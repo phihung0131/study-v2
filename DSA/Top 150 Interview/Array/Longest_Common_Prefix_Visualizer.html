@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Longest Common Prefix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .char-cell {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .char-match { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .char-mismatch { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .char-active { border-color: #3b82f6; background-color: #eff6ff; box-shadow: inset 0 0 0 2px #3b82f6; }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Longest Common Prefix</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #14 | Difficulty: Easy | String, Array</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>🔍</span> Problem Summary
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Write a function to find the longest common prefix string amongst an array of strings. 
+                If there is no common prefix, return an empty string <b>""</b>.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 italic"><b>Example:</b> strs = ["flower", "flow", "flight"] → Output: "fl"</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: HORIZONTAL SCANNING -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Horizontal Scanning
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "One String at a Time"</h3>
+                <p class="text-slate-600 mb-8">
+                    We start by assuming the first string is the common prefix. Then we compare it with the second string and "trim" it until it matches. We take that result and compare it with the third, and so on.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="hz-msg" class="step-msg">Click Next to start scanning horizontally.</div>
+                    <div class="flex flex-col gap-2 items-center mb-8" id="hz-viz"></div>
+                    
+                    <div class="flex justify-center items-center gap-4 mb-4">
+                        <span class="text-xs font-bold text-slate-400">CURRENT PREFIX:</span>
+                        <div id="hz-prefix" class="px-4 py-2 bg-white border-2 border-blue-200 rounded-lg font-mono font-bold text-blue-600">flower</div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="hzViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="hzViz.next()" id="hz-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public String</span> <span class="type">longestCommonPrefix</span>(<span class="type">String</span>[] strs) {
+    <span class="keyword">if</span> (strs == <span class="keyword">null</span> || strs.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="string">""</span>;
+    
+    <span class="comment">// Start with the first string as the potential prefix</span>
+    <span class="type">String</span> prefix = strs[<span class="number">0</span>];
+    
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < strs.length; i++) {
+        <span class="comment">// While the current string doesn't start with 'prefix'</span>
+        <span class="keyword">while</span> (strs[i].indexOf(prefix) != <span class="number">0</span>) {
+            <span class="comment">// Trim the prefix by one character from the end</span>
+            prefix = prefix.substring(<span class="number">0</span>, prefix.length() - <span class="number">1</span>);
+            <span class="keyword">if</span> (prefix.isEmpty()) <span class="keyword">return</span> <span class="string">""</span>;
+        }
+    }
+    <span class="keyword">return</span> prefix;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(S)</b>, where S is the sum of all characters in all strings.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. We only use a string variable.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Trade-off</h4>
+                        <p class="text-sm text-slate-600">Easy to implement, but if the mismatch happens at the very start of a long array, we waste time processing earlier strings.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: VERTICAL SCANNING -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: Vertical Scanning (Optimal for early exits)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "One Character at a Time"</h3>
+                <p class="text-slate-600 mb-8">
+                    We compare the first character of all strings. If they all match, we move to the second character. As soon as we find a mismatch or reach the end of any string, the process stops.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="vt-msg" class="step-msg">Click Next to scan vertically.</div>
+                    <div class="flex flex-col gap-2 items-center mb-8" id="vt-viz"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="vtViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="vtViz.next()" id="vt-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8 border-l-8 border-blue-600">
+<pre>
+<span class="keyword">public String</span> <span class="type">longestCommonPrefix</span>(<span class="type">String</span>[] strs) {
+    <span class="keyword">if</span> (strs == <span class="keyword">null</span> || strs.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="string">""</span>;
+    
+    <span class="comment">// Iterate through each character of the first string</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> charIdx = <span class="number">0</span>; charIdx < strs[<span class="number">0</span>].length(); charIdx++) {
+        <span class="keyword">char</span> currentChar = strs[<span class="number">0</span>].charAt(charIdx);
+        
+        <span class="comment">// Compare this character with the same index in all other strings</span>
+        <span class="keyword">for</span> (<span class="keyword">int</span> strIdx = <span class="number">1</span>; strIdx < strs.length; strIdx++) {
+            <span class="comment">// Mismatch found OR current string is too short</span>
+            <span class="keyword">if</span> (charIdx == strs[strIdx].length() || 
+                strs[strIdx].charAt(charIdx) != currentChar) {
+                <span class="keyword">return</span> strs[<span class="number">0</span>].substring(<span class="number">0</span>, charIdx);
+            }
+        }
+    }
+    <span class="keyword">return</span> strs[<span class="number">0</span>];
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(S)</b>. In the best case, it exits very early (e.g., first chars mismatch).</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-4 rounded-xl">
+                        <h4 class="font-bold text-blue-400 mb-2 uppercase text-xs">Efficiency</h4>
+                        <p class="text-sm text-slate-300">This is generally preferred in interviews because it handles early-mismatch scenarios much more gracefully than Horizontal scanning.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: SORTING -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 3: Sorting Trick
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Compare the Extremes"</h3>
+                <p class="text-slate-600 mb-8">
+                    If we sort the array lexicographically, the most different strings will be at the very first and very last positions. The common prefix of the entire array <b>must</b> be the common prefix of just the first and last sorted strings.
+                </p>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10 border-l-8 border-emerald-600">
+<pre>
+<span class="keyword">public String</span> <span class="type">longestCommonPrefix</span>(<span class="type">String</span>[] strs) {
+    <span class="type">Arrays</span>.sort(strs);
+    <span class="type">String</span> first = strs[<span class="number">0</span>];
+    <span class="type">String</span> last = strs[strs.length - <span class="number">1</span>];
+    
+    <span class="keyword">int</span> index = <span class="number">0</span>;
+    <span class="keyword">while</span> (index < first.length() && index < last.length()) {
+        <span class="keyword">if</span> (first.charAt(index) == last.charAt(index)) {
+            index++;
+        } <span class="keyword">else</span> {
+            <span class="keyword">break</span>;
+        }
+    }
+    <span class="keyword">return</span> first.substring(<span class="number">0</span>, index);
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(N log N * M)</b>, where N is number of strings and M is avg length (sorting cost).</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> or <b>O(log N)</b> depending on sort implementation.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-600 italic">Elegant code, but theoretically slower due to sorting overhead. Best when you want to write the fewest lines of code.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Comparison Table</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Avg Time</th>
+                            <th class="p-4 border">Best Case</th>
+                            <th class="p-4 border">Memory</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 border font-semibold">Horizontal</td>
+                            <td class="p-4 border">O(S)</td>
+                            <td class="p-4 border">O(S)</td>
+                            <td class="p-4 border">O(1)</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="p-4 border font-semibold">Vertical</td>
+                            <td class="p-4 border">O(S)</td>
+                            <td class="p-4 border text-blue-700 font-bold">O(N)</td>
+                            <td class="p-4 border">O(1)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">Sorting</td>
+                            <td class="p-4 border">O(N log N * M)</td>
+                            <td class="p-4 border">O(N log N * M)</td>
+                            <td class="p-4 border">O(1)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                <span>⚡</span> Recall Cheat Sheet
+            </h2>
+            <ul class="space-y-4 text-slate-300 text-sm">
+                <li>• <b>Horizontal Scanning:</b> Compare <code>prefix</code> with <code>strs[i]</code>. Trim prefix. Loop.</li>
+                <li>• <b>Vertical Scanning:</b> Compare <code>strs[0][j]</code> with <code>strs[i][j]</code>. Mismatch? Return.</li>
+                <li>• <b>Sorted Advantage:</b> Common prefix of a sorted array is just the overlap of the <b>min</b> and <b>max</b> strings.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const TEST_STRS = ["flower", "flow", "flight"];
+
+        // --- HORIZONTAL SCANNING ---
+        const hzViz = {
+            strs: [...TEST_STRS],
+            prefix: TEST_STRS[0],
+            strIdx: 1,
+            finished: false,
+            init() { this.render(); },
+            reset() {
+                this.prefix = this.strs[0];
+                this.strIdx = 1;
+                this.finished = false;
+                document.getElementById('hz-next-btn').disabled = false;
+                this.render("Reset. Starting with prefix: " + this.prefix);
+            },
+            render(msg) {
+                const container = document.getElementById('hz-viz');
+                const msgEl = document.getElementById('hz-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = this.strs.map((s, i) => {
+                    let chars = s.split('').map((c, j) => {
+                        let cls = "char-cell";
+                        if (i < this.strIdx && j < this.prefix.length && s[j] === this.prefix[j]) cls += " char-match";
+                        if (i === this.strIdx) cls += " char-active";
+                        return `<div class="${cls}">${c}</div>`;
+                    }).join('');
+                    return `<div class="flex gap-1">${chars}</div>`;
+                }).join('');
+                
+                document.getElementById('hz-prefix').innerText = this.prefix || "(empty)";
+            },
+            next() {
+                if (this.strIdx >= this.strs.length) {
+                    this.render("Scan complete!");
+                    document.getElementById('hz-next-btn').disabled = true;
+                    return;
+                }
+
+                let currentStr = this.strs[this.strIdx];
+                if (currentStr.startsWith(this.prefix)) {
+                    this.render(`String "${currentStr}" matches prefix "${this.prefix}". Moving to next string.`);
+                    this.strIdx++;
+                } else {
+                    this.prefix = this.prefix.substring(0, this.prefix.length - 1);
+                    this.render(`Mismatch found in "${currentStr}". Trimming prefix to "${this.prefix}"...`);
+                }
+            }
+        };
+
+        // --- VERTICAL SCANNING ---
+        const vtViz = {
+            strs: [...TEST_STRS],
+            charIdx: 0,
+            finished: false,
+            init() { this.render(); },
+            reset() {
+                this.charIdx = 0;
+                this.finished = false;
+                document.getElementById('vt-next-btn').disabled = false;
+                this.render("Reset. Pointers at the first character.");
+            },
+            render(msg) {
+                const container = document.getElementById('vt-viz');
+                const msgEl = document.getElementById('vt-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = this.strs.map((s, i) => {
+                    let chars = s.split('').map((c, j) => {
+                        let cls = "char-cell";
+                        if (j < this.charIdx) cls += " char-match";
+                        if (j === this.charIdx && !this.finished) cls += " char-active";
+                        return `<div class="${cls}">${c}</div>`;
+                    }).join('');
+                    return `<div class="flex gap-1">${chars}</div>`;
+                }).join('');
+            },
+            next() {
+                if (this.finished) return;
+
+                let charToMatch = this.strs[0][this.charIdx];
+                for (let i = 1; i < this.strs.length; i++) {
+                    if (this.charIdx >= this.strs[i].length || this.strs[i][this.charIdx] !== charToMatch) {
+                        const mismatchChar = this.charIdx >= this.strs[i].length ? "END" : this.strs[i][this.charIdx];
+                        this.render(`Mismatch at column ${this.charIdx}! '${charToMatch}' vs '${mismatchChar}'. Stop.`);
+                        this.finished = true;
+                        document.getElementById('vt-next-btn').disabled = true;
+                        return;
+                    }
+                }
+                this.charIdx++;
+                this.render(`Column ${this.charIdx - 1} matches ('${charToMatch}'). Moving to next column.`);
+            }
+        };
+
+        window.onload = () => {
+            hzViz.init();
+            vtViz.init();
+        };
+    </script>
+</body>
+</html>

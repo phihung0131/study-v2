@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Integer to Roman</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .symbol-card {
+            width: 80px;
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        .symbol-card.active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+
+        .roman-char {
+            display: inline-block;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 2px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black tracking-tight text-slate-900 mb-4">Integer to Roman</h1>
+            <p class="text-xl text-slate-500 font-medium italic">LeetCode #12 | Difficulty: Medium | Math, String, Greedy</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>🔢</span> Problem Context
+            </h2>
+            <p class="text-lg leading-relaxed text-slate-700 mb-6">
+                Seven symbols represent Roman numerals: <b>I, V, X, L, C, D, M</b>. Roman numerals are usually written largest to smallest from left to right. To represent 4 or 9, we use subtraction: 4 is IV, 9 is IX, 40 is XL, etc.
+            </p>
+            <div class="grid grid-cols-7 gap-2 mb-6">
+                <div class="symbol-card text-xs font-bold">I<br>1</div>
+                <div class="symbol-card text-xs font-bold">V<br>5</div>
+                <div class="symbol-card text-xs font-bold">X<br>10</div>
+                <div class="symbol-card text-xs font-bold">L<br>50</div>
+                <div class="symbol-card text-xs font-bold">C<br>100</div>
+                <div class="symbol-card text-xs font-bold">D<br>500</div>
+                <div class="symbol-card text-xs font-bold">M<br>1000</div>
+            </div>
+            <p class="text-slate-700"><b>Goal:</b> Convert an integer between 1 and 3999 into a Roman numeral string.</p>
+        </section>
+
+        <!-- APPROACH 1: GREEDY -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-slate-800 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 1</span>
+                <span class="opacity-50">|</span>
+                <span>GREEDY SUBTRACTION</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Largest Piece First"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    Roman numerals follow a greedy pattern. We want to use the <b>largest possible</b> symbol value that is less than or equal to our current number. We subtract that value and repeat until the number becomes zero.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="greedy-msg" class="step-msg">Enter a number and click "Next Step" to begin.</div>
+                    
+                    <div class="flex justify-center items-center gap-8 mb-12">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Current Number</p>
+                            <div id="greedy-num" class="text-5xl font-black text-blue-600">3749</div>
+                        </div>
+                        <div class="text-3xl text-slate-300">→</div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Roman Result</p>
+                            <div id="greedy-result" class="min-h-[60px] flex items-center justify-center font-serif">
+                                <span class="text-slate-300 italic text-sm">Waiting...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-2 mb-10" id="greedy-symbols">
+                        <!-- Symbols will be highlighted here -->
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <input type="number" id="greedy-input" min="1" max="3999" value="3749" class="w-24 px-4 py-2 border rounded-xl font-bold text-center">
+                        <button onclick="greedyViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="greedyViz.next()" id="greedy-next-btn" class="px-12 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10">
+<pre>
+<span class="keyword">public String</span> <span class="type">intToRoman</span>(<span class="keyword">int</span> num) {
+    <span class="comment">// Parallel arrays containing symbols and their integer values</span>
+    <span class="keyword">int</span>[] values = {<span class="number">1000</span>, <span class="number">900</span>, <span class="number">500</span>, <span class="number">400</span>, <span class="number">100</span>, <span class="number">90</span>, <span class="number">50</span>, <span class="number">40</span>, <span class="number">10</span>, <span class="number">9</span>, <span class="number">5</span>, <span class="number">4</span>, <span class="number">1</span>};
+    <span class="type">String</span>[] symbols = {<span class="string">"M"</span>, <span class="string">"CM"</span>, <span class="string">"D"</span>, <span class="string">"CD"</span>, <span class="string">"C"</span>, <span class="string">"XC"</span>, <span class="string">"L"</span>, <span class="string">"XL"</span>, <span class="string">"X"</span>, <span class="string">"IX"</span>, <span class="string">"V"</span>, <span class="string">"IV"</span>, <span class="string">"I"</span>};
+    
+    <span class="type">StringBuilder</span> romanResult = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+    
+    <span class="comment">// Iterate through the values from largest to smallest</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < values.length && num > <span class="number">0</span>; i++) {
+        <span class="comment">// While current value can fit into the remaining number</span>
+        <span class="keyword">while</span> (num >= values[i]) {
+            num -= values[i];
+            romanResult.append(symbols[i]);
+        }
+    }
+    
+    <span class="keyword">return</span> romanResult.toString();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-slate-700"><b>Time:</b> <b>O(1)</b>. Although there is a loop, the number of symbols is fixed and the maximum input is 3999, so the loop runs a constant number of times.</p>
+                        <p class="text-slate-700 mt-2"><b>Space:</b> <b>O(1)</b>. We only use a fixed amount of extra space for the arrays.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Pros & Cons</h4>
+                        <p class="text-green-600 font-bold">Pros: Elegant, easy to explain in interviews, very memory efficient.</p>
+                        <p class="text-red-600 font-bold">Cons: Requires maintaining two parallel arrays manually.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: HARDCODED DIGITS -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-blue-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 2</span>
+                <span class="opacity-50">|</span>
+                <span>PLACE VALUE MAPPING</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-blue-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "Decomposition Buffet"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    Every Roman numeral is just a combination of thousands, hundreds, tens, and ones. Since each digit (0-9) has a <b>unique fixed Roman representation</b> for its position, we can pre-calculate all 40 possibilities and just "pick" the right one.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="hard-msg" class="step-msg text-blue-900">Enter a number to see it decomposed into its Roman parts.</div>
+                    
+                    <div class="flex flex-col items-center gap-6 mb-8">
+                        <div class="flex gap-4 items-center">
+                             <div class="bg-white p-4 rounded-2xl border-2 border-blue-200 text-3xl font-black" id="hard-digit-display">3 7 4 9</div>
+                        </div>
+                        <div class="w-full max-w-md space-y-4" id="hard-parts">
+                            <!-- Parts will appear here -->
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <input type="number" id="hard-input" min="1" max="3999" value="3749" class="w-24 px-4 py-2 border rounded-xl font-bold text-center">
+                        <button onclick="hardViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="hardViz.next()" id="hard-next-btn" class="px-12 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition">Animate Decomposition</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10 border-l-8 border-blue-600">
+<pre>
+<span class="keyword">public String</span> <span class="type">intToRoman</span>(<span class="keyword">int</span> num) {
+    <span class="comment">// Arrays representing 0-9 for each decimal place</span>
+    <span class="type">String</span>[] thousands = {<span class="string">""</span>, <span class="string">"M"</span>, <span class="string">"MM"</span>, <span class="string">"MMM"</span>};
+    <span class="type">String</span>[] hundreds = {<span class="string">""</span>, <span class="string">"C"</span>, <span class="string">"CC"</span>, <span class="string">"CCC"</span>, <span class="string">"CD"</span>, <span class="string">"D"</span>, <span class="string">"DC"</span>, <span class="string">"DCC"</span>, <span class="string">"DCCC"</span>, <span class="string">"CM"</span>};
+    <span class="type">String</span>[] tens = {<span class="string">""</span>, <span class="string">"X"</span>, <span class="string">"XX"</span>, <span class="string">"XXX"</span>, <span class="string">"XL"</span>, <span class="string">"L"</span>, <span class="string">"LX"</span>, <span class="string">"LXX"</span>, <span class="string">"LXXX"</span>, <span class="string">"XC"</span>};
+    <span class="type">String</span>[] ones = {<span class="string">""</span>, <span class="string">"I"</span>, <span class="string">"II"</span>, <span class="string">"III"</span>, <span class="string">"IV"</span>, <span class="string">"V"</span>, <span class="string">"VI"</span>, <span class="string">"VII"</span>, <span class="string">"VIII"</span>, <span class="string">"IX"</span>};
+    
+    <span class="comment">// Extract each place value and concatenate</span>
+    <span class="keyword">return</span> thousands[num / <span class="number">1000</span>] + 
+           hundreds[(num % <span class="number">1000</span>) / <span class="number">100</span>] + 
+           tens[(num % <span class="number">100</span>) / <span class="number">10</span>] + 
+           ones[num % <span class="number">10</span>];
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-blue-900"><b>Time:</b> <b>O(1)</b>. Only 4 array lookups are performed regardless of input.</p>
+                        <p class="text-blue-900 mt-2"><b>Space:</b> <b>O(1)</b>. Pre-calculated strings take fixed memory.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">The "Hack"</h4>
+                        <p class="text-slate-600 italic">This is the "cheat code" version. It's essentially a lookup table. It's the fastest approach but requires more manual typing to set up the arrays.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Performance Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Runtime Complexity</th>
+                            <th class="p-4 border">Space Complexity</th>
+                            <th class="p-4 border">Best For</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 border font-semibold">Greedy Subtraction</td>
+                            <td class="p-4 border"><b>O(1)</b></td>
+                            <td class="p-4 border"><b>O(1)</b></td>
+                            <td class="p-4 border">General Interview Flow</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="p-4 border font-semibold text-blue-800">Hardcoded Digits</td>
+                            <td class="p-4 border font-bold text-blue-700">O(1) (Faster)</td>
+                            <td class="p-4 border font-bold text-blue-700">O(1) (More memory)</td>
+                            <td class="p-4 border">High-Performance scenarios</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl">
+            <h2 class="text-3xl font-bold mb-8 text-emerald-400">⚡ Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">The Greedy Rule</h4>
+                    <p class="text-slate-400 mb-4">
+                        Always handle the subtraction symbols as their own separate values:
+                    </p>
+                    <ul class="space-y-2 text-slate-300 text-sm">
+                        <li>• CM = 900, CD = 400</li>
+                        <li>• XC = 90, XL = 40</li>
+                        <li>• IX = 9, IV = 4</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Range Check</h4>
+                    <p class="text-slate-400">
+                        Input is always 1 to 3999. Why? Because Romans didn't have a standard way to write 4000 or larger (they used bars over symbols), and they had no symbol for 0.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VALUES = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+        const SYMBOLS = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
+
+        const THOUSANDS = ["", "M", "MM", "MMM"];
+        const HUNDREDS = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
+        const TENS = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
+        const ONES = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+
+        // --- GREEDY VIZ ---
+        const greedyViz = {
+            num: 0,
+            index: 0,
+            result: "",
+            init() {
+                const container = document.getElementById('greedy-symbols');
+                container.innerHTML = VALUES.map((v, i) => `
+                    <div class="symbol-card text-sm" id="g-sym-${i}">
+                        <div class="font-bold text-slate-800">${SYMBOLS[i]}</div>
+                        <div class="text-slate-400 text-xs">${v}</div>
+                    </div>
+                `).join('');
+                this.reset();
+            },
+            reset() {
+                this.num = parseInt(document.getElementById('greedy-input').value);
+                this.index = 0;
+                this.result = "";
+                document.getElementById('greedy-num').innerText = this.num;
+                document.getElementById('greedy-result').innerHTML = '<span class="text-slate-300 italic text-sm">Waiting...</span>';
+                document.getElementById('greedy-msg').innerText = "Ready. Pointers initialized at M (1000).";
+                document.getElementById('greedy-next-btn').disabled = false;
+                for(let i=0; i<VALUES.length; i++) document.getElementById(`g-sym-${i}`).classList.remove('active');
+            },
+            next() {
+                if (this.num <= 0 || this.index >= VALUES.length) {
+                    document.getElementById('greedy-msg').innerText = "Process complete!";
+                    document.getElementById('greedy-next-btn').disabled = true;
+                    return;
+                }
+
+                // Clear previous active
+                for(let i=0; i<VALUES.length; i++) document.getElementById(`g-sym-${i}`).classList.remove('active');
+                
+                const val = VALUES[this.index];
+                const sym = SYMBOLS[this.index];
+                document.getElementById(`g-sym-${this.index}`).classList.add('active');
+
+                if (this.num >= val) {
+                    this.num -= val;
+                    this.result += sym;
+                    document.getElementById('greedy-num').innerText = this.num;
+                    document.getElementById('greedy-msg').innerText = `Number ${this.num + val} is >= ${val}. Subtract ${val} and append "${sym}".`;
+                    
+                    const resDiv = document.getElementById('greedy-result');
+                    resDiv.innerHTML = this.result.split('').map(c => `<span class="roman-char">${c}</span>`).join('');
+                } else {
+                    document.getElementById('greedy-msg').innerText = `Number ${this.num} is < ${val}. Moving to next symbol.`;
+                    this.index++;
+                }
+            }
+        };
+
+        // --- HARDCODED VIZ ---
+        const hardViz = {
+            step: 0,
+            num: 0,
+            init() { this.reset(); },
+            reset() {
+                this.step = 0;
+                this.num = parseInt(document.getElementById('hard-input').value);
+                document.getElementById('hard-digit-display').innerText = this.num.toString().split('').join(' ');
+                document.getElementById('hard-parts').innerHTML = "";
+                document.getElementById('hard-msg').innerText = "Decomposing into Thousands, Hundreds, Tens, and Ones.";
+                document.getElementById('hard-next-btn').disabled = false;
+            },
+            next() {
+                const partsDiv = document.getElementById('hard-parts');
+                const val = this.num;
+                
+                const th = Math.floor(val / 1000);
+                const hu = Math.floor((val % 1000) / 100);
+                const te = Math.floor((val % 100) / 10);
+                const on = val % 10;
+
+                const data = [
+                    { label: "Thousands", val: th * 1000, roman: THOUSANDS[th] },
+                    { label: "Hundreds", val: hu * 100, roman: HUNDREDS[hu] },
+                    { label: "Tens", val: te * 10, roman: TENS[te] },
+                    { label: "Ones", val: on, roman: ONES[on] }
+                ];
+
+                if (this.step < 4) {
+                    const d = data[this.step];
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center p-4 bg-white rounded-xl border border-blue-100 shadow-sm animate-popIn";
+                    row.innerHTML = `
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase">${d.label} (${d.val})</span>
+                        </div>
+                        <div class="text-2xl font-black text-blue-600">${d.roman || "—"}</div>
+                    `;
+                    partsDiv.appendChild(row);
+                    document.getElementById('hard-msg').innerText = `Extracted ${d.label}: ${d.val} → ${d.roman || "Empty"}`;
+                    this.step++;
+                } else {
+                    document.getElementById('hard-msg').innerText = "Final concatenation: " + THOUSANDS[th] + HUNDREDS[hu] + TENS[te] + ONES[on];
+                    document.getElementById('hard-next-btn').disabled = true;
+                }
+            }
+        };
+
+        window.onload = () => {
+            greedyViz.init();
+            hardViz.init();
+        };
+    </script>
+</body>
+</html>

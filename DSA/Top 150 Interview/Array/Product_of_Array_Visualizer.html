@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Product of Array Except Self</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .array-cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .cell-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); }
+        .cell-multiplier { border-color: #fbbf24; background-color: #fffbeb; }
+        .cell-result { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        .cell-prefix { border-color: #8b5cf6; background-color: #f5f3ff; }
+        .cell-suffix { border-color: #ec4899; background-color: #fdf2f8; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Product of Array Except Self</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #238 | Difficulty: Medium | Array, Prefix Sum Pattern</p>
+        </header>
+
+        <!-- Problem Statement -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📝</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Given an integer array <b>nums</b>, return an array <b>answer</b> such that <b>answer[i]</b> is equal to the product of all the elements of <b>nums</b> except <b>nums[i]</b>.
+            </p>
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-4">
+                <p class="text-red-800 font-bold uppercase tracking-wider text-sm">Critical Constraint:</p>
+                <p class="text-red-700 font-medium">You must write an algorithm that runs in <b>O(n)</b> time and <b>without using the division operation</b>.</p>
+            </div>
+            <p class="text-slate-500 italic">Example: [1, 2, 3, 4] → [24, 12, 8, 6]</p>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Nested Loops (Brute Force)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    The most direct way is to iterate through each index <b>i</b>, and for every <b>i</b>, use another loop to multiply all elements <b>j</b> where <b>j != i</b>. 
+                    Simple to implement, but very slow for large arrays.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click Next to start the nested product calculation.</div>
+                    <div class="flex flex-col items-center gap-8">
+                        <div class="flex gap-4" id="bf-input-array"></div>
+                        <div class="flex gap-4" id="bf-result-array"></div>
+                    </div>
+                    <div class="flex justify-center gap-4 mt-12">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span>[] <span class="type">productExceptSelf</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> n = nums.length;
+    <span class="keyword">int</span>[] answer = <span class="keyword">new int</span>[n];
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> outerIndex = <span class="number">0</span>; outerIndex < n; outerIndex++) {
+        <span class="keyword">int</span> currentProduct = <span class="number">1</span>;
+        <span class="keyword">for</span> (<span class="keyword">int</span> innerIndex = <span class="number">0</span>; innerIndex < n; innerIndex++) {
+            <span class="comment">// Skip the element at the current outer index</span>
+            <span class="keyword">if</span> (outerIndex != innerIndex) {
+                currentProduct *= nums[innerIndex];
+            }
+        }
+        answer[outerIndex] = currentProduct;
+    }
+    <span class="keyword">return</span> answer;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n²)</b>. Two nested loops iterate over the array.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> (excluding output array).</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-600">Violates the <b>O(n)</b> time requirement. Fails for large inputs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: PREFIX & SUFFIX ARRAYS -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 2: Prefix & Suffix Products ($O(n)$ Space)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-100">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    Any <b>answer[i]</b> is the product of (everything to the left of <b>i</b>) multiplied by (everything to the right of <b>i</b>).
+                    We can pre-calculate these using two auxiliary arrays:
+                    <br>1. <b>Prefix:</b> <b>prefix[i]</b> stores product of <b>nums[0...i-1]</b>.
+                    <br>2. <b>Suffix:</b> <b>suffix[i]</b> stores product of <b>nums[i+1...n-1]</b>.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="ps-msg" class="step-msg">Click Next to build prefix and suffix arrays.</div>
+                    <div class="flex flex-col gap-4 overflow-x-auto pb-4">
+                        <div class="flex items-center gap-4"><span class="w-20 text-xs font-bold text-slate-400">INPUT</span><div id="ps-input" class="flex gap-2"></div></div>
+                        <div class="flex items-center gap-4"><span class="w-20 text-xs font-bold text-purple-400">PREFIX</span><div id="ps-prefix" class="flex gap-2"></div></div>
+                        <div class="flex items-center gap-4"><span class="w-20 text-xs font-bold text-pink-400">SUFFIX</span><div id="ps-suffix" class="flex gap-2"></div></div>
+                        <div class="flex items-center gap-4"><span class="w-20 text-xs font-bold text-emerald-400">RESULT</span><div id="ps-result" class="flex gap-2"></div></div>
+                    </div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="psViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="psViz.next()" id="ps-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span>[] <span class="type">productExceptSelf</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> n = nums.length;
+    <span class="keyword">int</span>[] prefixProducts = <span class="keyword">new int</span>[n];
+    <span class="keyword">int</span>[] suffixProducts = <span class="keyword">new int</span>[n];
+    <span class="keyword">int</span>[] result = <span class="keyword">new int</span>[n];
+
+    <span class="comment">// 1. Construct Prefix Array</span>
+    prefixProducts[<span class="number">0</span>] = <span class="number">1</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < n; i++) {
+        prefixProducts[i] = prefixProducts[i - <span class="number">1</span>] * nums[i - <span class="number">1</span>];
+    }
+
+    <span class="comment">// 2. Construct Suffix Array</span>
+    suffixProducts[n - <span class="number">1</span>] = <span class="number">1</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = n - <span class="number">2</span>; i >= <span class="number">0</span>; i--) {
+        suffixProducts[i] = suffixProducts[i + <span class="number">1</span>] * nums[i + <span class="number">1</span>];
+    }
+
+    <span class="comment">// 3. Combine both</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+        result[i] = prefixProducts[i] * suffixProducts[i];
+    }
+    <span class="keyword">return</span> result;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Three linear passes.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. Uses two extra arrays to store products.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2">Efficiency</h4>
+                        <p class="text-sm text-slate-700">Satisfies the time requirement! However, can we improve the space?</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: OPTIMIZED SPACE -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 3: Space-Optimized Prefix Product ($O(1)$ Space)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Two-Pass Trick"</h3>
+                <p class="text-slate-600 mb-8">
+                    We can reuse the <b>answer array</b> to store prefix products first. Then, instead of building a full suffix array, we use a <b>single variable</b> to keep track of the running suffix product as we iterate backwards, multiplying it into our answer array in real-time.
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="opt-msg" class="step-msg">Click Next to see the two-pass optimization in action.</div>
+                    <div class="flex flex-col items-center gap-8">
+                        <div class="flex gap-4" id="opt-input"></div>
+                        <div class="flex gap-4" id="opt-result"></div>
+                        <div class="text-center p-2 bg-emerald-100 border border-emerald-300 rounded-lg">
+                            <span class="text-xs font-bold text-emerald-800">RUNNING SUFFIX: </span>
+                            <span id="opt-suffix-val" class="font-mono font-bold text-emerald-600 text-lg">1</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="optViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="optViz.next()" id="opt-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public int</span>[] <span class="type">productExceptSelf</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> length = nums.length;
+    <span class="keyword">int</span>[] answer = <span class="keyword">new int</span>[length];
+
+    <span class="comment">// 1. Use answer array for Prefix Products</span>
+    answer[<span class="number">0</span>] = <span class="number">1</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < length; i++) {
+        answer[i] = answer[i - <span class="number">1</span>] * nums[i - <span class="number">1</span>];
+    }
+
+    <span class="comment">// 2. Use a single variable for Suffix Product while scanning backwards</span>
+    <span class="keyword">int</span> rightSuffixProduct = <span class="number">1</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = length - <span class="number">1</span>; i >= <span class="number">0</span>; i--) {
+        <span class="comment">// Result = (Existing Prefix) * (Running Suffix)</span>
+        answer[i] = answer[i] * rightSuffixProduct;
+        <span class="comment">// Update Suffix for the next element to the left</span>
+        rightSuffixProduct *= nums[i];
+    }
+
+    <span class="keyword">return</span> answer;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Two passes (one forward, one backward).</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. No extra space used besides the output array (as per problem rules).</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-4 rounded-xl">
+                        <h4 class="font-bold text-blue-400 mb-2 uppercase text-xs">Interview Tip</h4>
+                        <p class="text-sm text-slate-300 italic">This is the Gold Standard answer. Always start with the Prefix/Suffix intuition and then explain how to "crush" them together to save space.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Strategy Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Division?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Brute Force</td>
+                            <td class="p-4 border text-red-600">O(n²)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border">No</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-bold">Prefix/Suffix Array</td>
+                            <td class="p-4 border text-blue-600">O(n)</td>
+                            <td class="p-4 border text-red-600">O(n)</td>
+                            <td class="p-4 border">No</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-700">Optimized (Optimal)</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(n)</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(1)</td>
+                            <td class="p-4 border font-bold">No</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400">⚡ Fast Recall</h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>Pattern:</b> Left-to-Right pass, then Right-to-Left pass.</li>
+                    <li>• <b>Formula:</b> <code>res[i] = PrefixProd[i] * SuffixProd[i]</code>.</li>
+                    <li>• <b>Key Insight:</b> Division is forbidden because an array might contain zeros. <code>Total / 0</code> is undefined.</li>
+                    <li>• <b>Zero Handling:</b> If one zero exists, all other indices are 0 except the index of the zero. If two zeros exist, the entire result is 0.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-bold mb-4">🧩 Edge Case: Zeros</h3>
+                <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                    Consider <code>[1, 0, 3, 4]</code>.
+                    <br>• Index 0: 0 * 3 * 4 = 0
+                    <br>• Index 1: 1 * 3 * 4 = 12
+                    <br>• Index 2: 1 * 0 * 4 = 0
+                </p>
+                <p class="text-emerald-700 font-bold text-sm">The Prefix/Suffix product naturally handles zeros without any special "if" checks!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_DATA = [1, 2, 3, 4];
+
+        function createCells(containerId, data, emptyLabel = '-') {
+            const container = document.getElementById(containerId);
+            container.innerHTML = data.map((v, i) => `
+                <div class="array-cell">
+                    <span class="cell-index">${i}</span>
+                    ${v === null ? emptyLabel : v}
+                </div>
+            `).join('');
+        }
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            nums: [...TEST_DATA],
+            res: [null, null, null, null],
+            outer: 0,
+            inner: -1,
+            prod: 1,
+            init() {
+                createCells('bf-input-array', this.nums);
+                createCells('bf-result-array', this.res);
+            },
+            reset() { this.outer = 0; this.inner = -1; this.res = [null, null, null, null]; this.prod = 1; this.init(); document.getElementById('bf-next-btn').disabled = false; },
+            render() {
+                const inputCells = document.querySelectorAll('#bf-input-array .array-cell');
+                const resultCells = document.querySelectorAll('#bf-result-array .array-cell');
+                inputCells.forEach((c, i) => {
+                    c.className = 'array-cell';
+                    if (i === this.outer) c.classList.add('cell-active');
+                    if (i === this.inner) c.classList.add('cell-multiplier');
+                });
+                resultCells.forEach((c, i) => {
+                    c.className = 'array-cell';
+                    if (i === this.outer) {
+                        c.classList.add('cell-active');
+                        c.innerText = this.prod;
+                    } else {
+                        c.innerText = this.res[i] === null ? '-' : this.res[i];
+                    }
+                    if (this.res[i] !== null) c.classList.add('cell-result');
+                });
+            },
+            next() {
+                if (this.outer >= this.nums.length) return;
+                this.inner++;
+                if (this.inner === this.outer) this.inner++; 
+                
+                if (this.inner >= this.nums.length) {
+                    this.res[this.outer] = this.prod;
+                    this.outer++;
+                    this.inner = -1;
+                    this.prod = 1;
+                    if (this.outer === this.nums.length) {
+                        document.getElementById('bf-next-btn').disabled = true;
+                        document.getElementById('bf-msg').innerText = "Done! Brute force complete.";
+                    } else {
+                        document.getElementById('bf-msg').innerText = `Moving to next result index ${this.outer}.`;
+                    }
+                } else {
+                    this.prod *= this.nums[this.inner];
+                    document.getElementById('bf-msg').innerText = `Calculating answer[${this.outer}]: multiplying by ${this.nums[this.inner]}. Current product: ${this.prod}`;
+                }
+                this.render();
+            }
+        };
+
+        // --- PREFIX SUFFIX ---
+        const psViz = {
+            nums: [...TEST_DATA],
+            prefix: [null, null, null, null],
+            suffix: [null, null, null, null],
+            res: [null, null, null, null],
+            step: 0,
+            ptr: 0,
+            init() {
+                createCells('ps-input', this.nums);
+                createCells('ps-prefix', this.prefix);
+                createCells('ps-suffix', this.suffix);
+                createCells('ps-result', this.res);
+            },
+            reset() { this.prefix = [null, null, null, null]; this.suffix = [null, null, null, null]; this.res = [null, null, null, null]; this.step = 0; this.ptr = 0; this.init(); document.getElementById('ps-next-btn').disabled = false; },
+            render() {
+                const p = document.querySelectorAll('#ps-prefix .array-cell');
+                const s = document.querySelectorAll('#ps-suffix .array-cell');
+                const r = document.querySelectorAll('#ps-result .array-cell');
+                p.forEach((c, i) => { 
+                    c.innerText = this.prefix[i] === null ? '-' : this.prefix[i]; 
+                    if (this.prefix[i] !== null) c.classList.add('cell-prefix');
+                    if (this.step === 0 && i === this.ptr) c.classList.add('cell-active');
+                });
+                s.forEach((c, i) => { 
+                    c.innerText = this.suffix[i] === null ? '-' : this.suffix[i]; 
+                    if (this.suffix[i] !== null) c.classList.add('cell-suffix');
+                    if (this.step === 1 && i === this.ptr) c.classList.add('cell-active');
+                });
+                r.forEach((c, i) => { 
+                    c.innerText = this.res[i] === null ? '-' : this.res[i]; 
+                    if (this.res[i] !== null) c.classList.add('cell-result');
+                    if (this.step === 2 && i === this.ptr) c.classList.add('cell-active');
+                });
+            },
+            next() {
+                if (this.step === 0) {
+                    if (this.ptr === 0) this.prefix[0] = 1;
+                    else this.prefix[this.ptr] = this.prefix[this.ptr-1] * this.nums[this.ptr-1];
+                    this.ptr++;
+                    if (this.ptr === 4) { this.step = 1; this.ptr = 3; }
+                } else if (this.step === 1) {
+                    if (this.ptr === 3) this.suffix[3] = 1;
+                    else this.suffix[this.ptr] = this.suffix[this.ptr+1] * this.nums[this.ptr+1];
+                    this.ptr--;
+                    if (this.ptr === -1) { this.step = 2; this.ptr = 0; }
+                } else {
+                    this.res[this.ptr] = this.prefix[this.ptr] * this.suffix[this.ptr];
+                    this.ptr++;
+                    if (this.ptr === 4) document.getElementById('ps-next-btn').disabled = true;
+                }
+                this.render();
+            }
+        };
+
+        // --- OPTIMIZED ---
+        const optViz = {
+            nums: [...TEST_DATA],
+            ans: [null, null, null, null],
+            suffix: 1,
+            pass: 1,
+            ptr: 0,
+            init() {
+                createCells('opt-input', this.nums);
+                createCells('opt-result', this.ans);
+            },
+            reset() { this.ans = [null, null, null, null]; this.suffix = 1; this.pass = 1; this.ptr = 0; this.init(); document.getElementById('opt-next-btn').disabled = false; document.getElementById('opt-suffix-val').innerText = '1'; },
+            render() {
+                const r = document.querySelectorAll('#opt-result .array-cell');
+                r.forEach((c, i) => {
+                    c.innerText = this.ans[i] === null ? '-' : this.ans[i];
+                    if (i === this.ptr) c.classList.add('cell-active');
+                    else c.classList.remove('cell-active');
+                    if (this.pass === 2 && i >= this.ptr) c.classList.add('cell-result');
+                });
+                document.getElementById('opt-suffix-val').innerText = this.suffix;
+            },
+            next() {
+                if (this.pass === 1) {
+                    if (this.ptr === 0) this.ans[0] = 1;
+                    else this.ans[this.ptr] = this.ans[this.ptr-1] * this.nums[this.ptr-1];
+                    this.ptr++;
+                    if (this.ptr === 4) { this.pass = 2; this.ptr = 3; }
+                } else {
+                    this.ans[this.ptr] = this.ans[this.ptr] * this.suffix;
+                    this.suffix *= this.nums[this.ptr];
+                    this.ptr--;
+                    if (this.ptr === -1) document.getElementById('opt-next-btn').disabled = true;
+                }
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            psViz.init();
+            optViz.init();
+        };
+    </script>
+</body>
+</html>

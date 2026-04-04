@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Best Time to Buy and Sell Stock II</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .price-bar {
+            width: 45px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .bar-inner {
+            width: 80%;
+            background-color: #cbd5e1;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 8px;
+            color: #475569;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        /* State Styles */
+        .bar-buy { background-color: #ef4444 !important; color: white !important; transform: scaleY(1.05); }
+        .bar-sell { background-color: #10b981 !important; color: white !important; transform: scaleY(1.05); }
+        .bar-profit { background-color: #3b82f6 !important; color: white !important; }
+        .bar-scanning { border: 2px solid #3b82f6; }
+        
+        .pointer-label {
+            position: absolute;
+            bottom: -35px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .profit-line {
+            position: absolute;
+            height: 4px;
+            background: #10b981;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Best Time to Buy and Sell Stock II</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #122 | Difficulty: Medium | Array, Greedy, DP</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>📈</span> Problem Summary
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                You are given an integer array <b>prices</b>. On each day, you may decide to buy and/or sell the stock. 
+                You can only hold <b>at most one</b> share of the stock at any time. However, you can buy it then immediately sell it on the <b>same day</b>.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 font-semibold">Goal: Find the maximum profit you can achieve by making as many transactions as you like.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="bg-slate-800 text-white px-5 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 1: Recursive Backtracking (Brute Force)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    In a brute-force approach, we calculate the profit of <b>every possible combination</b> of transactions. 
+                    For each day, we can choose to either buy or skip. If we buy, we then explore all future days to sell. 
+                    This creates a massive recursion tree.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click "Next" to simulate path exploration.</div>
+                    <div class="flex justify-center items-end gap-2 h-48 mb-12" id="bf-chart"></div>
+                    
+                    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-6">
+                        <div class="metric-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Paths Explored</p>
+                            <p id="bf-paths" class="text-xl font-bold text-blue-600">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Max Profit</p>
+                            <p id="bf-max" class="text-xl font-bold text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">maxProfit</span>(<span class="keyword">int</span>[] prices) {
+    <span class="keyword">return</span> calculate(prices, <span class="number">0</span>);
+}
+
+<span class="keyword">private int</span> <span class="type">calculate</span>(<span class="keyword">int</span>[] prices, <span class="keyword">int</span> s) {
+    <span class="keyword">if</span> (s >= prices.length) <span class="keyword">return</span> <span class="number">0</span>;
+    <span class="keyword">int</span> max = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> start = s; start < prices.length; start++) {
+        <span class="keyword">int</span> maxProfit = <span class="number">0</span>;
+        <span class="keyword">for</span> (<span class="keyword">int</span> i = start + <span class="number">1</span>; i < prices.length; i++) {
+            <span class="keyword">if</span> (prices[start] < prices[i]) {
+                <span class="keyword">int</span> profit = calculate(prices, i + <span class="number">1</span>) + prices[i] - prices[start];
+                <span class="keyword">if</span> (profit > maxProfit) maxProfit = profit;
+            }
+        }
+        <span class="keyword">if</span> (maxProfit > max) max = maxProfit;
+    }
+    <span class="keyword">return</span> max;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-5 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time Complexity:</b> <b>O(nⁿ)</b>. Recursive calls grow exponentially.</p>
+                        <p class="text-sm"><b>Space Complexity:</b> <b>O(n)</b>. Depth of recursion stack.</p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Problem</h4>
+                        <p class="text-sm text-slate-600">The same subproblems are solved repeatedly. For an array of size 30, this would take billions of operations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: PEAK VALLEY -->
+        <section class="mb-20">
+            <div class="bg-blue-600 text-white px-5 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 2: Peak Valley (Graphical)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    Imagine the price chart as mountains and valleys. To maximize profit, we want to buy at every <b>Valley</b> (local minimum) and sell at the immediately following <b>Peak</b> (local maximum). 
+                    Summing these segments gives the total max profit.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="pv-msg" class="step-msg">Click "Next" to find valleys and peaks.</div>
+                    <div class="flex justify-center items-end gap-2 h-48 mb-12" id="pv-chart"></div>
+                    
+                    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-6">
+                        <div class="metric-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Current Buy (Valley)</p>
+                            <p id="pv-buy" class="text-xl font-bold text-red-500">-</p>
+                        </div>
+                        <div class="metric-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Total Profit</p>
+                            <p id="pv-total" class="text-xl font-bold text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="pvViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold">Reset</button>
+                        <button onclick="pvViz.next()" id="pv-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">maxProfit</span>(<span class="keyword">int</span>[] prices) {
+    <span class="keyword">int</span> i = <span class="number">0</span>;
+    <span class="keyword">int</span> valley = prices[<span class="number">0</span>];
+    <span class="keyword">int</span> peak = prices[<span class="number">0</span>];
+    <span class="keyword">int</span> totalProfit = <span class="number">0</span>;
+    
+    <span class="keyword">while</span> (i < prices.length - <span class="number">1</span>) {
+        <span class="comment">// 1. Find the Valley (dip)</span>
+        <span class="keyword">while</span> (i < prices.length - <span class="number">1</span> && prices[i] >= prices[i + <span class="number">1</span>]) i++;
+        valley = prices[i];
+        
+        <span class="comment">// 2. Find the Peak (top)</span>
+        <span class="keyword">while</span> (i < prices.length - <span class="number">1</span> && prices[i] <= prices[i + <span class="number">1</span>]) i++;
+        peak = prices[i];
+        
+        totalProfit += peak - valley;
+    }
+    <span class="keyword">return</span> totalProfit;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2 underline">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time Complexity:</b> <b>O(n)</b>. Single pass through the array.</p>
+                        <p class="text-sm"><b>Space Complexity:</b> <b>O(1)</b>. Constant extra space.</p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Logic</h4>
+                        <p class="text-sm text-slate-600">This approach mirrors the way a human visually identifies growth periods on a stock chart.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: SIMPLE PASS (OPTIMAL) -->
+        <section class="mb-20">
+            <div class="bg-emerald-600 text-white px-5 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 3: Simple Pass (Greedy)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Daily Gain"</h3>
+                <p class="text-slate-600 mb-8 text-lg">
+                    The Peak-Valley approach can be simplified further. If we look at any continuous growth (Valley to Peak), the total profit is exactly the same as the <b>sum of every daily increase</b>. 
+                    <br><br>
+                    <b>Example:</b> Buy at 1, Sell at 5 (Profit: 4). If prices were [1, 2, 5], daily gains are (2-1)=1 and (5-2)=3. Total: 1 + 3 = 4. 
+                    We just add up every <code>prices[i] - prices[i-1]</code> if it is positive!
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="sp-msg" class="step-msg">Click "Next" to harvest every positive climb.</div>
+                    <div class="flex justify-center items-end gap-2 h-48 mb-12" id="sp-chart"></div>
+                    
+                    <div class="grid grid-cols-1 gap-4 max-w-xs mx-auto mb-6">
+                        <div class="metric-card border-emerald-200 bg-emerald-50">
+                            <p class="text-xs font-bold text-emerald-600 uppercase">Accumulated Profit</p>
+                            <p id="sp-total" class="text-3xl font-bold text-emerald-700">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="spViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold">Reset</button>
+                        <button onclick="spViz.next()" id="sp-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public int</span> <span class="type">maxProfit</span>(<span class="keyword">int</span>[] prices) {
+    <span class="keyword">int</span> maxProfit = <span class="number">0</span>;
+    
+    <span class="comment">// Iterate from the second day</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < prices.length; i++) {
+        <span class="comment">// If today's price is higher than yesterday...</span>
+        <span class="keyword">if</span> (prices[i] > prices[i - <span class="number">1</span>]) {
+            <span class="comment">// ...add the difference to total profit</span>
+            maxProfit += prices[i] - prices[i - <span class="number">1</span>];
+        }
+    }
+    
+    <span class="keyword">return</span> maxProfit;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-200">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time Complexity:</b> <b>O(n)</b>. Single loop pass.</p>
+                        <p class="text-sm"><b>Space Complexity:</b> <b>O(1)</b>. Only one variable to store profit.</p>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">The "Aha!" Moment</h4>
+                        <p class="text-sm text-slate-600 italic">"If tomorrow is better than today, I want that money." This Greedy approach effectively captures every single climbing segment of the stock chart.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border text-slate-800 font-bold">Approach</th>
+                            <th class="p-4 border text-slate-800 font-bold">Time</th>
+                            <th class="p-4 border text-slate-800 font-bold">Space</th>
+                            <th class="p-4 border text-slate-800 font-bold">Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 border font-semibold">Recursive Brute Force</td>
+                            <td class="p-4 border text-red-600">O(nⁿ)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border text-red-500 font-bold">Unusable</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">Peak Valley</td>
+                            <td class="p-4 border text-emerald-600">O(n)</td>
+                            <td class="p-4 border text-emerald-600">O(1)</td>
+                            <td class="p-4 border text-blue-600">Excellent</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-900">Simple Pass (Greedy)</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(n)</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(1)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">Optimal / Simplest</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400">⚡ Cheat Sheet</h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>Rule:</b> If <code>prices[i] > prices[i-1]</code>, add profit.</li>
+                    <li>• <b>Pattern:</b> Greedy accumulation.</li>
+                    <li>• <b>Constraint:</b> No overlapping transactions (already handled by greedy logic because buying at $i-1$ and selling at $i$ then buying at $i$ and selling at $i+1$ is equivalent to buying at $i-1$ and selling at $i+1$).</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Common Confusion</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    Users often ask: "Can I sell on Day 3 and buy again on Day 3?" 
+                    <b>Yes.</b> In the code, adding <code>prices[3]-prices[2]</code> and <code>prices[4]-prices[3]</code> is mathematically identical to buying on Day 2 and selling on Day 4. The greedy approach handles this perfectly.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_DATA = [7, 1, 5, 3, 6, 4];
+        const MAX_P = Math.max(...TEST_DATA);
+
+        function createBars(containerId, data) {
+            const chart = document.getElementById(containerId);
+            chart.innerHTML = data.map((p, idx) => `
+                <div class="price-bar" style="height: ${(p/MAX_P)*80 + 20}%">
+                    <div class="bar-inner">${p}</div>
+                    <div class="pointer-label" id="${containerId}-ptr-${idx}"></div>
+                </div>
+            `).join('');
+        }
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            paths: 0,
+            max: 0,
+            init() { createBars('bf-chart', TEST_DATA); this.reset(); },
+            reset() { this.paths = 0; this.max = 0; this.updateUI(); document.getElementById('bf-next-btn').disabled = false; },
+            updateUI() {
+                document.getElementById('bf-paths').innerText = this.paths;
+                document.getElementById('bf-max').innerText = this.max;
+            },
+            next() {
+                // Simplified simulation of path exploration
+                this.paths += Math.floor(Math.random() * 10) + 5;
+                if (this.paths > 50) {
+                    this.max = 7;
+                    document.getElementById('bf-msg').innerText = "Found a path: Buy at 1, Sell at 5, Buy at 3, Sell at 6. Total: 7.";
+                    document.getElementById('bf-next-btn').disabled = true;
+                } else {
+                    document.getElementById('bf-msg').innerText = "Exploring recursive branch... recalculating same subproblems...";
+                }
+                this.updateUI();
+            }
+        };
+
+        // --- PEAK VALLEY ---
+        const pvViz = {
+            i: 0,
+            valley: null,
+            peak: null,
+            total: 0,
+            state: 'SEARCH_VALLEY',
+            init() { createBars('pv-chart', TEST_DATA); this.reset(); },
+            reset() { this.i = 0; this.valley = null; this.peak = null; this.total = 0; this.state = 'SEARCH_VALLEY'; this.render(); document.getElementById('pv-next-btn').disabled = false; },
+            render() {
+                const bars = document.querySelectorAll('#pv-chart .bar-inner');
+                bars.forEach((b, idx) => {
+                    b.className = 'bar-inner';
+                    if (idx === this.i) b.classList.add('bar-scanning');
+                    if (this.valley !== null && TEST_DATA[idx] === this.valley && idx <= this.i) b.classList.add('bar-buy');
+                    if (this.peak !== null && TEST_DATA[idx] === this.peak && idx <= this.i) b.classList.add('bar-sell');
+                });
+                document.getElementById('pv-buy').innerText = this.valley || '-';
+                document.getElementById('pv-total').innerText = this.total;
+            },
+            next() {
+                if (this.i >= TEST_DATA.length - 1) {
+                    document.getElementById('pv-msg').innerText = "Scan finished. Total profit: " + this.total;
+                    document.getElementById('pv-next-btn').disabled = true;
+                    return;
+                }
+
+                if (this.state === 'SEARCH_VALLEY') {
+                    if (TEST_DATA[this.i] >= TEST_DATA[this.i+1]) {
+                        this.i++;
+                        document.getElementById('pv-msg').innerText = "Descending... checking for a valley.";
+                    } else {
+                        this.valley = TEST_DATA[this.i];
+                        this.state = 'SEARCH_PEAK';
+                        document.getElementById('pv-msg').innerText = "Found a Valley at " + this.valley + ". Now looking for a peak.";
+                    }
+                } else {
+                    if (this.i < TEST_DATA.length - 1 && TEST_DATA[this.i] <= TEST_DATA[this.i+1]) {
+                        this.i++;
+                        document.getElementById('pv-msg').innerText = "Ascending... looking for the top.";
+                    } else {
+                        this.peak = TEST_DATA[this.i];
+                        this.total += (this.peak - this.valley);
+                        this.state = 'SEARCH_VALLEY';
+                        document.getElementById('pv-msg').innerText = "Found a Peak at " + this.peak + ". Profit gained: " + (this.peak - this.valley);
+                    }
+                }
+                this.render();
+            }
+        };
+
+        // --- SIMPLE PASS ---
+        const spViz = {
+            i: 1,
+            total: 0,
+            init() { createBars('sp-chart', TEST_DATA); this.reset(); },
+            reset() { this.i = 1; this.total = 0; this.render(); document.getElementById('sp-next-btn').disabled = false; },
+            render() {
+                const bars = document.querySelectorAll('#sp-chart .bar-inner');
+                bars.forEach((b, idx) => {
+                    b.className = 'bar-inner';
+                    if (idx === this.i) b.classList.add('bar-scanning');
+                    if (idx < this.i && TEST_DATA[idx] > TEST_DATA[idx-1]) b.classList.add('bar-profit');
+                });
+                document.getElementById('sp-total').innerText = this.total;
+            },
+            next() {
+                if (this.i >= TEST_DATA.length) {
+                    document.getElementById('sp-msg').innerText = "Finished. Final profit collected.";
+                    document.getElementById('sp-next-btn').disabled = true;
+                    return;
+                }
+                
+                const diff = TEST_DATA[this.i] - TEST_DATA[this.i-1];
+                if (diff > 0) {
+                    this.total += diff;
+                    document.getElementById('sp-msg').innerText = `Gain detected! ${TEST_DATA[this.i]} - ${TEST_DATA[this.i-1]} = ${diff}. Adding to total.`;
+                } else {
+                    document.getElementById('sp-msg').innerText = `Price dropped. No profit to harvest today.`;
+                }
+                this.i++;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            pvViz.init();
+            spViz.init();
+        };
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Remove Duplicates from Sorted Array II</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .array-slot {
+            width: 54px;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .slot-active { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-4px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .slot-duplicate { border-color: #ef4444; background-color: #fef2f2; color: #ef4444; }
+        .slot-keep { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        .slot-ignored { opacity: 0.3; border-style: dashed; transform: scale(0.9); }
+
+        .pointer-tag {
+            position: absolute;
+            top: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tag-write { background: #10b981; color: white; }
+        .tag-read { background: #3b82f6; color: white; }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            font-size: 1.1rem;
+            color: #334155;
+        }
+    </style>
+</head>
+<body class="py-12 px-6">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black tracking-tight text-slate-900 mb-4">Remove Duplicates II</h1>
+            <p class="text-xl text-slate-500 font-medium">LeetCode #80 | <span class="text-amber-600">Medium</span> | Arrays, Two Pointers</p>
+        </header>
+
+        <!-- Problem Card -->
+        <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span class="text-blue-600">📋</span> Problem Requirement
+            </h2>
+            <p class="text-lg leading-relaxed text-slate-700 mb-6">
+                Given a sorted array <b>nums</b>, remove duplicates in-place such that each unique element appears <b>at most twice</b>. The relative order must be preserved. Return the number of elements remaining.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p class="font-bold text-slate-500 text-sm mb-1 uppercase tracking-wider">Example Input</p>
+                    <code class="text-blue-600 font-bold">[1, 1, 1, 2, 2, 3]</code>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p class="font-bold text-slate-500 text-sm mb-1 uppercase tracking-wider">Expected Output</p>
+                    <code class="text-emerald-600 font-bold">k = 5, nums = [1, 1, 2, 2, 3]</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-slate-800 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 1</span>
+                <span class="opacity-50">|</span>
+                <span>LINEAR SCAN & SHIFT</span>
+            </div>
+
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <div class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">Intuition: "The Manual Cleanup"</h3>
+                    <p class="text-slate-600 text-lg">
+                        Iterate through the array while keeping a <b>count</b> of the current number. If we encounter a third (or more) instance of the same number, we <b>shift</b> all elements to the right of it one position to the left. This "erases" the extra duplicate.
+                    </p>
+                </div>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="bf-msg" class="step-msg mb-8">Ready to scan. Pointers initialized.</div>
+                    
+                    <div class="flex justify-center gap-3 mb-12 h-20" id="bf-container">
+                        <!-- Array cells -->
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="bfVisualizer.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition-all">Reset</button>
+                        <button onclick="bfVisualizer.next()" id="bf-next" class="px-12 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition-all shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4 text-slate-800">Java Implementation (Brute Force)</h3>
+                <div class="code-block mb-10">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeDuplicates</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> currentSize = nums.length;
+    <span class="keyword">if</span> (currentSize < <span class="number">3</span>) <span class="keyword">return</span> currentSize;
+
+    <span class="keyword">int</span> currentIndex = <span class="number">1</span>;
+    <span class="keyword">int</span> sameElementCount = <span class="number">1</span>;
+
+    <span class="keyword">while</span> (currentIndex < currentSize) {
+        <span class="keyword">if</span> (nums[currentIndex] == nums[currentIndex - <span class="number">1</span>]) {
+            sameElementCount++;
+        } <span class="keyword">else</span> {
+            sameElementCount = <span class="number">1</span>;
+        }
+
+        <span class="comment">// If we find more than 2, shift everything left</span>
+        <span class="keyword">if</span> (sameElementCount > <span class="number">2</span>) {
+            <span class="keyword">for</span> (<span class="keyword">int</span> k = currentIndex; k < currentSize - <span class="number">1</span>; k++) {
+                nums[k] = nums[k + <span class="number">1</span>];
+            }
+            currentSize--;
+            sameElementCount--; <span class="comment">// We stayed at the same index, so decrement count</span>
+        } <span class="keyword">else</span> {
+            currentIndex++;
+        }
+    }
+    <span class="keyword">return</span> currentSize;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-red-50 p-6 rounded-2xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-slate-700"><b>Time:</b> <b class="text-red-600">O(n²)</b>. For every extra duplicate, we shift <b>O(n)</b> elements.</p>
+                        <p class="text-slate-700 mt-2"><b>Space:</b> <b>O(1)</b>. In-place modification.</p>
+                    </div>
+                    <div class="bg-slate-100 p-6 rounded-2xl">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Trade-off</h4>
+                        <p class="text-slate-600">Simple to reason about but highly inefficient for large arrays with many duplicates. Repeatedly moving data is the primary bottleneck.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: TWO POINTERS -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-emerald-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide shadow-lg">
+                <span>APPROACH 2</span>
+                <span class="opacity-50">|</span>
+                <span>OPTIMAL TWO-POINTER</span>
+            </div>
+
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-100 ring-4 ring-emerald-50">
+                <div class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">Intuition: "The Smart Overwrite"</h3>
+                    <p class="text-slate-600 text-lg">
+                        Since the array is sorted, duplicates are grouped. We maintain a <b>writeIndex</b> pointer. For every element seen by the <b>readIndex</b>, we only write it if it's different from the element <b>two positions back</b> from our current write position. This automatically allows up to two duplicates.
+                    </p>
+                </div>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-emerald-50 p-8 rounded-3xl mb-10 border border-emerald-100">
+                    <div id="opt-msg" class="step-msg mb-8 border-l-emerald-500 text-emerald-900">Starting optimal scan. First two elements are always kept.</div>
+                    
+                    <div class="flex justify-center gap-3 mb-12 h-20" id="opt-container">
+                        <!-- Array cells -->
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="optVisualizer.reset()" class="px-8 py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl font-bold transition-all">Reset</button>
+                        <button onclick="optVisualizer.next()" id="opt-next" class="px-12 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeDuplicates</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">if</span> (nums.length <= <span class="number">2</span>) <span class="keyword">return</span> nums.length;
+
+    <span class="comment">// writeIndex: Position where we will write the next valid element</span>
+    <span class="keyword">int</span> writeIndex = <span class="number">2</span>;
+
+    <span class="comment">// currentIndex: Explores the rest of the array</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> currentIndex = <span class="number">2</span>; currentIndex < nums.length; currentIndex++) {
+        <span class="comment">// Core Logic: Only keep if it's NOT a 3rd duplicate.
+        // We compare against the element at (writeIndex - 2).</span>
+        <span class="keyword">if</span> (nums[currentIndex] != nums[writeIndex - <span class="number">2</span>]) {
+            nums[writeIndex] = nums[currentIndex];
+            writeIndex++;
+        }
+    }
+    
+    <span class="keyword">return</span> writeIndex;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-emerald-100 p-6 rounded-2xl border border-emerald-200">
+                        <h4 class="font-bold text-emerald-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-emerald-900"><b>Time:</b> <b class="text-emerald-700">O(n)</b>. Exactly one pass through the array.</p>
+                        <p class="text-emerald-900 mt-2"><b>Space:</b> <b>O(1)</b>. No auxiliary space used.</p>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-6 rounded-2xl shadow-inner">
+                        <h4 class="font-bold text-white opacity-80 mb-3 uppercase text-sm tracking-widest">Why it works</h4>
+                        <p class="text-emerald-50 text-sm leading-relaxed">
+                            Because the array is sorted, any value occurring more than twice will be equal to the value at <code>writeIndex - 2</code>. If <code>nums[currentIndex] == nums[writeIndex - 2]</code>, it means we already have two instances of that value in our "clean" portion, so we skip the current one.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Performance Comparison</h2>
+            <div class="overflow-hidden rounded-2xl border border-slate-200">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="p-6 font-bold text-slate-800">Approach</th>
+                            <th class="p-6 font-bold text-slate-800">Time</th>
+                            <th class="p-6 font-bold text-slate-800">Space</th>
+                            <th class="p-6 font-bold text-slate-800">Efficiency</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-6 font-semibold">Brute Force (Shift)</td>
+                            <td class="p-6"><b>O(n²)</b></td>
+                            <td class="p-6"><b>O(1)</b></td>
+                            <td class="p-6 text-red-500 font-bold uppercase text-xs">Low</td>
+                        </tr>
+                        <tr class="bg-emerald-50/50">
+                            <td class="p-6 font-semibold">Two Pointers (Optimal)</td>
+                            <td class="p-6 text-emerald-700"><b>O(n)</b></td>
+                            <td class="p-6 text-emerald-700"><b>O(1)</b></td>
+                            <td class="p-6 text-emerald-600 font-bold uppercase text-xs">Maximum</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-8 opacity-10">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            </div>
+            <h2 class="text-3xl font-bold mb-8 text-emerald-400">⚡ Fast Recall Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">The "K-Duplicates" Pattern</h4>
+                    <p class="text-slate-400 leading-relaxed mb-4">
+                        This problem is a specific case of "Allow at most K duplicates". The logic generalizes perfectly:
+                    </p>
+                    <div class="bg-slate-800 p-4 rounded-xl font-mono text-sm text-emerald-300">
+                        if (n > nums[write - K]) { <br>
+                        &nbsp;&nbsp;nums[write++] = n; <br>
+                        }
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Visual Memory Hook</h4>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">1.</span>
+                            <span><b>Write Pointer</b> is your boundary of "clean" data.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">2.</span>
+                            <span>Always compare the <b>New Candidate</b> with the <b>Backdoor</b> (write - K).</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">3.</span>
+                            <span>If they match, the current spot is "saturated". Skip it.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const TEST_DATA = [1, 1, 1, 2, 2, 3];
+
+        // --- BRUTE FORCE VISUALIZER ---
+        const bfVisualizer = {
+            data: [...TEST_DATA],
+            idx: 0,
+            size: 6,
+            count: 0,
+            isShifting: false,
+            shiftIdx: -1,
+            
+            init() { this.render(); },
+            reset() {
+                this.data = [...TEST_DATA];
+                this.idx = 0;
+                this.size = 6;
+                this.count = 0;
+                this.isShifting = false;
+                this.shiftIdx = -1;
+                document.getElementById('bf-next').disabled = false;
+                this.render("Reset. Click Next to start.");
+            },
+            render(msg) {
+                const container = document.getElementById('bf-container');
+                const msgEl = document.getElementById('bf-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = '';
+                this.data.forEach((val, i) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'array-slot';
+                    slot.innerText = val;
+                    if (i < this.size) {
+                        if (this.isShifting) {
+                            if (i === this.idx) slot.classList.add('slot-duplicate');
+                            if (i >= this.shiftIdx) slot.classList.add('slot-active');
+                        } else {
+                            if (i === this.idx) slot.classList.add('slot-active');
+                        }
+                    } else {
+                        slot.classList.add('slot-ignored');
+                    }
+                    container.appendChild(slot);
+                });
+            },
+            next() {
+                if (this.idx >= this.size) {
+                    this.render(`Finished! Remaining size k = ${this.size}`);
+                    document.getElementById('bf-next').disabled = true;
+                    return;
+                }
+
+                if (this.isShifting) {
+                    if (this.shiftIdx < this.size - 1) {
+                        this.data[this.shiftIdx] = this.data[this.shiftIdx + 1];
+                        this.shiftIdx++;
+                        this.render(`Shifting left... Moved index ${this.shiftIdx} to ${this.shiftIdx-1}`);
+                    } else {
+                        this.size--;
+                        this.isShifting = false;
+                        this.count--; // Compensate because we stay at same index
+                        this.render(`Shift done. New logical size: ${this.size}. Re-checking index ${this.idx}.`);
+                    }
+                } else {
+                    if (this.idx > 0 && this.data[this.idx] === this.data[this.idx-1]) {
+                        this.count++;
+                    } else {
+                        this.count = 1;
+                    }
+
+                    if (this.count > 2) {
+                        this.isShifting = true;
+                        this.shiftIdx = this.idx;
+                        this.render(`Duplicate found! Element ${this.data[this.idx]} appears for the 3rd time. Starting shift...`);
+                    } else {
+                        this.render(`Index ${this.idx}: Value ${this.data[this.idx]} is valid (Count: ${this.count}).`);
+                        this.idx++;
+                    }
+                }
+            }
+        };
+
+        // --- OPTIMAL VISUALIZER ---
+        const optVisualizer = {
+            data: [...TEST_DATA],
+            write: 2,
+            read: 2,
+            finished: false,
+
+            init() { this.render(); },
+            reset() {
+                this.data = [...TEST_DATA];
+                this.write = 2;
+                this.read = 2;
+                this.finished = false;
+                document.getElementById('opt-next').disabled = false;
+                this.render("First two elements [1, 1] are automatically valid.");
+            },
+            render(msg) {
+                const container = document.getElementById('opt-container');
+                const msgEl = document.getElementById('opt-msg');
+                if (msg) msgEl.innerText = msg;
+
+                container.innerHTML = '';
+                this.data.forEach((val, i) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'array-slot';
+                    slot.innerText = val;
+
+                    if (i < this.write) slot.classList.add('slot-keep');
+                    
+                    if (i === this.write) {
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag tag-write';
+                        tag.innerText = 'Write';
+                        slot.appendChild(tag);
+                    }
+
+                    if (i === this.read) {
+                        slot.classList.add('slot-active');
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag tag-read';
+                        tag.style.top = '62px';
+                        tag.innerText = 'Read';
+                        slot.appendChild(tag);
+                    }
+
+                    container.appendChild(slot);
+                });
+            },
+            next() {
+                if (this.read >= this.data.length) {
+                    this.render(`Process complete! k = ${this.write}. Result: [${this.data.slice(0, this.write).join(', ')}]`);
+                    document.getElementById('opt-next').disabled = true;
+                    return;
+                }
+
+                const candidate = this.data[this.read];
+                const backdoor = this.data[this.write - 2];
+
+                if (candidate !== backdoor) {
+                    this.render(`Read ${candidate} != Backdoor ${backdoor}. It's safe to write!`);
+                    this.data[this.write] = candidate;
+                    this.write++;
+                } else {
+                    this.render(`Read ${candidate} == Backdoor ${backdoor}. Already have 2 instances. Skip.`);
+                }
+                
+                this.read++;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfVisualizer.init();
+            optVisualizer.init();
+        }
+    </script>
+</body>
+</html>

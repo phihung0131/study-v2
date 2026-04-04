@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Stack vs Heap Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; }
+        .comparison-card { transition: all 0.3s ease; }
+        .comparison-card:hover { transform: scale(1.02); }
+        .memory-visual { display: flex; gap: 2rem; justify-content: center; margin: 2rem 0; }
+        .stack-container, .heap-container { border: 3px dashed #cbd5e1; border-radius: 1rem; padding: 1rem; width: 200px; min-height: 300px; display: flex; flex-direction: column-reverse; gap: 4px; }
+        .stack-frame { background: #3b82f6; color: white; padding: 10px; border-radius: 4px; text-align: center; font-size: 0.8rem; animation: slideIn 0.5s ease-out; }
+        .heap-obj { background: #10b981; color: white; padding: 15px; border-radius: 50%; text-align: center; font-size: 0.7rem; width: 80px; height: 80px; display: flex; items-center; justify-content: center; margin: 5px auto; }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="p-4 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-indigo-900 mb-4">Bài 1.2: Stack vs Heap</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto italic">"Stack là ngắn hạn, Heap là dài hạn. Hiểu sự khác biệt để làm chủ hiệu năng."</p>
+        </header>
+
+        <!-- Section 1: The Analogy -->
+        <section class="bg-white rounded-3xl p-8 shadow-xl mb-12">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-indigo-700">
+                <i class="fas fa-lightbulb"></i> 1. Phép ẩn dụ: Balo và Kho bãi
+            </h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <h3 class="font-bold text-xl mb-3">Stack (Chiếc Balo)</h3>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Hãy tưởng tượng em đi leo núi. Những thứ em cần dùng ngay (biến cục bộ, địa chỉ hàm) em bỏ vào **Balo**. 
+                        Nó nhỏ, nhẹ, lấy ra cất vào cực nhanh. Nhưng leo xong đoạn dốc đó (kết thúc hàm), em sẽ đổ sạch đồ trong Balo ra để đi đoạn tiếp theo.
+                    </p>
+                </div>
+                <div class="p-6 bg-emerald-50 rounded-2xl border-l-8 border-emerald-500">
+                    <h3 class="font-bold text-xl mb-3">Heap (Cái Kho)</h3>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Những vật dụng cồng kềnh (Objects) em gửi ở **Kho bãi**. Nó rộng thênh thang, chứa được cả tấn đồ. 
+                        Để lấy đồ, em phải cầm một **tấm thẻ (Reference)** ghi số phòng. Khi em không dùng nữa, chủ kho (Garbage Collector) sẽ đi kiểm tra và dọn dẹp sau.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Deep Dive Stack -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800">2. Phân tích chuyên sâu: Stack Memory</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-4 text-blue-600">Cơ chế hoạt động</h4>
+                        <ul class="space-y-3 text-slate-700 text-sm">
+                            <li><i class="fas fa-check-circle text-blue-500 mr-2"></i><strong>LIFO (Last-In-First-Out):</strong> Hàm nào gọi sau cùng sẽ thoát ra trước cùng.</li>
+                            <li><i class="fas fa-check-circle text-blue-500 mr-2"></i><strong>Stack Frame:</strong> Mỗi khi gọi một method, một Frame được đẩy vào. Chứa:
+                                <ul class="ml-8 list-disc text-xs mt-2 space-y-1">
+                                    <li>Local Variable Array (Biến cục bộ).</li>
+                                    <li>Operand Stack (Dùng cho tính toán toán học).</li>
+                                    <li>Frame Data (Tham chiếu tới Runtime Constant Pool).</li>
+                                </ul>
+                            </li>
+                            <li><i class="fas fa-check-circle text-blue-500 mr-2"></i><strong>Tính chất:</strong> Được quản lý bởi hệ điều hành/JVM, không cần GC dọn dẹp.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 w-full md:w-1/3">
+                        <p class="text-xs font-bold uppercase text-slate-400 mb-4 text-center">Visual Stack</p>
+                        <div class="stack-container" id="stack-visual">
+                            <div class="stack-frame">Method: main()</div>
+                            <div class="stack-frame">Method: calculate()</div>
+                            <div class="stack-frame">Method: print()</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Deep Dive Heap -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800">3. Phân tích chuyên sâu: Heap Memory</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row-reverse gap-8">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-4 text-emerald-600">Cơ chế hoạt động</h4>
+                        <ul class="space-y-3 text-slate-700 text-sm">
+                            <li><i class="fas fa-check-circle text-emerald-500 mr-2"></i><strong>Vùng nhớ dùng chung:</strong> Mọi Thread đều có thể truy cập vào đối tượng trên Heap (nếu có tham chiếu).</li>
+                            <li><i class="fas fa-check-circle text-emerald-500 mr-2"></i><strong>Phân mảnh bộ nhớ:</strong> Do Objects có kích thước khác nhau và "sống" lâu mau khác nhau, Heap dễ bị phân mảnh.</li>
+                            <li><i class="fas fa-check-circle text-emerald-500 mr-2"></i><strong>Garbage Collection:</strong> Là đối tượng chính của các thuật toán GC.</li>
+                        </ul>
+                        <div class="mt-6 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                            <p class="text-xs font-semibold text-yellow-800">
+                                <i class="fas fa-microchip"></i> JVM Internals: <strong>TLAB (Thread Local Allocation Buffer)</strong><br>
+                                Để tránh các Thread tranh giành nhau khi tạo Object trên Heap, JVM cấp cho mỗi Thread một vùng nhỏ trên Heap gọi là TLAB để tự ý "vẽ" Object vào đó mà không cần Lock. Cực kỳ quan trọng cho Performance!
+                            </p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 w-full md:w-1/3">
+                        <p class="text-xs font-bold uppercase text-slate-400 mb-4 text-center">Visual Heap</p>
+                        <div class="heap-container">
+                            <div class="heap-obj">User Obj</div>
+                            <div class="heap-obj">Array [100]</div>
+                            <div class="heap-obj">String "Hi"</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Code & Behavior -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800">4. Code thực chiến: Chuyện gì đang xảy ra?</h2>
+            <div class="code-block mb-6">
+<pre><code><span class="text-emerald-400">// Tình huống: Pass-by-value trong Java liên quan gì đến Stack/Heap?</span>
+<span class="text-purple-400">public class</span> <span class="text-yellow-400">MemoryTest</span> {
+    <span class="text-purple-400">public static void</span> <span class="text-blue-400">main</span>(String[] args) {
+        <span class="text-purple-400">int</span> age = <span class="text-orange-400">25</span>; <span class="text-slate-500">// Stack: Lưu giá trị 25</span>
+        User user = <span class="text-purple-400">new</span> User(<span class="text-green-400">"Tuan"</span>); <span class="text-slate-500">// Stack: Lưu địa chỉ (0x123). Heap: Lưu data User.</span>
+        
+        <span class="text-blue-400">update</span>(age, user);
+        
+        System.out.println(age);  <span class="text-slate-500">// Vẫn là 25 (vì Stack frame cũ không đổi)</span>
+        System.out.println(user.getName()); <span class="text-slate-500">// Đổi thành "Tèo" (vì cùng trỏ vào 1 vùng Heap)</span>
+    }
+
+    <span class="text-purple-400">static void</span> <span class="text-blue-400">update</span>(<span class="text-purple-400">int</span> a, User u) {
+        a = <span class="text-orange-400">30</span>; <span class="text-slate-500">// Chỉ thay đổi bản copy trong Stack Frame của hàm update</span>
+        u.setName(<span class="text-green-400">"Tèo"</span>); <span class="text-slate-500">// Thay đổi data thực sự trong "Cái Kho" (Heap)</span>
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 5: Comparison Table -->
+        <section class="mb-12 overflow-hidden bg-white rounded-3xl shadow-lg">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-indigo-900 text-white">
+                        <th class="p-4">Đặc điểm</th>
+                        <th class="p-4">Stack</th>
+                        <th class="p-4">Heap</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    <tr class="border-b">
+                        <td class="p-4 font-bold">Kích thước</td>
+                        <td class="p-4">Nhỏ (Mặc định thường là 1MB).</td>
+                        <td class="p-4">Lớn (Cấu hình qua -Xmx).</td>
+                    </tr>
+                    <tr class="border-b bg-slate-50">
+                        <td class="p-4 font-bold">Lưu trữ</td>
+                        <td class="p-4">Primitives, References, Method frames.</td>
+                        <td class="p-4">Objects, Arrays, JRE Classes.</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="p-4 font-bold">Tốc độ</td>
+                        <td class="p-4">Cực nhanh (truy cập trực tiếp).</td>
+                        <td class="p-4">Chậm hơn (phải giải mã địa chỉ).</td>
+                    </tr>
+                    <tr class="border-b bg-slate-50">
+                        <td class="p-4 font-bold">Tồn tại</td>
+                        <td class="p-4">Ngắn (chỉ khi method đang chạy).</td>
+                        <td class="p-4">Dài (đến khi không còn tham chiếu).</td>
+                    </tr>
+                    <tr>
+                        <td class="p-4 font-bold">Error</td>
+                        <td class="p-4 text-red-600 font-semibold">StackOverflowError</td>
+                        <td class="p-4 text-red-600 font-semibold">OutOfMemoryError</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 6: Advanced - Escape Analysis -->
+        <section class="mb-12 p-6 bg-purple-900 text-white rounded-3xl shadow-xl">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fas fa-magic"></i> Tuyệt chiêu tối ưu: Escape Analysis
+            </h2>
+            <p class="text-sm leading-relaxed mb-4">
+                "Thưa Thầy, có bao giờ Object được lưu trên Stack không?" -> **CÓ**. 
+                Nếu JVM nhận ra một Object chỉ được sử dụng bên trong một hàm và không bao giờ "thoát" (escape) ra ngoài (ví dụ: trả về hoặc gán cho static), JVM sẽ tự động cấp phát Object đó ngay trên **Stack**. 
+            </p>
+            <p class="text-xs bg-purple-800 p-3 rounded-lg border border-purple-700 italic">
+                Lợi ích: Không tốn công dọn rác (GC), tốc độ thực thi tăng vọt. Đây là một trong những tối ưu hóa đỉnh cao của JIT Compiler.
+            </p>
+        </section>
+
+        <!-- Section 7: Interview Prep -->
+        <section class="bg-indigo-50 p-8 rounded-3xl border-2 border-indigo-200">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900">Câu hỏi phỏng vấn (Hàng nóng)</h2>
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm">
+                    <p class="font-semibold text-slate-800">Q1: Tại sao việc sử dụng biến toàn cục (Static) quá nhiều lại dễ gây OutOfMemory?</p>
+                    <p class="text-sm text-slate-600 mt-2">A: Vì các biến Static được tham chiếu từ "GC Roots", chúng sẽ tồn tại vĩnh viễn trong Heap cho đến khi app tắt. GC sẽ không bao giờ dám dọn dẹp các đối tượng này.</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm">
+                    <p class="font-semibold text-slate-800">Q2: Tăng kích thước Stack (-Xss) có luôn tốt không?</p>
+                    <p class="text-sm text-slate-600 mt-2">A: Không. Tổng bộ nhớ RAM là hữu hạn. Nếu mỗi Stack của 1 Thread quá lớn, bạn sẽ tạo được ít Thread hơn. Trade-off ở đây là: Đệ quy sâu hơn vs. Khả năng xử lý đa luồng (Concurrency).</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm">
+                    <p class="font-semibold text-slate-800">Q3: Chuyện gì xảy ra nếu ta gán <code>user = null</code>?</p>
+                    <p class="text-sm text-slate-600 mt-2">A: Biến tham chiếu trên **Stack** sẽ mang giá trị null. Đối tượng thực sự trên **Heap** trở thành "unreachable" (mồ côi). Lúc này nó chính thức trở thành "rác" để GC dọn dẹp.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-12 text-slate-400 text-sm">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.2: Làm chủ bộ nhớ</p>
+        </footer>
+    </div>
+</body>
+</html>

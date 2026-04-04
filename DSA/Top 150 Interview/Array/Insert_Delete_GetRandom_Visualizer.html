@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Insert Delete GetRandom O(1)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .ds-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+
+        .list-box {
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            background: white;
+            padding: 15px;
+            min-width: 300px;
+        }
+
+        .map-box {
+            border: 2px solid #94a3b8;
+            border-radius: 12px;
+            background: #f1f5f9;
+            padding: 15px;
+            min-width: 250px;
+        }
+
+        .array-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.4s ease;
+        }
+
+        .cell-index {
+            font-size: 10px;
+            color: #94a3b8;
+            position: absolute;
+            top: -18px;
+        }
+
+        .cell-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); }
+        .cell-swap { border-color: #f59e0b; background-color: #fffbeb; }
+        .cell-delete { border-color: #ef4444; background-color: #fef2f2; }
+        .cell-success { border-color: #10b981; background-color: #ecfdf5; }
+
+        .map-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        .map-row:last-child { border-bottom: none; }
+        .map-header { font-weight: bold; color: #64748b; border-bottom: 2px solid #cbd5e1; }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Insert Delete GetRandom O(1)</h1>
+            <p class="text-slate-500 font-medium">LeetCode #380 | Difficulty: Medium | Design, Array, Hash Table</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>🎯</span> Problem Requirements
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Implement the <b>RandomizedSet</b> class:
+            </p>
+            <ul class="list-disc pl-6 space-y-2 text-slate-700 mb-4">
+                <li><b>insert(val)</b>: Inserts an item <b>val</b> into the set if not present. Returns true if the item was not present, false otherwise.</li>
+                <li><b>remove(val)</b>: Removes an item <b>val</b> from the set if present. Returns true if the item was present, false otherwise.</li>
+                <li><b>getRandom()</b>: Returns a random element from the current set of elements. Each element must have the <b>same probability</b> of being returned.</li>
+            </ul>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 font-bold uppercase tracking-wider mb-1">Strict Constraint:</p>
+                <p class="text-blue-800">You must implement the functions such that each function works in <b>average O(1)</b> time complexity.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="bg-slate-800 text-white px-5 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 1: Naive ArrayList
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    A simple <b>ArrayList</b> handles <b>insert</b> and <b>getRandom</b> efficiently. However, <b>remove</b> is problematic because finding the element takes <b>O(N)</b>, and deleting it from the middle requires shifting elements, which is also <b>O(N)</b>.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Select an operation to simulate the naive approach.</div>
+                    
+                    <div class="ds-container">
+                        <div class="list-box">
+                            <p class="text-center font-bold text-slate-400 mb-4 uppercase text-xs">ArrayList Data</p>
+                            <div class="flex flex-wrap gap-4 justify-center" id="bf-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-4 mt-8">
+                        <div class="flex gap-2">
+                            <input type="number" id="bf-input" class="w-20 px-3 py-2 border rounded" placeholder="Val" value="10">
+                            <button onclick="bfViz.insert()" class="px-4 py-2 bg-slate-700 text-white rounded font-bold">Insert</button>
+                            <button onclick="bfViz.remove()" class="px-4 py-2 bg-red-600 text-white rounded font-bold">Remove</button>
+                        </div>
+                        <button onclick="bfViz.getRandom()" class="px-4 py-2 bg-blue-600 text-white rounded font-bold">GetRandom</button>
+                        <button onclick="bfViz.reset()" class="px-4 py-2 bg-slate-200 rounded font-bold">Reset</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Naive)</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">class</span> <span class="type">RandomizedSet</span> {
+    <span class="type">List</span>&lt;<span class="type">Integer</span>&gt; list = <span class="keyword">new</span> <span class="type">ArrayList</span>&lt;&gt;();
+
+    <span class="keyword">public boolean</span> <span class="type">insert</span>(<span class="keyword">int</span> val) {
+        <span class="keyword">if</span> (list.contains(val)) <span class="keyword">return false</span>; <span class="comment">// O(N) linear search</span>
+        list.add(val); <span class="comment">// O(1) append</span>
+        <span class="keyword">return true</span>;
+    }
+
+    <span class="keyword">public boolean</span> <span class="type">remove</span>(<span class="keyword">int</span> val) {
+        <span class="keyword">int</span> index = list.indexOf(val); <span class="comment">// O(N) linear search</span>
+        <span class="keyword">if</span> (index == -<span class="number">1</span>) <span class="keyword">return false</span>;
+        list.remove(index); <span class="comment">// O(N) element shifting</span>
+        <span class="keyword">return true</span>;
+    }
+
+    <span class="keyword">public int</span> <span class="type">getRandom</span>() {
+        <span class="keyword">int</span> randomIndex = <span class="keyword">new</span> <span class="type">Random</span>().nextInt(list.size());
+        <span class="keyword">return</span> list.get(randomIndex); <span class="comment">// O(1) index access</span>
+    }
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-5 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Insert:</b> <b>O(N)</b> (due to contains() check).</p>
+                        <p class="text-sm"><b>Remove:</b> <b>O(N)</b> (due to finding index and shifting).</p>
+                        <p class="text-sm"><b>GetRandom:</b> <b>O(1)</b>.</p>
+                    </div>
+                    <div class="bg-slate-100 p-5 rounded-xl">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Why it fails</h4>
+                        <p class="text-sm text-slate-600">The requirement asks for average <b>O(1)</b> for ALL three. The linear search and shifting are the bottlenecks here.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: OPTIMAL (ARRAYLIST + HASHMAP) -->
+        <section class="mb-20">
+            <div class="bg-emerald-600 text-white px-5 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 2: HashMap + ArrayList (Optimal)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Swap & Pop Trick"</h3>
+                <p class="text-slate-600 mb-8">
+                    To achieve <b>O(1)</b>, we need to solve two problems:<br>
+                    1. <b>Lookup:</b> Use a <b>HashMap</b> to store <b>Value -> Index</b>. This makes finding an element's location <b>O(1)</b>.<br>
+                    2. <b>Deletion:</b> Removing from the middle is <b>O(N)</b>, but removing the <b>last element</b> is <b>O(1)</b>. <br>
+                    <b>The Trick:</b> Copy the last element into the position of the element to be deleted, update its index in the map, and then pop the last element.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="opt-msg" class="step-msg">Try inserting or removing values to see the Map/List interaction.</div>
+                    
+                    <div class="ds-container">
+                        <div class="map-box">
+                            <p class="text-center font-bold text-slate-500 mb-4 uppercase text-xs">HashMap (Val → Idx)</p>
+                            <div id="opt-map">
+                                <div class="map-row map-header"><span>Value</span><span>Index</span></div>
+                                <div id="map-contents"></div>
+                            </div>
+                        </div>
+                        <div class="list-box">
+                            <p class="text-center font-bold text-slate-400 mb-4 uppercase text-xs">ArrayList (Indices)</p>
+                            <div class="flex flex-wrap gap-6 justify-center pt-4" id="opt-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-4 mt-8">
+                        <div class="flex gap-2">
+                            <input type="number" id="opt-input" class="w-20 px-3 py-2 border rounded" placeholder="Val" value="10">
+                            <button onclick="optViz.insert()" class="px-4 py-2 bg-emerald-600 text-white rounded font-bold">Insert</button>
+                            <button onclick="optViz.remove()" class="px-4 py-2 bg-red-600 text-white rounded font-bold">Remove</button>
+                        </div>
+                        <button onclick="optViz.getRandom()" class="px-4 py-2 bg-blue-600 text-white rounded font-bold">GetRandom</button>
+                        <button onclick="optViz.reset()" class="px-4 py-2 bg-slate-200 rounded font-bold">Reset</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">class</span> <span class="type">RandomizedSet</span> {
+    <span class="type">Map</span>&lt;<span class="type">Integer</span>, <span class="type">Integer</span>&gt; valToIndexMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    <span class="type">List</span>&lt;<span class="type">Integer</span>&gt; valuesList = <span class="keyword">new</span> <span class="type">ArrayList</span>&lt;&gt;();
+    <span class="type">Random</span> rand = <span class="keyword">new</span> <span class="type">Random</span>();
+
+    <span class="keyword">public boolean</span> <span class="type">insert</span>(<span class="keyword">int</span> val) {
+        <span class="keyword">if</span> (valToIndexMap.containsKey(val)) <span class="keyword">return false</span>;
+        
+        <span class="comment">// Add to Map with its upcoming index in the List</span>
+        valToIndexMap.put(val, valuesList.size());
+        valuesList.add(val);
+        <span class="keyword">return true</span>;
+    }
+
+    <span class="keyword">public boolean</span> <span class="type">remove</span>(<span class="keyword">int</span> val) {
+        <span class="keyword">if</span> (!valToIndexMap.containsKey(val)) <span class="keyword">return false</span>;
+        
+        <span class="keyword">int</span> indexToRemove = valToIndexMap.get(val);
+        <span class="keyword">int</span> lastElement = valuesList.get(valuesList.size() - <span class="number">1</span>);
+        
+        <span class="comment">// 1. Move last element to the position of element to remove</span>
+        valuesList.set(indexToRemove, lastElement);
+        <span class="comment">// 2. Update the last element's index in the Map</span>
+        valToIndexMap.put(lastElement, indexToRemove);
+        
+        <span class="comment">// 3. Remove last element from List and current value from Map</span>
+        valuesList.remove(valuesList.size() - <span class="number">1</span>);
+        valToIndexMap.remove(val);
+        
+        <span class="keyword">return true</span>;
+    }
+
+    <span class="keyword">public int</span> <span class="type">getRandom</span>() {
+        <span class="keyword">return</span> valuesList.get(rand.nextInt(valuesList.size()));
+    }
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity Analysis</h4>
+                        <ul class="text-sm space-y-1">
+                            <li><b>Insert:</b> <b>O(1)</b> (Average Map put + List append).</li>
+                            <li><b>Remove:</b> <b>O(1)</b> (Map lookup + List swap + List pop).</li>
+                            <li><b>GetRandom:</b> <b>O(1)</b> (List index access).</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Key Concept</h4>
+                        <p class="text-sm text-slate-600">The <b>ArrayList</b> provides fast random access, while the <b>HashMap</b> provides fast lookup. The "Swap with Last" technique keeps the list compact without shifting costs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-xl shadow-sm mb-8 border border-slate-200">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Insert</th>
+                            <th class="p-4 border">Remove</th>
+                            <th class="p-4 border">GetRandom</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Naive ArrayList</td>
+                            <td class="p-4 border text-red-600">O(N)</td>
+                            <td class="p-4 border text-red-600">O(N)</td>
+                            <td class="p-4 border text-emerald-600">O(1)</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-800">Map + List (Optimal)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(1)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-blue-400 flex items-center gap-2">
+                    <span>⚡</span> Recall Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>HashMap alone:</b> $O(1)$ insert/delete, but cannot $O(1)$ random access (no index).</li>
+                    <li>• <b>ArrayList alone:</b> $O(1)$ random access, but $O(N)$ lookup/delete.</li>
+                    <li>• <b>The Hybrid:</b> Map stores <b>index</b> of value in list.</li>
+                    <li>• <b>The Removal Trick:</b> Replace target with <b>last element</b> in the list to avoid shifting.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>Remove Last Element:</b> The logic works naturally. IndexToRemove equals LastIndex. Swap does nothing, Pop removes it.</li>
+                    <li><b>Insert Duplicate:</b> Check Map first (returns false).</li>
+                    <li><b>Remove Non-existent:</b> Check Map first (returns false).</li>
+                    <li><b>Empty Structure:</b> Handle random selection carefully (size 0).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BRUTE FORCE LOGIC ---
+        const bfViz = {
+            list: [],
+            msg: document.getElementById('bf-msg'),
+            input: document.getElementById('bf-input'),
+            container: document.getElementById('bf-list'),
+
+            reset() {
+                this.list = [];
+                this.updateUI();
+                this.msg.innerText = "Set reset.";
+            },
+
+            updateUI(activeIndex = -1) {
+                this.container.innerHTML = this.list.map((v, i) => `
+                    <div class="array-cell ${i === activeIndex ? 'cell-active' : ''}">
+                        <span class="cell-index">${i}</span>
+                        ${v}
+                    </div>
+                `).join('');
+            },
+
+            insert() {
+                const val = parseInt(this.input.value);
+                if (this.list.includes(val)) {
+                    this.msg.innerText = `Insert(${val}): Failed. Value already exists in list. (O(N) check)`;
+                    return;
+                }
+                this.list.push(val);
+                this.updateUI(this.list.length - 1);
+                this.msg.innerText = `Insert(${val}): Success. Added to the end.`;
+            },
+
+            remove() {
+                const val = parseInt(this.input.value);
+                const idx = this.list.indexOf(val);
+                if (idx === -1) {
+                    this.msg.innerText = `Remove(${val}): Failed. Value not found in list. (O(N) check)`;
+                    return;
+                }
+                this.list.splice(idx, 1);
+                this.updateUI();
+                this.msg.innerText = `Remove(${val}): Success. Elements after index ${idx} were shifted. (O(N) operation)`;
+            },
+
+            getRandom() {
+                if (this.list.length === 0) return;
+                const idx = Math.floor(Math.random() * this.list.length);
+                this.updateUI(idx);
+                this.msg.innerText = `GetRandom: Returned ${this.list[idx]} from index ${idx}. (O(1) access)`;
+            }
+        };
+
+        // --- OPTIMAL LOGIC ---
+        const optViz = {
+            map: new Map(), // val -> index
+            list: [],
+            msg: document.getElementById('opt-msg'),
+            input: document.getElementById('opt-input'),
+            listContainer: document.getElementById('opt-list'),
+            mapContainer: document.getElementById('map-contents'),
+
+            reset() {
+                this.map.clear();
+                this.list = [];
+                this.updateUI();
+                this.msg.innerText = "Set reset.";
+            },
+
+            updateUI(activeIdx = -1, swapIdx = -1) {
+                // Update List
+                this.listContainer.innerHTML = this.list.map((v, i) => {
+                    let cls = "";
+                    if (i === activeIdx) cls = "cell-active";
+                    if (i === swapIdx) cls = "cell-swap";
+                    return `<div class="array-cell ${cls}"><span class="cell-index">${i}</span>${v}</div>`;
+                }).join('');
+
+                // Update Map
+                let mapHtml = "";
+                this.map.forEach((idx, val) => {
+                    mapHtml += `<div class="map-row"><span>${val}</span><span class="font-bold text-blue-600">${idx}</span></div>`;
+                });
+                this.mapContainer.innerHTML = mapHtml;
+            },
+
+            insert() {
+                const val = parseInt(this.input.value);
+                if (this.map.has(val)) {
+                    this.msg.innerText = `Insert(${val}): Value exists in Map. Returning False. (O(1))`;
+                    return;
+                }
+                const newIdx = this.list.length;
+                this.map.set(val, newIdx);
+                this.list.push(val);
+                this.updateUI(newIdx);
+                this.msg.innerText = `Insert(${val}): Added to Map and appended to List at index ${newIdx}. (O(1))`;
+            },
+
+            async remove() {
+                const val = parseInt(this.input.value);
+                if (!this.map.has(val)) {
+                    this.msg.innerText = `Remove(${val}): Value not in Map. Returning False. (O(1))`;
+                    return;
+                }
+
+                const idxToRemove = this.map.get(val);
+                const lastIdx = this.list.length - 1;
+                const lastVal = this.list[lastIdx];
+
+                this.updateUI(idxToRemove, lastIdx);
+                this.msg.innerText = `Remove(${val}): Found at index ${idxToRemove}. Swapping with last element (${lastVal})...`;
+
+                await new Promise(r => setTimeout(r, 600));
+
+                // Perform swap logic
+                this.list[idxToRemove] = lastVal;
+                this.map.set(lastVal, idxToRemove);
+                
+                this.updateUI(idxToRemove);
+                this.msg.innerText = `Updated ${lastVal}'s index in Map. Now popping the redundant last element.`;
+
+                await new Promise(r => setTimeout(r, 600));
+
+                this.list.pop();
+                this.map.delete(val);
+                this.updateUI();
+                this.msg.innerText = `Successfully removed ${val} in O(1) total time.`;
+            },
+
+            getRandom() {
+                if (this.list.length === 0) return;
+                const idx = Math.floor(Math.random() * this.list.length);
+                this.updateUI(idx);
+                this.msg.innerText = `GetRandom: O(1) index access from ArrayList. Returned ${this.list[idx]}.`;
+            }
+        };
+
+        window.onload = () => {
+            bfViz.updateUI();
+            optViz.updateUI();
+        };
+    </script>
+</body>
+</html>

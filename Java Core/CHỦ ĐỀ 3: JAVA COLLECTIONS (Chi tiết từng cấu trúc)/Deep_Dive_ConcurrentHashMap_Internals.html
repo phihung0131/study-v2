@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.6 ConcurrentHashMap Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        code, pre { font-family: 'Fira Code', monospace !important; }
+        .sidebar-link.active { border-right: 4px solid #10b981; background: #ecfdf5; color: #065f46; }
+        .thread-node { transition: all 0.5s ease; }
+        .lock-indicator { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        .cas-success { background-color: #10b981 !important; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white border-r border-gray-200 hidden lg:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-8">
+                <h2 class="text-2xl font-bold text-emerald-600">Thầy Dạy Java</h2>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#problem" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">1. Vấn đề của SynchronizedMap</a>
+                <a href="#evolution" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">2. Tiến hóa Java 7 -> 8+</a>
+                <a href="#internals" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">3. CAS & Bucket-Level Locking</a>
+                <a href="#simulator" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-100 bg-emerald-50 text-emerald-700">4. Interactive Thread Simulator</a>
+                <a href="#weak-consistency" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">5. Weakly Consistent Iterators</a>
+                <a href="#atomic-ops" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">6. Atomic Operations (putIfAbsent)</a>
+                <a href="#interview" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-gray-50">7. Câu hỏi Phỏng vấn Senior</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-16 overflow-y-auto">
+            <header class="mb-16">
+                <div class="flex items-center space-x-2 mb-4">
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase">Bài giảng 3.6</span>
+                    <span class="text-gray-400">|</span>
+                    <span class="text-gray-500 text-sm">Concurrency Series</span>
+                </div>
+                <h1 class="text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">ConcurrentHashMap</h1>
+                <p class="text-xl text-gray-600 max-w-3xl leading-relaxed">Khám phá bí mật đằng sau cấu trúc dữ liệu Thread-safe nhanh nhất thế giới Java, nơi Locking không còn là "nỗi sợ" của Performance.</p>
+            </header>
+
+            <!-- Section 1: The Problem -->
+            <section id="problem" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">1</span>
+                    Vấn đề của SynchronizedMap / Hashtable
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h4 class="font-bold text-red-600 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"></path></svg>
+                            The "Giant Lock" Problem
+                        </h4>
+                        <p class="text-sm text-gray-600 leading-relaxed">
+                            `Collections.synchronizedMap` hoặc `Hashtable` sử dụng một Monitor Lock duy nhất trên **toàn bộ đối tượng Map**. 
+                            <br><br>
+                            Khi Luồng A đang `put`, Luồng B muốn `get` (ở một bucket hoàn toàn khác) cũng phải đứng chờ. Điều này tạo ra "nút thắt cổ chai" (bottleneck) kinh khủng trong hệ thống High-Concurrency.
+                        </p>
+                    </div>
+                    <div class="bg-emerald-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                        <h4 class="font-bold mb-4">Mô phỏng Luồng</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-red-400 rounded-full lock-indicator"></div>
+                                <span class="text-xs font-mono">Thread A: Writing... [LOCKING MAP]</span>
+                            </div>
+                            <div class="flex items-center space-x-3 opacity-50">
+                                <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span class="text-xs font-mono">Thread B: Waiting to Read...</span>
+                            </div>
+                            <div class="flex items-center space-x-3 opacity-50">
+                                <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                <span class="text-xs font-mono">Thread C: Waiting to Put...</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-[10px] text-emerald-300 italic uppercase tracking-widest text-center border-t border-emerald-800 pt-4">
+                            Global Lock = Low Throughput
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Evolution -->
+            <section id="evolution" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">2</span>
+                    Sự tiến hóa của ConcurrentHashMap
+                </h2>
+                <div class="space-y-6">
+                    <div class="bg-white p-8 rounded-2xl border-l-8 border-amber-400 shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Java 7: Segment Locking (Lock Striping)</h4>
+                        <p class="text-sm text-gray-600 leading-relaxed">
+                            Map được chia thành 16 phân đoạn (Segments). Mỗi Segment là một con Map nhỏ có Lock riêng. Luồng A thao tác trên Segment 1 không làm ảnh hưởng Luồng B trên Segment 2. 
+                            <br><strong>Nhược điểm:</strong> Vẫn tốn bộ nhớ cho các Segment và số lượng song song bị giới hạn bởi số Segment.
+                        </p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl border-l-8 border-emerald-500 shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Java 8+: CAS & Synchronized on Bucket Head</h4>
+                        <p class="text-sm text-gray-600 leading-relaxed">
+                            Bỏ hoàn toàn Segments. Lock được đặt trực tiếp lên **Node đầu tiên của mỗi Bucket**. 
+                            Nếu Bucket trống, Java dùng **CAS (Compare-And-Swap)** để chèn Node mà không cần dùng Lock (Lock-free).
+                            Nếu Bucket đã có dữ liệu, chỉ đồng bộ hóa (synchronized) trên Node đầu tiên đó.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: CAS & Internals -->
+            <section id="internals" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">3</span>
+                    CAS (Compare-And-Swap) & volatile
+                </h2>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                    <div>
+                        <p class="text-gray-700 mb-6 leading-relaxed">
+                            `ConcurrentHashMap` sử dụng các phép toán nguyên tử cấp độ CPU. Thay vì nói "Hãy khóa mảng lại cho tôi", nó nói: "Nếu giá trị tại ô này hiện tại là A, hãy đổi nó thành B". Nếu đúng là A, việc đổi xảy ra tức thì. Nếu không, luồng sẽ thử lại (Retry).
+                        </p>
+                        <div class="bg-gray-900 rounded-xl p-6 text-emerald-400 font-mono text-xs">
+                            <span class="text-gray-500">// Pseudo-code logic của put() trong Java 8</span><br>
+                            for (Node[] tab = table;;) {<br>
+                            &nbsp;&nbsp;if (bucketIsEmpty(i)) {<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;if (casTabAt(i, null, newNode)) break; <span class="text-gray-500">// Không dùng lock!</span><br>
+                            &nbsp;&nbsp;} else {<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;synchronized (nodeAt(i)) { <span class="text-gray-500">// Chỉ lock bucket này</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;updateNode();<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                            &nbsp;&nbsp;}<br>
+                            }
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Từ khóa `volatile`
+                        </h4>
+                        <p class="text-sm text-blue-700 leading-relaxed">
+                            Mảng `table` và các biến `val`, `next` trong Node được đánh dấu là `volatile`. Điều này đảm bảo tính **Visibility** (Tầm nhìn): Một luồng vừa sửa dữ liệu, các luồng khác sẽ thấy ngay lập tức ở mức độ RAM, không bị cache ở CPU Register.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Simulator -->
+            <section id="simulator" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">4</span>
+                    Interactive Thread Simulator
+                </h2>
+                <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-xl">
+                    <div class="flex justify-between items-center mb-10">
+                        <div>
+                            <h4 class="font-bold text-lg">Mô phỏng Ghi song song</h4>
+                            <p class="text-xs text-gray-500">Bấm các nút để mô phỏng các luồng truy cập các bucket khác nhau.</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="runThread(1, 0)" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-blue-700 transition">Thread 1 -> Bucket 0</button>
+                            <button onclick="runThread(2, 2)" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-purple-700 transition">Thread 2 -> Bucket 2</button>
+                            <button onclick="runThread(3, 0)" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition">Thread 3 -> Bucket 0 (Lock!)</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-6" id="chm-buckets">
+                        <!-- Buckets -->
+                    </div>
+
+                    <div id="thread-log" class="mt-10 p-6 bg-gray-900 rounded-2xl text-emerald-400 font-mono text-sm min-h-[120px] overflow-y-auto max-h-40">
+                        // Logs: Hệ thống đang chờ lệnh...
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Weak Consistency -->
+            <section id="weak-consistency" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">5</span>
+                    Weakly Consistent Iterators
+                </h2>
+                <div class="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-r-xl">
+                    <h4 class="font-bold text-amber-800 mb-2">Tạm biệt ConcurrentModificationException!</h4>
+                    <p class="text-sm text-amber-700 leading-relaxed">
+                        Không giống `ArrayList` hay `HashMap`, Iterator của `ConcurrentHashMap` **không ném lỗi** khi Map bị sửa đổi trong lúc duyệt. 
+                        Nó phản ánh trạng thái của Map tại thời điểm Iterator được tạo và CÓ THỂ (nhưng không hứa trước) thấy các thay đổi sau đó. Đây gọi là tính nhất quán yếu (Weakly Consistent).
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 6: Atomic Ops -->
+            <section id="atomic-ops" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-emerald-200">6</span>
+                    Atomic Operations: Đừng dùng if-else!
+                </h2>
+                <p class="text-gray-700 mb-6">Trong môi trường đa luồng, việc kiểm tra rồi mới làm (Check-then-act) là cực kỳ nguy hiểm. Hãy sử dụng các phương thức nguyên tử:</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <code class="text-emerald-600 font-bold">putIfAbsent(K, V)</code>
+                        <p class="text-xs text-gray-500 mt-2">Chỉ thêm nếu Key chưa tồn tại. Trả về giá trị cũ.</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <code class="text-emerald-600 font-bold">computeIfAbsent(...)</code>
+                        <p class="text-xs text-gray-500 mt-2">Tính toán và thêm giá trị mới chỉ khi Key vắng mặt.</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <code class="text-emerald-600 font-bold">merge(K, V, Func)</code>
+                        <p class="text-xs text-gray-500 mt-2">Gộp giá trị cũ và mới theo một logic định sẵn.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-8">Thử thách Mentor (Interview Prep)</h2>
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q1: ConcurrentHashMap có cho phép null key/value không?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> KHÔNG. Cả Key và Value đều không được null. Lý do là để tránh sự nhập nhằng trong môi trường đa luồng (ví dụ: nếu `get(key)` trả về `null`, ta không biết là Key không tồn tại hay Value thực sự là `null`).
+                        </p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q2: size() của ConcurrentHashMap có chính xác tuyệt đối không?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Nó là một giá trị ước tính tốt nhất. Vì tại thời điểm hàm `size()` đang đếm, các luồng khác có thể đang thêm/xóa. Tuy nhiên, nó nhanh hơn rất nhiều so với việc khóa toàn bộ Map để đếm.
+                        </p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q3: Khi nào nên dùng Collections.synchronizedMap thay vì ConcurrentHashMap?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Rất hiếm khi. `synchronizedMap` chỉ nên dùng khi bạn cần khóa toàn bộ Map để thực hiện một chuỗi các thao tác nguyên tử thủ công (ví dụ: duyệt qua toàn bộ Map và thay đổi dữ liệu theo một transaction).
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const bucketContainer = document.getElementById('chm-buckets');
+        const logBox = document.getElementById('thread-log');
+        const numBuckets = 4;
+        let locks = [false, false, false, false];
+
+        function initBuckets() {
+            bucketContainer.innerHTML = '';
+            for (let i = 0; i < numBuckets; i++) {
+                const b = document.createElement('div');
+                b.className = 'relative flex flex-col items-center bg-gray-100 rounded-2xl p-6 border-2 border-dashed border-gray-200 transition-all duration-300';
+                b.id = `bucket-${i}`;
+                b.innerHTML = `
+                    <div class="text-3xl mb-2" id="icon-${i}">📦</div>
+                    <div class="text-[10px] font-bold text-gray-400 uppercase">Bucket ${i}</div>
+                    <div id="status-${i}" class="mt-2 text-[10px] font-bold py-1 px-2 rounded-full bg-green-100 text-green-700">FREE</div>
+                `;
+                bucketContainer.appendChild(b);
+            }
+        }
+
+        function writeLog(msg, colorClass = "text-emerald-400") {
+            const time = new Date().toLocaleTimeString();
+            logBox.innerHTML = `<div><span class="text-gray-500">[${time}]</span> <span class="${colorClass}">${msg}</span></div>` + logBox.innerHTML;
+        }
+
+        function runThread(id, bucketIdx) {
+            const bucket = document.getElementById(`bucket-${bucketIdx}`);
+            const status = document.getElementById(`status-${bucketIdx}`);
+            const icon = document.getElementById(`icon-${bucketIdx}`);
+
+            if (locks[bucketIdx]) {
+                writeLog(`⚠️ Thread ${id}: Bucket ${bucketIdx} is LOCKED! Waiting...`, "text-red-400");
+                bucket.classList.add('ring-4', 'ring-red-500/50');
+                setTimeout(() => bucket.classList.remove('ring-4', 'ring-red-500/50'), 1000);
+                return;
+            }
+
+            // Simulate Locking
+            locks[bucketIdx] = true;
+            writeLog(`🚀 Thread ${id}: Acquired LOCK on Bucket ${bucketIdx}. Processing...`, id === 1 ? "text-blue-400" : (id === 2 ? "text-purple-400" : "text-red-400"));
+            
+            bucket.classList.add('bg-white', 'shadow-xl', 'scale-105', 'border-emerald-500');
+            status.innerText = "LOCKED";
+            status.className = "mt-2 text-[10px] font-bold py-1 px-2 rounded-full bg-red-100 text-red-700 animate-pulse";
+            icon.innerText = "🔒";
+
+            setTimeout(() => {
+                locks[bucketIdx] = false;
+                bucket.classList.remove('bg-white', 'shadow-xl', 'scale-105', 'border-emerald-500');
+                status.innerText = "FREE";
+                status.className = "mt-2 text-[10px] font-bold py-1 px-2 rounded-full bg-green-100 text-green-700";
+                icon.innerText = "📦";
+                writeLog(`✅ Thread ${id}: Completed task and Released Lock on Bucket ${bucketIdx}.`, "text-gray-400");
+            }, 2500);
+        }
+
+        initBuckets();
+
+        // Sidebar active link logic
+        const navLinks = document.querySelectorAll(".sidebar-link");
+        const sections = document.querySelectorAll("section");
+
+        window.addEventListener("scroll", () => {
+            let current = "";
+            sections.forEach((section) => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 150) {
+                    current = section.getAttribute("id");
+                }
+            });
+
+            navLinks.forEach((link) => {
+                link.classList.remove("active");
+                if (link.getAttribute("href").includes(current)) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Stream API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        code { font-family: 'Fira Code', monospace !important; }
+        .sidebar-item:hover { background-color: #0f172a; color: #38bdf8; }
+        .active-section { border-left: 4px solid #38bdf8; background-color: #0f172a; }
+        .glass-card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* Stream Pipeline Animation */
+        .stream-node { transition: all 0.5s ease; }
+        .active-node { background: #38bdf8; color: #020617; transform: scale(1.1); box-shadow: 0 0 20px #38bdf8; }
+        .filter-gate { border-right: 4px solid #f43f5e; }
+        .map-gate { border-right: 4px solid #10b981; }
+    </style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-950 border-r border-slate-900 sticky top-0 h-screen overflow-y-auto p-6 hidden md:block">
+        <div class="mb-10">
+            <h1 class="text-xl font-bold text-sky-400">Thầy Dạy Java</h1>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Mastering Stream API</p>
+        </div>
+        <nav class="space-y-1">
+            <a href="#definition" class="sidebar-item block p-3 rounded-lg transition">1. Stream là gì?</a>
+            <a href="#pipeline" class="sidebar-item block p-3 rounded-lg transition">2. Pipeline Architecture</a>
+            <a href="#intermediate" class="sidebar-item block p-3 rounded-lg transition">3. Intermediate Ops</a>
+            <a href="#terminal" class="sidebar-item block p-3 rounded-lg transition">4. Terminal Ops</a>
+            <a href="#internal" class="sidebar-item block p-3 rounded-lg transition">5. Internals (Lazy Eval)</a>
+            <a href="#parallel" class="sidebar-item block p-3 rounded-lg transition">6. Parallel Streams</a>
+            <a href="#best-practices" class="sidebar-item block p-3 rounded-lg transition">7. Best Practices</a>
+        </nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="flex-1 p-6 md:p-12 overflow-y-auto">
+        
+        <header id="definition" class="mb-16">
+            <span class="text-sky-500 font-semibold tracking-wider text-sm">CHƯƠNG 7.2</span>
+            <h2 class="text-5xl font-black mt-2 mb-6">Stream API <span class="text-slate-600">(Intermediate)</span></h2>
+            <div class="p-6 glass-card rounded-2xl border-l-4 border-sky-500">
+                <p class="text-lg text-slate-300">
+                    "Stream không phải là một cấu trúc dữ liệu để lưu trữ. Nó là một <strong>luồng dữ liệu</strong> từ nguồn (Collections, Arrays, I/O) đi qua một loạt các bước xử lý để trả về kết quả."
+                </p>
+            </div>
+        </header>
+
+        <!-- The Pipeline Visualizer -->
+        <section id="pipeline" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 flex items-center">
+                <span class="w-10 h-10 bg-sky-600 rounded-lg flex items-center justify-center mr-4">02</span>
+                Mô phỏng Stream Pipeline
+            </h3>
+            
+            <div class="bg-slate-900 rounded-3xl p-8 border border-slate-800">
+                <div class="flex flex-col md:flex-row items-center justify-between space-y-10 md:space-y-0">
+                    <!-- Source -->
+                    <div class="text-center">
+                        <div class="mb-4 text-xs font-bold text-slate-500 uppercase">Source</div>
+                        <div class="flex space-x-2" id="source-container">
+                            <div class="w-10 h-10 rounded bg-slate-700 flex items-center justify-center text-xs stream-node" id="n1">12</div>
+                            <div class="w-10 h-10 rounded bg-slate-700 flex items-center justify-center text-xs stream-node" id="n2">5</div>
+                            <div class="w-10 h-10 rounded bg-slate-700 flex items-center justify-center text-xs stream-node" id="n3">18</div>
+                            <div class="w-10 h-10 rounded bg-slate-700 flex items-center justify-center text-xs stream-node" id="n4">7</div>
+                        </div>
+                    </div>
+
+                    <!-- Flow -->
+                    <div class="flex-1 px-10 flex items-center">
+                        <div class="w-full h-1 bg-slate-800 relative">
+                            <div class="absolute -top-6 left-1/4 text-[10px] text-rose-400">filter(>10)</div>
+                            <div class="absolute -top-6 left-3/4 text-[10px] text-emerald-400">map(x*2)</div>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div class="text-center">
+                        <div class="mb-4 text-xs font-bold text-slate-500 uppercase">Terminal</div>
+                        <div class="flex space-x-2" id="result-container">
+                            <div class="w-12 h-12 rounded-full border-2 border-dashed border-slate-700 flex items-center justify-center text-xs" id="r1">?</div>
+                            <div class="w-12 h-12 rounded-full border-2 border-dashed border-slate-700 flex items-center justify-center text-xs" id="r2">?</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 text-center">
+                    <button onclick="startStream()" class="px-6 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-full transition">Kích hoạt Terminal Operation</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Anatomy Section -->
+        <section id="intermediate" class="mb-20 grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div class="glass-card p-8 rounded-2xl">
+                <h4 class="text-xl font-bold text-rose-400 mb-6">Intermediate Operations (Lazy)</h4>
+                <p class="text-sm text-slate-400 mb-6">Trả về một Stream mới. Không thực thi cho đến khi Terminal Op được gọi.</p>
+                <ul class="space-y-4">
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-rose-500">
+                        <code class="text-sky-300">filter(Predicate)</code>: Lọc phần tử.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-rose-500">
+                        <code class="text-sky-300">map(Function)</code>: Ánh xạ biến đổi giá trị.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-rose-500">
+                        <code class="text-sky-300">flatMap(Function)</code>: Làm phẳng (flatten) stream các stream.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-rose-500">
+                        <code class="text-sky-300">sorted()</code>: Sắp xếp (Stateful operation).
+                    </li>
+                </ul>
+            </div>
+
+            <div id="terminal" class="glass-card p-8 rounded-2xl">
+                <h4 class="text-xl font-bold text-emerald-400 mb-6">Terminal Operations (Eager)</h4>
+                <p class="text-sm text-slate-400 mb-6">Kích hoạt toàn bộ Pipeline và trả về kết quả cuối cùng (List, Object, Void).</p>
+                <ul class="space-y-4">
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-emerald-500">
+                        <code class="text-sky-300">collect(Collectors)</code>: Gom kết quả vào Collection.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-emerald-500">
+                        <code class="text-sky-300">forEach(Consumer)</code>: Duyệt qua từng kết quả.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-emerald-500">
+                        <code class="text-sky-300">reduce(BinaryOperator)</code>: Kết hợp các phần tử thành một.
+                    </li>
+                    <li class="bg-slate-800/50 p-3 rounded border-l-2 border-emerald-500">
+                        <code class="text-sky-300">anyMatch/findFirst</code>: Short-circuiting operations.
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Deep Dive Internal -->
+        <section id="internal" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6">5. Internal Working: Sự thật về vòng lặp</h3>
+            <div class="p-6 bg-indigo-950/20 border border-indigo-500/30 rounded-2xl">
+                <p class="mb-4">Nhiều người nghĩ Stream chạy hết <code>filter</code> cho cả list rồi mới chạy tới <code>map</code>. **SAI!**</p>
+                <div class="bg-slate-900 p-6 rounded-xl mb-4">
+                    <h5 class="text-sky-400 font-bold mb-4">Cơ chế: One-Pass & Lazy Evaluation</h5>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        Java Stream sử dụng một cấu trúc dữ liệu gọi là <strong>Pipeline/Stage</strong>. Khi Terminal Op được gọi, nó duyệt qua nguồn dữ liệu **một lần duy nhất**. Mỗi phần tử sẽ được đẩy qua toàn bộ pipeline:
+                        <br><br>
+                        Phần tử 1 -> Filter -> Map -> Collect.
+                        <br>
+                        Phần tử 2 -> Filter (Nếu sai, bỏ qua luôn, không chạy Map).
+                    </p>
+                </div>
+                <div class="bg-amber-500/10 p-4 border-l-4 border-amber-500 text-amber-200 text-sm">
+                    <strong>Note:</strong> Short-circuiting (như <code>limit(1)</code>) sẽ dừng ngay lập tức khi tìm được kết quả, giúp hiệu năng vượt trội so với vòng lặp truyền thống khi xử lý dữ liệu lớn.
+                </div>
+            </div>
+        </section>
+
+        <!-- Parallel Stream -->
+        <section id="parallel" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-purple-400">6. Parallel Streams - Con dao hai lưỡi</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-slate-900 rounded-xl">
+                    <h5 class="font-bold mb-2">Khi nào dùng?</h5>
+                    <ul class="text-sm text-slate-400 space-y-2">
+                        <li>✅ Dữ liệu cực lớn (hàng triệu bản ghi).</li>
+                        <li>✅ Các tác vụ xử lý độc lập, không phụ thuộc trạng thái.</li>
+                        <li>✅ Tận dụng Multi-core (sử dụng Common ForkJoinPool).</li>
+                    </ul>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-xl">
+                    <h5 class="font-bold mb-2 text-rose-400">Nguy cơ?</h5>
+                    <ul class="text-sm text-slate-400 space-y-2">
+                        <li>❌ Overhead khi chia nhỏ và gộp dữ liệu (Splitting/Merging cost).</li>
+                        <li>❌ Race condition nếu body của lambda thay đổi biến ngoài.</li>
+                        <li>❌ Hiệu năng có thể TỆ HƠN nếu dữ liệu nhỏ.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Practice -->
+        <section id="best-practices" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8">7. Real-world Production Code</h3>
+            <pre><code class="language-java">public List&lt;String&gt; getHighValueOrderCodes(List&lt;Order&gt; orders) {
+    return orders.stream()
+        .filter(o -> o.getStatus() == OrderStatus.COMPLETED) // Lọc
+        .filter(o -> o.getAmount() > 1000)                  // Lọc tiếp
+        .map(Order::getTrackingCode)                       // Biến đổi
+        .distinct()                                        // Loại trùng
+        .limit(10)                                         // Lấy 10 thằng đầu
+        .collect(Collectors.toList());                     // Đóng gói
+}</code></pre>
+        </section>
+
+        <!-- Quiz/Interview -->
+        <section class="mb-20 pb-20">
+            <h3 class="text-2xl font-bold mb-6 text-sky-400 underline decoration-sky-800">🎯 Interview Checklist</h3>
+            <div class="space-y-4">
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800 group hover:border-sky-500 transition">
+                    <p class="font-bold mb-2">Q1: Stream có thể được tái sử dụng (reuse) không?</p>
+                    <p class="text-slate-500 text-sm group-hover:text-slate-300">A: Không. Một stream chỉ được duyệt một lần. Nếu em gọi Terminal Op lần thứ hai, nó sẽ quăng <code>IllegalStateException</code>.</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800 group hover:border-sky-500 transition">
+                    <p class="font-bold mb-2">Q2: flatMap() khác gì map()?</p>
+                    <p class="text-slate-500 text-sm group-hover:text-slate-300">A: <code>map</code> biến đổi 1 object thành 1 object. <code>flatMap</code> biến đổi 1 object thành 1 Stream các object và "trải phẳng" chúng ra thành một stream duy nhất.</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800 group hover:border-sky-500 transition">
+                    <p class="font-bold mb-2">Q3: stream().peek() thường dùng làm gì?</p>
+                    <p class="text-slate-500 text-sm group-hover:text-slate-300">A: Thường dùng để debug (in log) mà không làm thay đổi luồng dữ liệu.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    async function startStream() {
+        const nodes = [
+            { id: 'n1', val: 12, pass: true, result: 24 },
+            { id: 'n2', val: 5, pass: false },
+            { id: 'n3', val: 18, pass: true, result: 36 },
+            { id: 'n4', val: 7, pass: false }
+        ];
+
+        let resultIdx = 1;
+        
+        for (const node of nodes) {
+            const el = document.getElementById(node.id);
+            el.classList.add('active-node');
+            
+            await new Promise(r => setTimeout(r, 800));
+            
+            if (node.pass) {
+                const resEl = document.getElementById('r' + resultIdx);
+                resEl.textContent = node.result;
+                resEl.classList.add('bg-emerald-500', 'text-slate-950', 'border-none', 'font-bold');
+                resultIdx++;
+            } else {
+                el.classList.add('opacity-20', 'bg-rose-500');
+            }
+            
+            await new Promise(r => setTimeout(r, 400));
+            el.classList.remove('active-node');
+        }
+    }
+
+    // Prism highlight initialization
+    document.addEventListener('DOMContentLoaded', (event) => {
+        Prism.highlightAll();
+    });
+</script>
+
+</body>
+</html>

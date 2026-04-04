@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Exception Hierarchy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .sidebar-item:hover { background-color: #1e293b; border-left: 4px solid #38bdf8; }
+        .active-nav { background-color: #1e293b; border-left: 4px solid #38bdf8; }
+        .hierarchy-node { transition: all 0.3s ease; cursor: pointer; }
+        .hierarchy-node:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .stack-frame { animation: slideIn 0.5s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-sky-400">Java Mentor</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Chương 4.1: Exception</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#intro" class="block py-3 px-6 sidebar-item active-nav">1. The Root: Throwable</a>
+            <a href="#error" class="block py-3 px-6 sidebar-item">2. Fatal: Error class</a>
+            <a href="#exception" class="block py-3 px-6 sidebar-item">3. The Core: Exception class</a>
+            <a href="#checked-unchecked" class="block py-3 px-6 sidebar-item">4. Checked vs Unchecked</a>
+            <a href="#internals" class="block py-3 px-6 sidebar-item">5. JVM Internals (Memory)</a>
+            <a href="#practice" class="block py-3 px-6 sidebar-item text-orange-400 font-semibold">6. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        <section id="intro" class="mb-16">
+            <h1 class="text-4xl font-bold mb-6 text-white">Sơ đồ Phân cấp Exception</h1>
+            <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+                Trong Java, mọi thứ liên quan đến lỗi đều là <strong>Object</strong>. Để quản lý hàng nghìn loại lỗi khác nhau, Java thiết lập một hệ thống phân cấp chặt chẽ bắt đầu từ lớp <code class="text-sky-400">java.lang.Throwable</code>.
+            </p>
+
+            <!-- Interactive Diagram -->
+            <div class="glass-card p-8 rounded-2xl flex flex-col items-center space-y-4">
+                <div class="hierarchy-node bg-sky-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-sky-900/20">Throwable</div>
+                <div class="w-px h-8 bg-slate-700"></div>
+                <div class="flex space-x-12">
+                    <div class="flex flex-col items-center">
+                        <div class="hierarchy-node bg-rose-600 text-white px-6 py-2 rounded shadow-lg">Error</div>
+                        <div class="w-px h-4 bg-slate-700 mt-2"></div>
+                        <div class="text-[10px] text-slate-500 text-center mt-1">OutOfMemoryError<br>StackOverflowError</div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="hierarchy-node bg-emerald-600 text-white px-6 py-2 rounded shadow-lg">Exception</div>
+                        <div class="w-px h-8 bg-slate-700 mt-2"></div>
+                        <div class="flex space-x-8">
+                            <div class="flex flex-col items-center">
+                                <div class="hierarchy-node border border-emerald-500 text-emerald-400 px-4 py-1 rounded text-sm">Checked Exception</div>
+                                <div class="text-[9px] text-slate-500 mt-1">IOException, SQLException</div>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="hierarchy-node bg-emerald-800 text-emerald-100 px-4 py-1 rounded text-sm">RuntimeException</div>
+                                <div class="text-[9px] text-slate-500 mt-1">NullPointerException, ...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="error" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-rose-400 border-b border-rose-900 pb-2">1. Error - Những "Cú đấm" chí mạng</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div class="glass-card p-6 rounded-xl">
+                    <h3 class="font-bold text-white mb-2">Đặc điểm</h3>
+                    <ul class="list-disc list-inside text-slate-400 space-y-2">
+                        <li>Đại diện cho các vấn đề nghiêm trọng của JVM.</li>
+                        <li><strong>Không nên</strong> try-catch (vì catch xong cũng không làm gì được).</li>
+                        <li>Thường dẫn đến việc dừng chương trình ngay lập tức.</li>
+                    </ul>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl">
+                    <h3 class="font-bold text-rose-400 mb-2">Ví dụ kinh điển</h3>
+                    <code class="text-sm">StackOverflowError</code>: Đệ quy vô tận.<br>
+                    <code class="text-sm">OutOfMemoryError</code>: RAM hết, GC bất lực.
+                </div>
+            </div>
+        </section>
+
+        <section id="checked-unchecked" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-emerald-400 border-b border-emerald-900 pb-2">2. Checked vs Unchecked Exception</h2>
+            <p class="mb-6 text-slate-400 italic">Đây là phần quan trọng nhất khi thiết kế API.</p>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse glass-card rounded-xl">
+                    <thead>
+                        <tr class="bg-slate-800">
+                            <th class="p-4 border-b border-slate-700">Đặc điểm</th>
+                            <th class="p-4 border-b border-slate-700 text-emerald-400">Checked Exception</th>
+                            <th class="p-4 border-b border-slate-700 text-sky-400">Unchecked (RuntimeException)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border-b border-slate-800 font-semibold">Gốc tọa độ</td>
+                            <td class="p-4 border-b border-slate-800">Kế thừa <code class="bg-slate-900 p-1">Exception</code></td>
+                            <td class="p-4 border-b border-slate-800">Kế thừa <code class="bg-slate-900 p-1">RuntimeException</code></td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border-b border-slate-800 font-semibold">Thời điểm kiểm tra</td>
+                            <td class="p-4 border-b border-slate-800">Compile-time (Bắt buộc xử lý)</td>
+                            <td class="p-4 border-b border-slate-800">Runtime (Không bắt buộc)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border-b border-slate-800 font-semibold">Ý nghĩa</td>
+                            <td class="p-4 border-b border-slate-800 text-sm">Các sự cố ngoại vi dự đoán được (Network, File)</td>
+                            <td class="p-4 border-b border-slate-800 text-sm">Lỗi logic của lập trình viên (Null, Index out of bound)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="internals" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-blue-400">3. Internal Working: Chi phí của Exception</h2>
+            <div class="p-6 bg-slate-900 rounded-xl border border-blue-900/30">
+                <p class="mb-4">Em có biết tại sao tạo một Exception lại <strong>tốn kém</strong> (Performance hit) không?</p>
+                <div class="flex items-center space-x-8">
+                    <div id="stack-container" class="w-64 h-64 border-2 border-dashed border-slate-700 rounded-lg p-4 flex flex-col-reverse justify-start space-y-reverse space-y-2">
+                        <!-- Stack frames will appear here -->
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-slate-400 mb-4">
+                            Khi một Exception được khởi tạo, JVM phải thực hiện phương thức <code class="text-orange-400">fillInStackTrace()</code>. 
+                            Nó sẽ <strong>duyệt ngược (walk)</strong> toàn bộ call stack hiện tại để ghi lại các frame. Stack càng sâu, Exception càng nặng.
+                        </p>
+                        <button onclick="simulateException()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded transition">Mô phỏng "Stack Walk"</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="code" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4">4. Code thực chiến & Anti-patterns</h2>
+            <div class="space-y-4">
+                <div class="rounded-xl overflow-hidden shadow-2xl">
+                    <pre><code class="language-java">// ❌ ANTI-PATTERN: Swallow Exception (Nuốt lỗi)
+try {
+    readFile("data.txt");
+} catch (IOException e) {
+    // Không làm gì cả - Tội ác lớn nhất của Dev!
+}
+
+// ✅ BEST PRACTICE: Wrap & Rethrow hoặc Handle triệt để
+try {
+    readFile("data.txt");
+} catch (IOException e) {
+    logger.error("Failed to read data file", e);
+    throw new BusinessException("Service unavailable", ErrorCode.FILE_NOT_FOUND);
+}</code></pre>
+                </div>
+                <div class="bg-amber-900/20 border-l-4 border-amber-500 p-4">
+                    <p class="text-amber-200"><strong>Mentor Tip:</strong> Đừng bao giờ catch <code class="text-white bg-amber-800 px-1 rounded">Throwable</code> hay <code class="text-white bg-amber-800 px-1 rounded">Error</code> trừ khi em đang viết một Framework/Container quản lý vòng đời ứng dụng.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="practice" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-orange-400">5. Thử thách tư duy (Interview Questions)</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div class="glass-card p-6 rounded-xl hover:border-orange-500/50 transition">
+                    <p class="font-semibold text-lg text-white">Q1: Tại sao Spring Framework chủ yếu sử dụng Unchecked Exception?</p>
+                    <p class="text-slate-400 text-sm mt-2">Gợi ý: Hãy nghĩ về tính "sạch" của Code (Boilerplate code) và sự phân tách giữa Business Logic và Infrastructure.</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl hover:border-orange-500/50 transition">
+                    <p class="font-semibold text-lg text-white">Q2: Có thể ném (throw) một Error không? Nếu được thì khi nào?</p>
+                    <p class="text-slate-400 text-sm mt-2">Gợi ý: Java cho phép ném bất cứ thứ gì là Throwable. Nhưng hành vi đó có ý nghĩa gì?</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Smooth scrolling for sidebar links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+                
+                // Update active state
+                document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active-nav'));
+                this.classList.add('active-nav');
+            });
+        });
+
+        // Stack Trace Simulation
+        const stackContainer = document.getElementById('stack-container');
+        const frames = ["main()", "controller()", "service()", "repository()", "driver()", "throw Exception!"];
+        
+        function simulateException() {
+            stackContainer.innerHTML = '';
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i >= frames.length) {
+                    clearInterval(interval);
+                    stackContainer.lastChild.classList.remove('bg-slate-700');
+                    stackContainer.lastChild.classList.add('bg-rose-600', 'animate-pulse');
+                    return;
+                }
+                const frame = document.createElement('div');
+                frame.className = `stack-frame p-2 bg-slate-700 text-[10px] text-center rounded border border-slate-600 shadow-sm transition-colors`;
+                frame.innerText = frames[i];
+                stackContainer.appendChild(frame);
+                i++;
+            }, 300);
+        }
+    </script>
+</body>
+</html>

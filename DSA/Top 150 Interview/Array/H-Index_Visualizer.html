@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H-Index Visualizer - LeetCode #274</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .cell-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); z-index: 10; }
+        .cell-valid { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        .cell-invalid { border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; }
+
+        .bucket {
+            width: 60px;
+            border: 2px solid #cbd5e1;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 4px;
+            padding: 4px;
+            min-height: 100px;
+            background: #f1f5f9;
+        }
+        .bucket-item {
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 4px;
+        }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">H-Index</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #274 | Difficulty: Medium | Sorting, Bucket Sort</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>📚</span> Problem Definition
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                The <b>H-Index</b> is a metric that attempts to measure both the <b>productivity</b> and <b>citation impact</b> of a researcher.
+            </p>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                A scientist has an index <b>h</b> if <b>h</b> of their <b>n</b> papers have at least <b>h</b> citations each, and the other <b>n − h</b> papers have no more than <b>h</b> citations each.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-blue-800 font-semibold">Example: citations = [3, 0, 6, 1, 5]</p>
+                <p class="text-sm text-blue-700 mt-1">Output: 3 (3 papers have at least 3 citations: 3, 6, 5).</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: SORTING -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Sorting ($O(n \log n)$)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    If we sort the papers by citations in descending order, the H-Index is simply the point where the <b>number of papers</b> (index + 1) is no longer less than or equal to the <b>citation count</b>.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="sort-msg" class="step-msg">Click "Next Step" to sort and find H-Index.</div>
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="flex justify-center gap-2" id="sort-array"></div>
+                        <div class="flex justify-center gap-2" id="sort-labels" style="height: 20px;"></div>
+                    </div>
+                    <div class="flex justify-center gap-4 mt-12">
+                        <button onclick="sortViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="sortViz.next()" id="sort-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-container mb-8 code-font">
+<pre>
+<span class="keyword">public int</span> <span class="type">hIndex</span>(<span class="keyword">int</span>[] citations) {
+    <span class="comment">// Sort citations in ascending order</span>
+    <span class="type">Arrays</span>.sort(citations);
+    <span class="keyword">int</span> n = citations.length;
+    
+    <span class="comment">// Check from right to left (largest to smallest)</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+        <span class="comment">// Remaining papers count: n - i</span>
+        <span class="keyword">int</span> remainingPapers = n - i;
+        <span class="keyword">if</span> (citations[i] >= remainingPapers) {
+            <span class="keyword">return</span> remainingPapers;
+        }
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n \log n)</b> due to sorting.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> (ignoring sort stack space).</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Note</h4>
+                        <p class="text-sm text-slate-600">While sorting is clean, we can achieve better performance by noticing that H-Index can never exceed the total number of papers <b>n</b>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: COUNTING SORT / BUCKET SORT -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 2: Bucket Sort ($O(n)$)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Bucket Strategy"</h3>
+                <p class="text-slate-600 mb-8">
+                    Since the H-Index is capped at <b>n</b>, we can use an array of size <b>n+1</b> to count how many papers have 0, 1, ..., n citations. Any paper with more than <b>n</b> citations is treated as having exactly <b>n</b> citations for the calculation. We then sum counts from right to left until the sum is $\geq$ the current bucket index.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bucket-msg" class="step-msg">Click "Next Step" to distribute citations into buckets.</div>
+                    
+                    <div class="mb-8 overflow-x-auto">
+                        <div class="flex justify-center gap-4 mb-2" id="bucket-viz"></div>
+                        <div class="flex justify-center gap-4" id="bucket-labels"></div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bucketViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bucketViz.next()" id="bucket-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Optimal)</h3>
+                <div class="code-container mb-8 code-font border-2 border-blue-800">
+<pre>
+<span class="keyword">public int</span> <span class="type">hIndex</span>(<span class="keyword">int</span>[] citations) {
+    <span class="keyword">int</span> n = citations.length;
+    <span class="keyword">int</span>[] buckets = <span class="keyword">new int</span>[n + <span class="number">1</span>];
+    
+    <span class="comment">// 1. Fill buckets</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> c : citations) {
+        <span class="keyword">if</span> (c >= n) {
+            buckets[n]++;
+        } <span class="keyword">else</span> {
+            buckets[c]++;
+        }
+    }
+    
+    <span class="comment">// 2. Accumulate from right to left</span>
+    <span class="keyword">int</span> totalPapersCount = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> hCandidate = n; hCandidate >= <span class="number">0</span>; hCandidate--) {
+        totalPapersCount += buckets[hCandidate];
+        <span class="keyword">if</span> (totalPapersCount >= hCandidate) {
+            <span class="keyword">return</span> hCandidate;
+        }
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Two linear passes.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. Extra array of size <b>n+1</b>.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Key Insight</h4>
+                        <p class="text-sm text-slate-600">By capping citations at <b>n</b>, we turn an unbounded sorting problem into a bounded counting problem. This is a classic "trade memory for time" scenario.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Strategy Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Ideal For</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Sorting</td>
+                            <td class="p-4 border">O(n \log n)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border">Low memory environments</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="p-4 border font-bold text-blue-700">Bucket Sort</td>
+                            <td class="p-4 border text-blue-700 font-bold">O(n)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border">Large datasets (Fastest)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-blue-400">⚡ Interview Cheat Sheet</h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>H-Index Pattern:</b> A value <b>h</b> where at least <b>h</b> items satisfy a condition.</li>
+                    <li>• <b>Sorting Hook:</b> Sort descending $\rightarrow$ if <code>cit[i] >= i + 1</code>, keep going.</li>
+                    <li>• <b>Bucket Hook:</b> If you see $N$ as a bound, think Counting/Bucket sort.</li>
+                    <li>• <b>Common Mistake:</b> Forgetting that citations can be $> n$. Always cap them at $n$ for the bucket.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>[0]:</b> H-Index is 0.</li>
+                    <li><b>[10, 8]:</b> H-Index is 2 (2 papers have $\geq$ 2 citations).</li>
+                    <li><b>[0, 0, 0]:</b> H-Index is 0.</li>
+                    <li><b>[100]:</b> H-Index is 1.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_DATA = [3, 0, 6, 1, 5];
+
+        // --- SORTING VISUALIZER ---
+        const sortViz = {
+            citations: [...TEST_DATA],
+            sorted: [...TEST_DATA].sort((a,b) => b-a),
+            idx: -1,
+            step: 0, // 0: init, 1: sorted, 2+: scanning
+            init() {
+                const container = document.getElementById('sort-array');
+                container.innerHTML = this.citations.map(v => `<div class="cell">${v}</div>`).join('');
+                this.reset();
+            },
+            reset() {
+                this.idx = -1;
+                this.step = 0;
+                document.getElementById('sort-next-btn').disabled = false;
+                document.getElementById('sort-msg').innerText = "Original unsorted citations.";
+                const container = document.getElementById('sort-array');
+                container.innerHTML = this.citations.map(v => `<div class="cell">${v}</div>`).join('');
+                document.getElementById('sort-labels').innerHTML = '';
+            },
+            next() {
+                const container = document.getElementById('sort-array');
+                const labels = document.getElementById('sort-labels');
+                const msg = document.getElementById('sort-msg');
+
+                if (this.step === 0) {
+                    msg.innerText = "Step 1: Sort citations in descending order.";
+                    container.innerHTML = this.sorted.map(v => `<div class="cell">${v}</div>`).join('');
+                    labels.innerHTML = this.sorted.map((_, i) => `<div style="width:50px; text-align:center; font-size:10px; font-weight:800; color:#94a3b8;">#${i+1}</div>`).join('');
+                    this.step = 1;
+                } else {
+                    this.idx++;
+                    if (this.idx >= this.sorted.length) {
+                        msg.innerText = "Scan finished. H-Index is " + (this.idx);
+                        document.getElementById('sort-next-btn').disabled = true;
+                        return;
+                    }
+
+                    const val = this.sorted[this.idx];
+                    const paperNum = this.idx + 1;
+
+                    const cells = container.querySelectorAll('.cell');
+                    cells.forEach((c, i) => {
+                        c.className = 'cell';
+                        if (i === this.idx) c.classList.add('cell-active');
+                        else if (i < this.idx) c.classList.add('cell-valid');
+                    });
+
+                    if (val >= paperNum) {
+                        msg.innerText = `Paper #${paperNum} has ${val} citations. Since ${val} >= ${paperNum}, H-Index is at least ${paperNum}.`;
+                    } else {
+                        msg.innerText = `Paper #${paperNum} has only ${val} citations. ${val} < ${paperNum}, so H-Index is the previous count: ${this.idx}.`;
+                        cells[this.idx].classList.add('cell-invalid');
+                        document.getElementById('sort-next-btn').disabled = true;
+                    }
+                }
+            }
+        };
+
+        // --- BUCKET VISUALIZER ---
+        const bucketViz = {
+            data: [...TEST_DATA],
+            n: TEST_DATA.length,
+            buckets: new Array(TEST_DATA.length + 1).fill(0),
+            citIdx: 0,
+            scanning: false,
+            scanIdx: TEST_DATA.length,
+            totalPapers: 0,
+
+            init() {
+                this.reset();
+            },
+            reset() {
+                this.buckets = new Array(this.n + 1).fill(0);
+                this.citIdx = 0;
+                this.scanning = false;
+                this.scanIdx = this.n;
+                this.totalPapers = 0;
+                document.getElementById('bucket-next-btn').disabled = false;
+                document.getElementById('bucket-msg').innerText = "Paper Citations: [" + this.data.join(', ') + "]. Click Next to distribute.";
+                this.render();
+            },
+            render() {
+                const viz = document.getElementById('bucket-viz');
+                const labels = document.getElementById('bucket-labels');
+                
+                viz.innerHTML = this.buckets.map((count, i) => {
+                    let items = "";
+                    for(let k=0; k<count; k++) items += `<div class="bucket-item"></div>`;
+                    let cls = "bucket";
+                    if (this.scanning && i === this.scanIdx) cls += " border-blue-500 ring-2 ring-blue-200 bg-blue-50";
+                    return `<div class="${cls}">${items}</div>`;
+                }).join('');
+
+                labels.innerHTML = this.buckets.map((_, i) => `<div style="width:60px; text-align:center; font-weight:bold; font-size:12px;">${i}${i===this.n ? '+' : ''}</div>`).join('');
+            },
+            next() {
+                const msg = document.getElementById('bucket-msg');
+
+                if (!this.scanning) {
+                    if (this.citIdx < this.data.length) {
+                        const val = this.data[this.citIdx];
+                        const bucketIdx = Math.min(val, this.n);
+                        this.buckets[bucketIdx]++;
+                        msg.innerText = `Paper with ${val} citations goes to bucket ${bucketIdx}.`;
+                        this.citIdx++;
+                    } else {
+                        this.scanning = true;
+                        msg.innerText = "All papers distributed. Now scanning buckets from right to left...";
+                    }
+                } else {
+                    this.totalPapers += this.buckets[this.scanIdx];
+                    if (this.totalPapers >= this.scanIdx) {
+                        msg.innerText = `At bucket ${this.scanIdx}, total papers with at least ${this.scanIdx} citations is ${this.totalPapers}. H-Index = ${this.scanIdx}!`;
+                        document.getElementById('bucket-next-btn').disabled = true;
+                    } else {
+                        msg.innerText = `Bucket ${this.scanIdx}: Total papers with >= ${this.scanIdx} citations is ${this.totalPapers}. Not enough (needed ${this.scanIdx}). Moving left...`;
+                        this.scanIdx--;
+                    }
+                }
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            sortViz.init();
+            bucketViz.init();
+        }
+    </script>
+</body>
+</html>

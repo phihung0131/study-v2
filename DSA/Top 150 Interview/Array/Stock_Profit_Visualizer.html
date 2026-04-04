@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Visualizer: Best Time to Buy and Sell Stock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .price-bar {
+            width: 40px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .bar-inner {
+            width: 100%;
+            background-color: #cbd5e1;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 8px;
+            color: #475569;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        .bar-buy { background-color: #ef4444 !important; color: white !important; transform: scaleX(1.1); }
+        .bar-sell { background-color: #10b981 !important; color: white !important; transform: scaleX(1.1); }
+        .bar-scanning { background-color: #3b82f6; color: white; }
+        .bar-min-so-far { border: 2px dashed #ef4444; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -30px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .step-msg {
+            min-height: 70px;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Best Time to Buy and Sell Stock</h1>
+            <p class="text-slate-500 font-medium">LeetCode #121 | Difficulty: Easy | Array, Dynamic Programming</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>📊</span> Problem Summary
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                You are given an array <b>prices</b> where <b>prices[i]</b> is the price of a given stock on the <b>i-th</b> day. 
+                You want to maximize your profit by choosing a <b>single day</b> to buy one stock and choosing a <b>different day in the future</b> to sell that stock.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 italic font-semibold">Constraint: You cannot sell a stock before you buy one.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="bg-slate-800 text-white px-4 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 1: Brute Force (Nested Loops)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    To find the maximum profit, we can check every possible pair of (Buy Day, Sell Day). 
+                    For each day <b>i</b> (buying day), we check every day <b>j > i</b> (selling day) and calculate the profit. 
+                    We keep track of the highest profit found so far.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click "Next Step" to start checking pairs.</div>
+                    <div class="flex justify-center items-end gap-2 h-48 mb-12" id="bf-chart"></div>
+                    
+                    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-6">
+                        <div class="text-center p-2 bg-white rounded-lg border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Current Buy</p>
+                            <p id="bf-buy-val" class="text-xl font-bold text-red-500">-</p>
+                        </div>
+                        <div class="text-center p-2 bg-white rounded-lg border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Max Profit</p>
+                            <p id="bf-max-val" class="text-xl font-bold text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">maxProfit</span>(<span class="keyword">int</span>[] prices) {
+    <span class="keyword">int</span> maxProfitFound = <span class="number">0</span>;
+    
+    <span class="comment">// i is the buying day</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < prices.length - <span class="number">1</span>; i++) {
+        <span class="comment">// j is the selling day (must be after buying day)</span>
+        <span class="keyword">for</span> (<span class="keyword">int</span> j = i + <span class="number">1</span>; j < prices.length; j++) {
+            <span class="keyword">int</span> currentProfit = prices[j] - prices[i];
+            
+            <span class="comment">// Update global max if we found a better deal</span>
+            <span class="keyword">if</span> (currentProfit > maxProfitFound) {
+                maxProfitFound = currentProfit;
+            }
+        }
+    }
+    <span class="keyword">return</span> maxProfitFound;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline decoration-red-200">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time Complexity:</b> <b>O(n²)</b>. We use nested loops to check all possible pairs <b>(n*(n-1)/2)</b>.</p>
+                        <p class="text-sm"><b>Space Complexity:</b> <b>O(1)</b>. We only store the max profit variable.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline decoration-slate-200">Pros & Cons</h4>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-red-500">Cons:</span> Extremely inefficient for large input sizes (e.g., 100,000 prices). It will likely result in a Time Limit Exceeded (TLE) error on LeetCode.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: OPTIMAL ONE PASS -->
+        <section class="mb-20">
+            <div class="bg-emerald-600 text-white px-4 py-2 rounded-t-xl font-bold inline-block uppercase text-xs tracking-widest">
+                Approach 2: One Pass (Greedy/DP)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    We only care about the lowest price we've seen <b>before</b> the current day. 
+                    As we iterate through the array once:
+                    <br>1. Keep track of the <b>minimum price</b> seen so far.
+                    <br>2. For every new price, calculate the profit if we sold <b>today</b> using that minimum price.
+                    <br>3. Update the <b>maximum profit</b> accordingly.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="opt-msg" class="step-msg">Click "Next Step" to scan the array efficiently.</div>
+                    <div class="flex justify-center items-end gap-2 h-48 mb-12" id="opt-chart"></div>
+                    
+                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto mb-6">
+                        <div class="text-center p-2 bg-white rounded-lg border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Min Price So Far</p>
+                            <p id="opt-min-val" class="text-xl font-bold text-blue-500">∞</p>
+                        </div>
+                        <div class="text-center p-2 bg-white rounded-lg border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Max Profit</p>
+                            <p id="opt-max-val" class="text-xl font-bold text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="optViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold">Reset</button>
+                        <button onclick="optViz.next()" id="opt-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-lg transition-transform active:scale-95">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">maxProfit</span>(<span class="keyword">int</span>[] prices) {
+    <span class="keyword">if</span> (prices == <span class="keyword">null</span> || prices.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>;
+    
+    <span class="comment">// Initialize minPrice to a very large value</span>
+    <span class="keyword">int</span> minPriceSeenSoFar = <span class="type">Integer</span>.MAX_VALUE;
+    <span class="keyword">int</span> maxProfitAchieved = <span class="number">0</span>;
+    
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < prices.length; i++) {
+        <span class="keyword">int</span> currentDayPrice = prices[i];
+        
+        <span class="comment">// If today's price is the lowest we've seen, update minPrice</span>
+        <span class="keyword">if</span> (currentDayPrice < minPriceSeenSoFar) {
+            minPriceSeenSoFar = currentDayPrice;
+        } 
+        <span class="comment">// Otherwise, see if selling today gives us a better profit</span>
+        <span class="keyword">else if</span> (currentDayPrice - minPriceSeenSoFar > maxProfitAchieved) {
+            maxProfitAchieved = currentDayPrice - minPriceSeenSoFar;
+        }
+    }
+    
+    <span class="keyword">return</span> maxProfitAchieved;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline decoration-emerald-200">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time Complexity:</b> <b>O(n)</b>. We only traverse the prices array once.</p>
+                        <p class="text-sm"><b>Space Complexity:</b> <b>O(1)</b>. We use a constant amount of extra space (two variables).</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2 underline decoration-slate-200">Key Insight</h4>
+                        <p class="text-sm text-slate-600">By keeping track of the minimum price, we effectively "compress" all previous days into a single state, allowing us to make an optimal decision for the current day instantly.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Comparison -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">LeetCode Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Brute Force</td>
+                            <td class="p-4 border text-red-600">O(n²)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border">Time Limit Exceeded</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold">One Pass</td>
+                            <td class="p-4 border text-emerald-600">O(n)</td>
+                            <td class="p-4 border text-emerald-600">O(1)</td>
+                            <td class="p-4 border font-bold text-emerald-700">Accepted (Optimal)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                    <span>⚡</span> Cheat Sheet
+                </h2>
+                <ul class="space-y-3 text-slate-400 text-sm">
+                    <li>• <b>Pattern:</b> Minimum Tracker.</li>
+                    <li>• <b>Keyword:</b> Profit = High - Low (where Low comes first).</li>
+                    <li>• <b>Logic:</b> If <code>price < min</code>, update <code>min</code>. Else, calculate <code>price - min</code> and update <code>maxProfit</code>.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">⚠️ Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>Decreasing Prices:</b> [7, 6, 4, 3, 1]. Result: 0 (No profit possible).</li>
+                    <li><b>Single Day:</b> [5]. Result: 0 (Cannot buy and sell same day).</li>
+                    <li><b>All Same:</b> [3, 3, 3]. Result: 0.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_PRICES = [7, 1, 5, 3, 6, 4];
+        const MAX_P = Math.max(...TEST_PRICES);
+
+        // --- BRUTE FORCE VIZ ---
+        const bfViz = {
+            data: [...TEST_PRICES],
+            i: 0,
+            j: 1,
+            maxProfit: 0,
+            finished: false,
+            
+            init() {
+                const chart = document.getElementById('bf-chart');
+                chart.innerHTML = this.data.map((p, idx) => `
+                    <div class="price-bar" style="height: ${(p/MAX_P)*100}%">
+                        <div class="bar-inner">${p}</div>
+                        <div class="pointer-label" id="bf-ptr-${idx}"></div>
+                    </div>
+                `).join('');
+                this.render();
+            },
+            reset() {
+                this.i = 0;
+                this.j = 1;
+                this.maxProfit = 0;
+                this.finished = false;
+                document.getElementById('bf-next-btn').disabled = false;
+                this.init();
+                document.getElementById('bf-msg').innerText = "Click 'Next Step' to start.";
+                document.getElementById('bf-buy-val').innerText = '-';
+                document.getElementById('bf-max-val').innerText = '0';
+            },
+            render() {
+                const bars = document.querySelectorAll('#bf-chart .bar-inner');
+                const labels = document.querySelectorAll('#bf-chart .pointer-label');
+                
+                bars.forEach((bar, idx) => {
+                    bar.className = 'bar-inner';
+                    labels[idx].innerText = '';
+                    if (idx === this.i) {
+                        bar.classList.add('bar-buy');
+                        labels[idx].innerText = 'BUY';
+                        labels[idx].style.color = '#ef4444';
+                    }
+                    if (idx === this.j && !this.finished) {
+                        bar.classList.add('bar-sell');
+                        labels[idx].innerText = 'SELL?';
+                        labels[idx].style.color = '#10b981';
+                    }
+                });
+            },
+            next() {
+                if (this.finished) return;
+
+                const buyPrice = this.data[this.i];
+                const sellPrice = this.data[this.j];
+                const profit = sellPrice - buyPrice;
+
+                document.getElementById('bf-buy-val').innerText = buyPrice;
+                
+                if (profit > this.maxProfit) {
+                    this.maxProfit = profit;
+                    document.getElementById('bf-max-val').innerText = this.maxProfit;
+                    document.getElementById('bf-msg').innerText = `Profit: ${sellPrice} - ${buyPrice} = ${profit}. New Max Found!`;
+                } else {
+                    document.getElementById('bf-msg').innerText = `Profit: ${sellPrice} - ${buyPrice} = ${profit}.`;
+                }
+
+                this.render();
+
+                this.j++;
+                if (this.j >= this.data.length) {
+                    this.i++;
+                    this.j = this.i + 1;
+                }
+
+                if (this.i >= this.data.length - 1) {
+                    this.finished = true;
+                    document.getElementById('bf-next-btn').disabled = true;
+                    document.getElementById('bf-msg').innerText = `Search finished. Final Max Profit: ${this.maxProfit}`;
+                }
+            }
+        };
+
+        // --- OPTIMAL VIZ ---
+        const optViz = {
+            data: [...TEST_PRICES],
+            idx: 0,
+            minPrice: Infinity,
+            maxProfit: 0,
+            finished: false,
+
+            init() {
+                const chart = document.getElementById('opt-chart');
+                chart.innerHTML = this.data.map((p, idx) => `
+                    <div class="price-bar" style="height: ${(p/MAX_P)*100}%">
+                        <div class="bar-inner">${p}</div>
+                        <div class="pointer-label" id="opt-ptr-${idx}"></div>
+                    </div>
+                `).join('');
+                this.render();
+            },
+            reset() {
+                this.idx = 0;
+                this.minPrice = Infinity;
+                this.maxProfit = 0;
+                this.finished = false;
+                document.getElementById('opt-next-btn').disabled = false;
+                this.init();
+                document.getElementById('opt-msg').innerText = "Click 'Next Step' to scan.";
+                document.getElementById('opt-min-val').innerText = '∞';
+                document.getElementById('opt-max-val').innerText = '0';
+            },
+            render() {
+                const bars = document.querySelectorAll('#opt-chart .bar-inner');
+                const labels = document.querySelectorAll('#opt-chart .pointer-label');
+                
+                bars.forEach((bar, i) => {
+                    bar.className = 'bar-inner';
+                    labels[i].innerText = '';
+                    if (this.data[i] === this.minPrice && i < this.idx) {
+                        bar.classList.add('bar-min-so-far');
+                        labels[i].innerText = 'MIN SEEN';
+                        labels[i].style.color = '#3b82f6';
+                    }
+                    if (i === this.idx && !this.finished) {
+                        bar.classList.add('bar-scanning');
+                        labels[i].innerText = 'CURRENT';
+                        labels[i].style.color = '#3b82f6';
+                    }
+                });
+            },
+            next() {
+                if (this.finished) return;
+
+                const currentPrice = this.data[this.idx];
+                let msg = `Day ${this.idx + 1}: Price is ${currentPrice}. `;
+
+                if (currentPrice < this.minPrice) {
+                    this.minPrice = currentPrice;
+                    document.getElementById('opt-min-val').innerText = this.minPrice;
+                    msg += `New lowest price found! Updating minPrice to ${this.minPrice}.`;
+                } else {
+                    const currentProfit = currentPrice - this.minPrice;
+                    if (currentProfit > this.maxProfit) {
+                        this.maxProfit = currentProfit;
+                        document.getElementById('opt-max-val').innerText = this.maxProfit;
+                        msg += `Selling today gives profit ${currentPrice} - ${this.minPrice} = ${currentProfit}. New Max Profit!`;
+                    } else {
+                        msg += `Selling today gives profit ${currentProfit}. Max profit remains ${this.maxProfit}.`;
+                    }
+                }
+
+                document.getElementById('opt-msg').innerText = msg;
+                this.render();
+                this.idx++;
+
+                if (this.idx >= this.data.length) {
+                    this.finished = true;
+                    document.getElementById('opt-next-btn').disabled = true;
+                    document.getElementById('opt-msg').innerText = `One-pass scan finished. Final Max Profit: ${this.maxProfit}`;
+                }
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            optViz.init();
+        };
+    </script>
+</body>
+</html>

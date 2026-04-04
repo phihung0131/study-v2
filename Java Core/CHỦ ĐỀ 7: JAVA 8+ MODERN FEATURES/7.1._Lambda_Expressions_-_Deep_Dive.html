@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Lambda Expressions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        code { font-family: 'Fira Code', monospace !important; }
+        .sidebar-item:hover { background-color: #1e293b; }
+        .active-section { border-left: 4px solid #38bdf8; background-color: #1e293b; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .anatomy-box { border: 2px dashed #38bdf8; padding: 10px; border-radius: 8px; }
+        
+        /* Animation for Lambda flow */
+        @keyframes flow {
+            0% { transform: translateX(-20px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        .animate-flow { animation: flow 0.5s ease-out forwards; }
+    </style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+    <!-- Sidebar Navigation -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto p-6 hidden md:block">
+        <div class="mb-10 text-center">
+            <h1 class="text-2xl font-bold text-sky-400">Thầy Dạy Java</h1>
+            <p class="text-xs text-slate-400 mt-2 uppercase tracking-widest">Senior Mentor Program</p>
+        </div>
+        <nav class="space-y-2">
+            <a href="#intro" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">1. Concept & Problem</a>
+            <a href="#syntax" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">2. Syntax Anatomy</a>
+            <a href="#functional" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">3. Functional Interface</a>
+            <a href="#internal" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">4. Internal Working (JSR 292)</a>
+            <a href="#variable" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">5. Variable Capture</a>
+            <a href="#practice" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">6. Best Practices</a>
+            <a href="#interview" class="sidebar-item block p-3 rounded-lg text-slate-300 transition">7. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-12 overflow-y-auto bg-slate-950">
+        
+        <!-- Header Section -->
+        <header id="intro" class="mb-16">
+            <span class="px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-400 rounded-full border border-sky-500/20 mb-4 inline-block">Chương 7.1</span>
+            <h2 class="text-5xl font-extrabold mb-6 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">Lambda Expressions</h2>
+            <p class="text-lg text-slate-400 leading-relaxed max-w-3xl">
+                Chào mừng em. Trước Java 8, chúng ta bị mắc kẹt trong "Verbosisty" (sự rườm rà). Muốn truyền một hành động, ta phải bọc nó vào một Class nặc danh (Anonymous Class). Lambda ra đời để giải phóng tư duy đó.
+            </p>
+        </header>
+
+        <!-- Problem Section: Anonymous vs Lambda -->
+        <section class="mb-20 glass-card p-8 rounded-2xl">
+            <h3 class="text-2xl font-semibold mb-6 flex items-center">
+                <span class="w-8 h-8 bg-sky-500 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                Tại sao cần Lambda?
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h4 class="text-slate-400 mb-4 italic">Cũ: Anonymous Inner Class</h4>
+                    <pre><code class="language-java">button.addActionListener(new ActionListener() {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        System.out.println("Clicked!");
+    }
+});</code></pre>
+                </div>
+                <div class="relative">
+                    <div id="lambda-magic" class="absolute -top-4 right-0 text-yellow-400 text-xs font-bold bg-yellow-400/10 px-2 py-1 rounded">MAGIC!</div>
+                    <h4 class="text-slate-400 mb-4 italic">Mới: Lambda Expression</h4>
+                    <pre><code class="language-java">button.addActionListener(e -> System.out.println("Clicked!"));</code></pre>
+                    <div class="mt-4 p-4 bg-sky-900/20 border-l-4 border-sky-500 text-sm">
+                        <strong>Phân tích:</strong> Chúng ta đã loại bỏ 5 dòng code boilerplate. Thứ duy nhất quan trọng là <code>System.out.println</code>.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Syntax Section -->
+        <section id="syntax" class="mb-20">
+            <h3 class="text-2xl font-semibold mb-8 flex items-center">
+                <span class="w-8 h-8 bg-sky-500 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                Cấu trúc giải phẫu (Anatomy)
+            </h3>
+            <div class="bg-slate-900 p-8 rounded-xl border border-slate-800 text-center">
+                <div class="inline-flex items-center text-3xl font-mono space-x-4">
+                    <span class="text-sky-400 anatomy-box" title="Tham số đầu vào">(parameters)</span>
+                    <span class="text-pink-500 font-bold">-></span>
+                    <span class="text-green-400 anatomy-box" title="Logic xử lý">{ expression / body }</span>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mt-10 text-sm">
+                    <div class="p-4 rounded-lg bg-slate-800/50">
+                        <h5 class="font-bold text-sky-400 mb-2">No Parameters</h5>
+                        <code>() -> System.out.print("Hi")</code>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-800/50">
+                        <h5 class="font-bold text-sky-400 mb-2">One Parameter</h5>
+                        <code>s -> System.out.print(s)</code>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-800/50">
+                        <h5 class="font-bold text-sky-400 mb-2">Multi-line Body</h5>
+                        <code>(x, y) -> { int sum = x + y; return sum; }</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Functional Interface Section -->
+        <section id="functional" class="mb-20 glass-card p-8 rounded-2xl">
+            <h3 class="text-2xl font-semibold mb-6 flex items-center text-sky-400">
+                <span class="w-8 h-8 bg-sky-500 text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                Điều kiện cần: Functional Interface
+            </h3>
+            <p class="mb-6 text-slate-300">Lambda chỉ có thể được gán cho một interface có <strong>duy nhất một phương thức trừu tượng (Single Abstract Method - SAM)</strong>.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="p-5 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <h4 class="font-bold text-red-400 mb-2">Standard Interfaces</h4>
+                    <ul class="text-sm space-y-2 opacity-80">
+                        <li>• <code>Predicate&lt;T&gt;</code>: Kiểm tra (trả về boolean)</li>
+                        <li>• <code>Consumer&lt;T&gt;</code>: Tiêu thụ (không trả về gì)</li>
+                        <li>• <code>Supplier&lt;T&gt;</code>: Cung cấp (không nhận input)</li>
+                        <li>• <code>Function&lt;T, R&gt;</code>: Chuyển đổi T thành R</li>
+                    </ul>
+                </div>
+                <div class="p-5 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <h4 class="font-bold text-green-400 mb-2">Annotation</h4>
+                    <pre><code class="language-java">@FunctionalInterface
+public interface MyCalc {
+    int operate(int a, int b);
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Internal Working Section -->
+        <section id="internal" class="mb-20">
+            <h3 class="text-2xl font-semibold mb-6 flex items-center">
+                <span class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                Under the Hood: invokedynamic
+            </h3>
+            <div class="bg-indigo-950/30 p-8 rounded-2xl border border-indigo-500/30">
+                <p class="mb-4">Dành cho Senior: Lambda <strong>KHÔNG</strong> phải là cú pháp thay thế hoàn toàn cho Anonymous Class.</p>
+                <div class="flex flex-col md:flex-row items-center justify-between space-y-8 md:space-y-0 md:space-x-8">
+                    <div class="flex-1 text-sm">
+                        <div class="mb-3 p-3 bg-slate-800 rounded">
+                            <span class="text-pink-400 font-bold">1. Compile Time:</span> Trình biên dịch tạo ra một phương thức private trong chính class đó chứa logic của Lambda.
+                        </div>
+                        <div class="mb-3 p-3 bg-slate-800 rounded">
+                            <span class="text-sky-400 font-bold">2. Runtime:</span> JVM sử dụng lệnh <code>invokedynamic</code> để gọi <code>LambdaMetafactory</code>.
+                        </div>
+                        <div class="mb-3 p-3 bg-slate-800 rounded">
+                            <span class="text-green-400 font-bold">3. Result:</span> Một đối tượng được tạo ra "on-the-fly" mà không cần file .class riêng biệt như Anonymous Class.
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-slate-900 p-6 rounded-lg border border-slate-700">
+                        <h5 class="text-center text-xs uppercase text-slate-500 mb-4">Memory Simulation</h5>
+                        <canvas id="memoryCanvas" width="250" height="150" class="mx-auto"></canvas>
+                        <p class="text-[10px] text-center mt-2 text-slate-500 italic">Lambda reduces footprint by avoiding extra inner class metadata.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Variable Capture -->
+        <section id="variable" class="mb-20">
+            <div class="bg-amber-900/10 border border-amber-500/20 p-8 rounded-2xl">
+                <h3 class="text-2xl font-semibold mb-4 text-amber-400">5. Variable Capture & Closure</h3>
+                <p class="text-slate-300 mb-6">Lambda có thể truy cập các biến bên ngoài, nhưng có một quy tắc sắt đá: Biến đó phải là <strong>Final</strong> hoặc <strong>Effectively Final</strong>.</p>
+                <pre><code class="language-java">int count = 10; // Biến này không được thay đổi sau đây
+Runnable r = () -> System.out.println(count); 
+
+// count = 20; // ERROR: Local variable count defined in an enclosing 
+               // scope must be final or effectively final</code></pre>
+                <div class="mt-6 p-4 bg-amber-950/30 rounded border-l-4 border-amber-500 text-sm">
+                    <strong>Giải thích kỹ thuật:</strong> Các biến local nằm trên Stack, Lambda đối tượng nằm trên Heap. Nếu Stack Frame của phương thức bị xóa mà Lambda vẫn tồn tại, Java cần copy giá trị biến đó vào Lambda. Để đảm bảo tính nhất quán, giá trị đó không được phép thay đổi.
+                </div>
+            </div>
+        </section>
+
+        <!-- Best Practice Section -->
+        <section id="practice" class="mb-20">
+            <h3 class="text-2xl font-semibold mb-8">6. Best Practices & Anti-patterns</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+                <div class="space-y-4">
+                    <div class="p-4 bg-emerald-500/10 border-l-4 border-emerald-500">
+                        <h5 class="font-bold text-emerald-400 mb-1">Nên: Giữ cho Lambda ngắn gọn</h5>
+                        <p>Lý tưởng nhất là 1 dòng code. Nếu nhiều hơn 3 dòng, hãy trích xuất ra một method riêng.</p>
+                    </div>
+                    <div class="p-4 bg-emerald-500/10 border-l-4 border-emerald-500">
+                        <h5 class="font-bold text-emerald-400 mb-1">Nên: Sử dụng Method References</h5>
+                        <p><code>list.forEach(System.out::println)</code> thay vì <code>list.forEach(s -> System.out.println(s))</code>.</p>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-4 bg-rose-500/10 border-l-4 border-rose-500">
+                        <h5 class="font-bold text-rose-400 mb-1">Không nên: Side effects</h5>
+                        <p>Hạn chế thay đổi trạng thái của các đối tượng bên ngoài trong body của lambda.</p>
+                    </div>
+                    <div class="p-4 bg-rose-500/10 border-l-4 border-rose-500">
+                        <h5 class="font-bold text-rose-400 mb-1">Không nên: Ép kiểu quá đà</h5>
+                        <p>Đừng viết Lambda quá phức tạp khiến trình biên dịch không thể suy luận kiểu dữ liệu (Type Inference).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interview Questions Section -->
+        <section id="interview" class="mb-20 pb-20">
+            <h3 class="text-2xl font-semibold mb-6 flex items-center text-yellow-400 underline">
+                🎯 Câu hỏi phỏng vấn hóc búa
+            </h3>
+            <div class="space-y-4">
+                <div class="p-6 bg-slate-900 rounded-xl cursor-pointer hover:border-sky-500 transition border border-slate-800" onclick="toggleAnswer(1)">
+                    <p class="font-semibold">Q1: Sự khác biệt lớn nhất giữa 'this' trong Anonymous Class và Lambda là gì?</p>
+                    <div id="ans1" class="hidden mt-4 pt-4 border-t border-slate-800 text-slate-400 italic">
+                        Trong Anonymous Class, 'this' trỏ tới chính đối tượng Anonymous đó. Trong Lambda, 'this' trỏ tới đối tượng của lớp bao quanh (lexical scoping). Lambda không tạo ra một phạm vi mới cho 'this'.
+                    </div>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-xl cursor-pointer hover:border-sky-500 transition border border-slate-800" onclick="toggleAnswer(2)">
+                    <p class="font-semibold">Q2: Tại sao Lambda giúp ứng dụng chạy nhanh hơn và tốn ít bộ nhớ hơn Anonymous Class?</p>
+                    <div id="ans2" class="hidden mt-4 pt-4 border-t border-slate-800 text-slate-400 italic">
+                        Anonymous class tạo ra một file .class riêng biệt, được classloader tải lên và cấp phát bộ nhớ như một class thông thường. Lambda sử dụng invokedynamic, trì hoãn việc tạo đối tượng đến runtime và thường tái sử dụng các instance nếu Lambda không capture biến nào, giúp giảm áp lực cho Garbage Collector.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    function toggleAnswer(id) {
+        const el = document.getElementById('ans' + id);
+        el.classList.toggle('hidden');
+        el.classList.add('animate-flow');
+    }
+
+    // Canvas Memory Simulation
+    window.onload = function() {
+        const canvas = document.getElementById('memoryCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let offset = 0;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Stack
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(10, 20, 80, 110);
+            ctx.fillStyle = "#38bdf8";
+            ctx.font = "10px Arial";
+            ctx.fillText("STACK", 30, 15);
+            
+            // Heap
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(130, 20, 100, 110);
+            ctx.fillStyle = "#f472b6";
+            ctx.fillText("HEAP", 165, 15);
+
+            // invokedynamic call
+            offset = (offset + 1) % 120;
+            ctx.beginPath();
+            ctx.strokeStyle = "#fbbf24";
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(90, 40 + (Math.sin(Date.now()/500) * 10));
+            ctx.lineTo(130, 70);
+            ctx.stroke();
+
+            // Object in heap
+            ctx.fillStyle = "#334155";
+            ctx.beginPath();
+            ctx.arc(180, 75, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#e2e8f0";
+            ctx.fillText("λ Object", 162, 78);
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+    };
+
+    // Smooth scroll for sidebar
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
+            
+            // Active link effect
+            document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active-section'));
+            this.classList.add('active-section');
+        });
+    });
+</script>
+
+</body>
+</html>

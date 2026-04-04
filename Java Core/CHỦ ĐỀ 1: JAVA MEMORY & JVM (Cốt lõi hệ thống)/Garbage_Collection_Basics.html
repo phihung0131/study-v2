@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Garbage Collection (Basics)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #0f172a; color: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; }
+        .gc-step { transition: all 0.3s ease; border: 2px solid transparent; }
+        .gc-step:hover { border-color: #3b82f6; transform: translateY(-3px); }
+        .stw-warning { background-color: #fff7ed; border-left: 4px solid #f97316; }
+        
+        /* Heap Animation Styles */
+        .heap-container { height: 100px; display: flex; border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #e2e8f0; }
+        .gen-young { width: 35%; background: #93c5fd; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border-right: 2px solid #64748b; }
+        .gen-old { width: 65%; background: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        
+        .object-dot { width: 10px; height: 10px; border-radius: 50%; margin: 2px; }
+        .dot-alive { background: #22c55e; }
+        .dot-dead { background: #ef4444; animation: blink 1s infinite; }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <div class="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-4">JVM PERFORMANCE</div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4">Bài 1.4: Garbage Collection (Cơ bản)</h1>
+            <p class="text-lg text-slate-600">Linh hồn của quản lý bộ nhớ tự động trong Java.</p>
+        </header>
+
+        <!-- Section 1: The Core Question -->
+        <section class="mb-16 bg-white p-8 rounded-3xl shadow-sm border">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-question-circle text-blue-500"></i> 1. GC làm sao biết đối tượng nào là "Rác"?
+            </h2>
+            <p class="mb-6 leading-relaxed">
+                Nhiều người nghĩ GC dùng <i>Reference Counting</i> (đếm số tham chiếu), nhưng thực tế JVM hiện đại dùng thuật toán <strong>Reachability Analysis</strong> (Phân tích khả năng chạm tới).
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-5 bg-slate-50 rounded-2xl">
+                    <h3 class="font-bold text-blue-700 mb-2">GC Roots là gì?</h3>
+                    <p class="text-sm text-slate-600 mb-4">Đó là những "điểm neo" chắc chắn đang sống. Bao gồm:</p>
+                    <ul class="text-xs space-y-2 list-disc ml-5 font-medium">
+                        <li>Biến cục bộ trong <strong>Stack</strong> của các Thread đang chạy.</li>
+                        <li>Các biến <strong>Static</strong> trong Method Area.</li>
+                        <li>Các tham chiếu từ <strong>JNI</strong> (Native code).</li>
+                    </ul>
+                </div>
+                <div class="p-5 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col justify-center">
+                    <p class="text-sm italic text-slate-600">
+                        "Nếu một đối tượng không thể được truy tìm dấu vết từ bất kỳ <strong>GC Root</strong> nào, nó được coi là không còn khả năng chạm tới (Unreachable) và sẽ bị đánh dấu là Rác."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Generational Hypothesis -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">2. Giả thuyết thế hệ (Generational Hypothesis)</h2>
+            <p class="mb-6 text-slate-600">Tại sao JVM lại chia Heap thành nhiều vùng? Vì các kỹ sư nhận ra một sự thật đau đớn trong lập trình:</p>
+            <div class="p-6 bg-blue-900 text-white rounded-2xl mb-8">
+                <p class="text-xl font-medium italic text-center">"Hầu hết các đối tượng đều chết trẻ."</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-blue-600">Young Generation</h4>
+                    <p class="text-xs mt-2 text-slate-600">Nơi các đối tượng mới sinh ra. GC quét ở đây rất thường xuyên (Minor GC) vì tỷ lệ "chết" rất cao.</p>
+                </div>
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-indigo-600">Old Generation</h4>
+                    <p class="text-xs mt-2 text-slate-600">Dành cho các đối tượng "sống dai" sau nhiều đợt quét ở Young Gen. Quét ở đây (Major GC) tốn thời gian hơn nhiều.</p>
+                </div>
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-slate-600">Lợi ích</h4>
+                    <p class="text-xs mt-2 text-slate-600">Tối ưu hóa hiệu năng: JVM không cần quét toàn bộ Heap mỗi lần dọn dẹp.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: The 3 Pillars of GC -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-slate-800 border-b pb-2">3. Quy trình 3 bước: Mark - Sweep - Compact</h2>
+            <div class="space-y-8">
+                <div class="flex flex-col md:flex-row gap-6 items-start gc-step p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold">BƯỚC 1</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Mark (Đánh dấu)</h4>
+                        <p class="text-sm text-slate-600">GC duyệt từ các Roots, đánh dấu tất cả đối tượng "còn sống". Những gì không được đánh dấu mặc nhiên là rác.</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 items-start gc-step p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="bg-yellow-100 text-yellow-600 px-4 py-2 rounded-lg font-bold">BƯỚC 2</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Sweep (Quét)</h4>
+                        <p class="text-sm text-slate-600">GC giải phóng vùng nhớ của các đối tượng không được đánh dấu. Lúc này bộ nhớ bắt đầu có những "lỗ hổng" (phân mảnh).</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 items-start gc-step p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="bg-green-100 text-green-600 px-4 py-2 rounded-lg font-bold">BƯỚC 3</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Compact (Nén)</h4>
+                        <p class="text-sm text-slate-600">Để tránh phân mảnh (Memory Fragmentation), GC dồn các đối tượng còn sống lại sát nhau ở đầu vùng nhớ. Việc này giúp việc cấp phát đối tượng mới sau này nhanh hơn (chỉ cần dịch chuyển con trỏ).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Stop-The-World (STW) -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">4. Stop-The-World (STW): Nỗi ám ảnh của Latency</h2>
+            <div class="stw-warning p-6 rounded-2xl">
+                <div class="flex gap-4 items-start">
+                    <i class="fas fa-hand-paper text-3xl text-orange-500"></i>
+                    <div>
+                        <h4 class="font-bold text-orange-900">Khái niệm STW</h4>
+                        <p class="text-sm text-orange-800 leading-relaxed">
+                            Để dọn dẹp bộ nhớ một cách an toàn, GC đôi khi phải yêu cầu **tất cả Thread ứng dụng dừng lại hoàn toàn**. 
+                            Tại sao? Vì nếu ứng dụng vẫn chạy, nó sẽ liên tục tạo mới hoặc thay đổi tham chiếu, làm kết quả "đánh dấu" của GC bị sai lệch.
+                        </p>
+                        <p class="text-xs mt-3 font-bold text-orange-950 uppercase">
+                            Mục tiêu của các bộ GC hiện đại (G1, ZGC): Giảm thiểu thời gian STW xuống mức thấp nhất có thể (dưới 10ms hoặc thậm chí 1ms).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Practical Code -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">5. Khi nào đối tượng đủ điều kiện bị GC?</h2>
+            <div class="code-block">
+<pre><code><span class="text-slate-500">// Ví dụ minh họa các cách biến đối tượng thành rác</span>
+<span class="text-purple-400">public class</span> <span class="text-yellow-400">GCTest</span> {
+    <span class="text-purple-400">public static void</span> <span class="text-blue-400">main</span>(String[] args) {
+        <span class="text-slate-500">// 1. Gán null (Nulling the reference)</span>
+        Student s1 = <span class="text-purple-400">new</span> Student();
+        s1 = <span class="text-purple-400">null</span>; <span class="text-green-400">// Đối tượng Student đầu tiên đủ điều kiện bị GC</span>
+
+        <span class="text-slate-500">// 2. Gán tham chiếu sang đối tượng khác (Reassigning)</span>
+        Student s2 = <span class="text-purple-400">new</span> Student(<span class="text-green-400">"A"</span>);
+        Student s3 = <span class="text-purple-400">new</span> Student(<span class="text-green-400">"B"</span>);
+        s2 = s3; <span class="text-green-400">// Đối tượng Student "A" mồ côi -> GC</span>
+
+        <span class="text-slate-500">// 3. Đối tượng tạo trong hàm (Local scope)</span>
+        <span class="text-blue-400">createAndForget</span>();
+        <span class="text-slate-500">// Sau khi hàm kết thúc, đối tượng tạo bên trong sẽ bị GC</span>
+    }
+
+    <span class="text-purple-400">static void</span> <span class="text-blue-400">createAndForget</span>() {
+        Student temp = <span class="text-purple-400">new</span> Student();
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 6: Best Practices -->
+        <section class="mb-16 bg-blue-50 p-8 rounded-3xl border border-blue-100">
+            <h2 class="text-2xl font-bold mb-6 text-blue-900 underline">Tư duy Senior: Đừng chống lại GC, hãy hỗ trợ nó!</h2>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-times"></i></div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">ĐỪNG dùng System.gc()</h4>
+                        <p class="text-sm text-slate-600 italic">Đây chỉ là một lời "gợi ý" cho JVM, không đảm bảo GC sẽ chạy ngay. Nó thường ép JVM chạy Full GC (STW rất lâu), gây lag hệ thống cực kỳ nghiêm trọng.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-check"></i></div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">Ưu tiên biến cục bộ (Local Variables)</h4>
+                        <p class="text-sm text-slate-600">Biến cục bộ chết ngay sau khi hàm kết thúc, giúp GC dọn dẹp nhanh ở Young Gen. Hạn chế dùng Static nếu không thực sự cần thiết.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-check"></i></div>
+                    <div>
+                        <h4 class="font-bold text-slate-800">Cẩn thận với Object Pooling</h4>
+                        <p class="text-sm text-slate-600">Chỉ dùng Pool cho các đối tượng "đắt đỏ" (DB Connection, Thread). Đừng cố tạo Pool cho các đối tượng nhỏ như String hay DTO, vì GC hiện đại dọn dẹp các đối tượng nhỏ cực kỳ hiệu quả.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Interview Q&A -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900">Câu hỏi phỏng vấn (Interview Mastery)</h2>
+            <div class="space-y-4">
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q1: "Mối quan hệ vòng quanh" (Circular Reference) có bị GC dọn không?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: <strong>CÓ</strong>. Nếu đối tượng A trỏ tới B, B trỏ tới A, nhưng cả hai đều không thể truy cập được từ bất kỳ GC Root nào, chúng vẫn bị coi là Rác. Đây là ưu điểm vượt trội của thuật toán <i>Reachability Analysis</i> so với <i>Reference Counting</i>.
+                    </div>
+                </details>
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q2: Minor GC và Full GC khác nhau thế nào?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: <strong>Minor GC</strong> dọn dẹp vùng Young Generation, diễn ra nhanh và thường xuyên. <strong>Full GC</strong> dọn dẹp toàn bộ Heap (cả Young và Old). Full GC gây ra thời gian dừng (STW) rất lâu và là thứ chúng ta cần tránh tối đa bằng cách Tuning tham số JVM.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-10 border-t border-slate-200 text-slate-400 text-xs">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.4: Garbage Collection Internals</p>
+        </footer>
+    </div>
+</body>
+</html>

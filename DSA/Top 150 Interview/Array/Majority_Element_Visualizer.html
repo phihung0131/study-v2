@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Majority Element</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .array-slot {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .slot-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); }
+        .slot-scanning { border-color: #fbbf24; background-color: #fffbeb; }
+        .slot-match { border-color: #10b981; background-color: #ecfdf5; }
+
+        .map-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+        }
+        .map-row.highlight { background-color: #f0fdf4; border-left: 4px solid #22c55e; }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .voting-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            width: 120px;
+        }
+        .voting-card.active { border-color: #3b82f6; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2); }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Majority Element</h1>
+            <p class="text-slate-500 font-medium">LeetCode #169 | Difficulty: Easy | Array, Greedy, Sorting</p>
+        </header>
+
+        <!-- Problem Definition -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span class="text-blue-600">📋</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Given an array <b>nums</b> of size <b>n</b>, return the <b>majority element</b>. 
+                The majority element is the element that appears more than <b>⌊n / 2⌋</b> times. 
+                You may assume that the majority element always exists in the array.
+            </p>
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                <p class="text-sm text-amber-800 italic"><b>Note:</b> Can you solve this in <b>O(n)</b> time and <b>O(1)</b> space?</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-16">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Brute Force (Nested Loops)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    For every element in the array, scan the entire array to count how many times that specific element appears. 
+                    If the count exceeds <b>n / 2</b>, we've found our answer.
+                </p>
+
+                <!-- Animation 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg text-slate-700 font-medium">Click Next to start counting.</div>
+                    <div class="flex flex-wrap justify-center gap-3 mb-10" id="bf-array"></div>
+                    
+                    <div class="flex justify-center items-center gap-8 mb-4">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Testing For</p>
+                            <div id="bf-test-val" class="text-2xl font-bold text-blue-600">-</div>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Current Count</p>
+                            <div id="bf-current-count" class="text-2xl font-bold text-emerald-600">0</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Code</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">majorityElement</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> majorityCount = nums.length / <span class="number">2</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> outer = <span class="number">0</span>; outer < nums.length; outer++) {
+        <span class="keyword">int</span> count = <span class="number">0</span>;
+        <span class="keyword">for</span> (<span class="keyword">int</span> inner = <span class="number">0</span>; inner < nums.length; inner++) {
+            <span class="keyword">if</span> (nums[inner] == nums[outer]) {
+                count++;
+            }
+        }
+        <span class="keyword">if</span> (count > majorityCount) {
+            <span class="keyword">return</span> nums[outer];
+        }
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n²)</b>. Two nested loops iterate over the array.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. No extra data structures used.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Inefficiency</h4>
+                        <p class="text-sm text-slate-600">We re-count the same values multiple times. This approach is only practical for very small arrays.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: HASHMAP -->
+        <section class="mb-16">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: HashMap (Frequency Tracking)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-100">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    Avoid redundant counts by storing the frequency of each element in a <b>Map</b>. 
+                    As we iterate, we update the frequency and immediately check if it has crossed the threshold.
+                </p>
+
+                <!-- Animation 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200 flex flex-col md:flex-row gap-8">
+                    <div class="flex-1">
+                        <div id="hm-msg" class="step-msg text-slate-700 font-medium">Click Next to map frequencies.</div>
+                        <div class="flex flex-wrap justify-center gap-2 mb-6" id="hm-array"></div>
+                        <div class="flex justify-center gap-4 mt-12">
+                            <button onclick="hmViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                            <button onclick="hmViz.next()" id="hm-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-64">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">HashMap State</h4>
+                        <div class="border rounded-lg overflow-hidden" id="hm-table">
+                            <div class="map-row font-bold bg-slate-200 text-xs">
+                                <span>Key</span>
+                                <span>Value (Count)</span>
+                            </div>
+                            <div id="hm-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Code</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">majorityElement</span>(<span class="keyword">int</span>[] nums) {
+    <span class="type">Map</span>&lt;<span class="type">Integer</span>, <span class="type">Integer</span>&gt; counts = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    <span class="keyword">int</span> majorityCount = nums.length / <span class="number">2</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> num : nums) {
+        <span class="comment">// Update frequency in the map</span>
+        counts.put(num, counts.getOrDefault(num, <span class="number">0</span>) + <span class="number">1</span>);
+        
+        <span class="comment">// Check if this number is now the majority</span>
+        <span class="keyword">if</span> (counts.get(num) > majorityCount) {
+            <span class="keyword">return</span> num;
+        }
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Single pass through the array. Map operations are <b>O(1)</b> on average.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. In the worst case, the map stores <b>n/2 + 1</b> unique elements.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Pros & Cons</h4>
+                        <p class="text-sm text-slate-600"><b class="text-emerald-600">Pros:</b> Simple and fast. <b class="text-red-600">Cons:</b> Uses extra linear memory which can be large.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: BOYER-MOORE -->
+        <section class="mb-16">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 3: Boyer-Moore Voting (Optimal)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Tug of War"</h3>
+                <p class="text-slate-600 mb-8">
+                    Imagine a battle. A candidate takes the throne. Every time we see the same person, their <b>count</b> increases. 
+                    Every time we see an enemy, the <b>count</b> decreases. If the count reaches 0, the throne is empty, and the next person we see takes it.
+                    Because the majority element appears <b>more than half</b> the time, it will always survive the "battles."
+                </p>
+
+                <!-- Animation 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bm-msg" class="step-msg text-slate-700 font-medium">Click Next to start the voting battle.</div>
+                    <div class="flex flex-wrap justify-center gap-2 mb-12" id="bm-array"></div>
+                    
+                    <div class="flex justify-center items-end gap-12 mb-8">
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2">Current Candidate</span>
+                            <div id="bm-candidate-card" class="voting-card text-4xl font-bold text-slate-800">-</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2">Votes / Count</span>
+                            <div id="bm-count-card" class="voting-card text-4xl font-bold text-emerald-600">0</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bmViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bmViz.next()" id="bm-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Code</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">majorityElement</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> count = <span class="number">0</span>;
+    <span class="type">Integer</span> candidate = <span class="keyword">null</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> num : nums) {
+        <span class="comment">// If count is zero, we pick a new candidate</span>
+        <span class="keyword">if</span> (count == <span class="number">0</span>) {
+            candidate = num;
+        }
+        
+        <span class="comment">// Increment if current number matches candidate, else decrement</span>
+        count += (num == candidate) ? <span class="number">1</span> : -<span class="number">1</span>;
+    }
+
+    <span class="keyword">return</span> candidate;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Single pass, no complex operations.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. Only two variables needed.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Key Insight</h4>
+                        <p class="text-sm text-slate-600">This works <b>only</b> because a majority element is guaranteed to exist. It "cancels out" all other elements and still remains.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Approach Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Strategy</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Brute Force</td>
+                            <td class="p-4 border text-red-600">O(n²)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border">Small datasets</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-bold">HashMap</td>
+                            <td class="p-4 border text-blue-600">O(n)</td>
+                            <td class="p-4 border text-red-600">O(n)</td>
+                            <td class="p-4 border">General purpose / multiple frequencies needed</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold">Boyer-Moore</td>
+                            <td class="p-4 border text-emerald-600">O(n)</td>
+                            <td class="p-4 border text-emerald-600">O(1)</td>
+                            <td class="p-4 border"><b>Optimal</b> when majority is guaranteed</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 flex items-center"><span class="mr-2">💡</span> Cheat Sheet</h3>
+                <ul class="space-y-3 text-slate-700 text-sm">
+                    <li>• <b>Majority Definition:</b> Frequency > <b>n / 2</b>.</li>
+                    <li>• <b>Sorting Hack:</b> If you sort the array, the majority element is always at <b>nums[n/2]</b>.</li>
+                    <li>• <b>Divide & Conquer:</b> If a majority element exists in the whole array, it must be the majority element in at least one of the halves.</li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                <h3 class="text-xl font-bold mb-4 text-amber-800 flex items-center"><span class="mr-2">🧩</span> Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-amber-900 text-sm">
+                    <li>Array size is 1: The element itself is the majority.</li>
+                    <li>Only two types of numbers: Logic handles this easily.</li>
+                    <li>Majority element at the very end: Handled by Boyer-Moore.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_ARRAY = [2, 2, 1, 1, 1, 2, 2];
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            data: [...TEST_ARRAY],
+            outer: 0,
+            inner: -1,
+            currentCount: 0,
+            isFinished: false,
+            init() {
+                const container = document.getElementById('bf-array');
+                container.innerHTML = this.data.map(v => `<div class="array-slot">${v}</div>`).join('');
+                this.reset();
+            },
+            reset() {
+                this.outer = 0;
+                this.inner = -1;
+                this.currentCount = 0;
+                this.isFinished = false;
+                document.getElementById('bf-next-btn').disabled = false;
+                document.getElementById('bf-test-val').innerText = '-';
+                document.getElementById('bf-current-count').innerText = '0';
+                document.getElementById('bf-msg').innerText = "Testing elements one by one.";
+                this.updateUI();
+            },
+            updateUI() {
+                const slots = document.querySelectorAll('#bf-array .array-slot');
+                slots.forEach((s, i) => {
+                    s.className = 'array-slot';
+                    if (i === this.outer) s.classList.add('slot-active');
+                    if (i === this.inner) {
+                        s.classList.add('slot-scanning');
+                        if (this.data[i] === this.data[this.outer]) s.classList.add('slot-match');
+                    }
+                });
+                document.getElementById('bf-test-val').innerText = this.data[this.outer];
+                document.getElementById('bf-current-count').innerText = this.currentCount;
+            },
+            next() {
+                if (this.isFinished) return;
+                
+                this.inner++;
+                if (this.inner >= this.data.length) {
+                    if (this.currentCount > this.data.length / 2) {
+                        document.getElementById('bf-msg').innerText = `Success! ${this.data[this.outer]} appears ${this.currentCount} times (> ${Math.floor(this.data.length/2)}).`;
+                        this.isFinished = true;
+                        document.getElementById('bf-next-btn').disabled = true;
+                    } else {
+                        this.outer++;
+                        this.inner = 0;
+                        this.currentCount = 0;
+                        document.getElementById('bf-msg').innerText = `Failed. Moving to next element: ${this.data[this.outer]}.`;
+                    }
+                } else {
+                    if (this.data[this.inner] === this.data[this.outer]) {
+                        this.currentCount++;
+                        document.getElementById('bf-msg').innerText = `Found a match! Count is now ${this.currentCount}.`;
+                    } else {
+                        document.getElementById('bf-msg').innerText = `No match at index ${this.inner}.`;
+                    }
+                }
+                this.updateUI();
+            }
+        };
+
+        // --- HASHMAP ---
+        const hmViz = {
+            data: [...TEST_ARRAY],
+            idx: 0,
+            counts: {},
+            init() {
+                const container = document.getElementById('hm-array');
+                container.innerHTML = this.data.map(v => `<div class="array-slot">${v}</div>`).join('');
+                this.reset();
+            },
+            reset() {
+                this.idx = 0;
+                this.counts = {};
+                document.getElementById('hm-next-btn').disabled = false;
+                document.getElementById('hm-content').innerHTML = '';
+                document.getElementById('hm-msg').innerText = "Scanning array to populate HashMap.";
+                this.updateUI();
+            },
+            updateUI() {
+                const slots = document.querySelectorAll('#hm-array .array-slot');
+                slots.forEach((s, i) => {
+                    s.className = 'array-slot';
+                    if (i === this.idx) s.classList.add('slot-active');
+                    if (i < this.idx) s.classList.add('slot-match');
+                });
+                
+                const content = document.getElementById('hm-content');
+                content.innerHTML = Object.entries(this.counts).map(([k, v]) => `
+                    <div class="map-row ${this.data[this.idx-1] == k ? 'highlight' : ''}">
+                        <span>${k}</span>
+                        <span>${v}</span>
+                    </div>
+                `).join('');
+            },
+            next() {
+                if (this.idx >= this.data.length) {
+                    document.getElementById('hm-next-btn').disabled = true;
+                    return;
+                }
+                const val = this.data[this.idx];
+                this.counts[val] = (this.counts[val] || 0) + 1;
+                
+                if (this.counts[val] > this.data.length / 2) {
+                    document.getElementById('hm-msg').innerText = `Found it! ${val} frequency is ${this.counts[val]} (> ${Math.floor(this.data.length/2)}).`;
+                    this.idx++;
+                    this.updateUI();
+                    document.getElementById('hm-next-btn').disabled = true;
+                    return;
+                }
+                
+                document.getElementById('hm-msg').innerText = `Updated frequency for ${val} to ${this.counts[val]}.`;
+                this.idx++;
+                this.updateUI();
+            }
+        };
+
+        // --- BOYER MOORE ---
+        const bmViz = {
+            data: [...TEST_ARRAY],
+            idx: 0,
+            candidate: null,
+            count: 0,
+            init() {
+                const container = document.getElementById('bm-array');
+                container.innerHTML = this.data.map(v => `<div class="array-slot">${v}</div>`).join('');
+                this.reset();
+            },
+            reset() {
+                this.idx = 0;
+                this.candidate = null;
+                this.count = 0;
+                document.getElementById('bm-next-btn').disabled = false;
+                document.getElementById('bm-msg').innerText = "Let the battle begin!";
+                this.updateUI();
+            },
+            updateUI() {
+                const slots = document.querySelectorAll('#bm-array .array-slot');
+                slots.forEach((s, i) => {
+                    s.className = 'array-slot';
+                    if (i === this.idx) s.classList.add('slot-active');
+                    if (i < this.idx) s.classList.add('slot-match');
+                });
+                document.getElementById('bm-candidate-card').innerText = this.candidate === null ? '-' : this.candidate;
+                document.getElementById('bm-candidate-card').className = `voting-card text-4xl font-bold ${this.candidate !== null ? 'active border-blue-400' : ''}`;
+                document.getElementById('bm-count-card').innerText = this.count;
+            },
+            next() {
+                if (this.idx >= this.data.length) {
+                    document.getElementById('bm-msg').innerText = `Final Candidate: ${this.candidate}. Majority found!`;
+                    document.getElementById('bm-next-btn').disabled = true;
+                    return;
+                }
+
+                const num = this.data[this.idx];
+                let msg = "";
+
+                if (this.count === 0) {
+                    this.candidate = num;
+                    this.count = 1;
+                    msg = `Count is 0. ${num} takes the throne. Count = 1.`;
+                } else if (num === this.candidate) {
+                    this.count++;
+                    msg = `${num} matches candidate. Strengthening position! Count = ${this.count}.`;
+                } else {
+                    this.count--;
+                    msg = `${num} is an enemy! Battling... Count drops to ${this.count}.`;
+                }
+
+                document.getElementById('bm-msg').innerText = msg;
+                this.idx++;
+                this.updateUI();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            hmViz.init();
+            bmViz.init();
+        };
+    </script>
+</body>
+</html>

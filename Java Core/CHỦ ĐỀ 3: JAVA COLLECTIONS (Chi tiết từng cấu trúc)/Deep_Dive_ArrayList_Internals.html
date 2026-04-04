@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.1 ArrayList Internals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-link.active { border-right: 4px solid #3b82f6; background: #eff6ff; color: #1d4ed8; }
+        .code-block { position: relative; }
+        .capacity-box { transition: all 0.5s ease; }
+        .resizing-anim { animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 hidden md:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-blue-600">Java Mentor</h2>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#overview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">1. Tổng quan & Phân cấp</a>
+                <a href="#internals" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">2. Cấu trúc Internals</a>
+                <a href="#growth" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">3. Cơ chế Resizing (1.5x)</a>
+                <a href="#performance" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">4. Phân tích Hiệu năng</a>
+                <a href="#failfast" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">5. Fail-Fast & modCount</a>
+                <a href="#bestpractices" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">6. Best Practices (Senior)</a>
+                <a href="#interview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">7. Câu hỏi Phỏng vấn</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-12 overflow-y-auto">
+            <header class="mb-12">
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">BÀI HỌC 3.1</span>
+                <h1 class="text-4xl font-extrabold mt-4 mb-2">ArrayList: Master the Internals</h1>
+                <p class="text-gray-600 text-lg">Học cách làm chủ cấu trúc dữ liệu phổ biến nhất trong JDK và hiểu cơ chế tối ưu bộ nhớ phía sau.</p>
+            </header>
+
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    Tổng quan & Phân cấp (Hierarchy)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-lg mb-3">ArrayList là gì?</h3>
+                        <p class="text-gray-700 leading-relaxed">
+                            ArrayList là một <strong>Mảng động (Dynamic Array)</strong>. Khác với mảng thông thường (`[]`), ArrayList có thể tự động tăng kích thước khi cần thiết. 
+                        </p>
+                        <ul class="mt-4 space-y-2 text-sm text-gray-600">
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> Cho phép phần tử trùng lặp.</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> Bảo toàn thứ tự thêm vào (Insertion order).</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> Triển khai interface RandomAccess (Truy cập cực nhanh qua index).</li>
+                        </ul>
+                    </div>
+                    <div class="bg-blue-900 text-white p-6 rounded-xl shadow-lg">
+                        <h3 class="font-bold text-lg mb-3">Hierarchy Visualization</h3>
+                        <div class="flex flex-col items-center space-y-2">
+                            <div class="border border-blue-300 px-4 py-1 rounded">Iterable</div>
+                            <div class="text-xs">↓</div>
+                            <div class="border border-blue-300 px-4 py-1 rounded">Collection</div>
+                            <div class="text-xs">↓</div>
+                            <div class="border border-blue-300 px-4 py-1 rounded text-yellow-300 font-bold">List</div>
+                            <div class="text-xs">↓</div>
+                            <div class="bg-blue-700 px-6 py-2 rounded-lg font-bold shadow">ArrayList</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Internals -->
+            <section id="internals" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    Cấu trúc Internals (Under the hood)
+                </h2>
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                    <p class="text-sm text-yellow-800 font-semibold italic">"ArrayList thực chất chỉ là một Wrapper bao quanh một mảng Object thuần túy."</p>
+                </div>
+                <div class="code-block mb-8">
+                    <pre><code class="language-java">// Cấu trúc cốt lõi trong OpenJDK 17
+public class ArrayList&lt;E&gt; extends AbstractList&lt;E&gt; implements List&lt;E&gt;, RandomAccess, Cloneable, java.io.Serializable {
+    
+    // Mảng lưu trữ thực sự
+    transient Object[] elementData; 
+
+    // Số lượng phần tử hiện tại
+    private int size;
+
+    // Dung lượng mặc định ban đầu (Nếu không chỉ định)
+    private static final int DEFAULT_CAPACITY = 10;
+    
+    // ...
+}</code></pre>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200">
+                    <h4 class="font-bold mb-4">Lưu ý quan trọng về `transient`:</h4>
+                    <p class="text-gray-700">Tại sao `elementData` lại là <code>transient</code>? Vì ArrayList tự triển khai cơ chế Serialization riêng (qua `writeObject` / `readObject`) để tránh serialize những ô trống (null) trong mảng nhằm tiết kiệm băng thông mạng/dung lượng đĩa.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Growth Mechanism (Interactive Simulation) -->
+            <section id="growth" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                    Cơ chế Resizing (Growth Strategy)
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <p class="mb-4 text-gray-700">Khi số lượng phần tử vượt quá `capacity`, ArrayList sẽ gọi phương thức `grow()`:</p>
+                        <div class="bg-gray-900 rounded-lg p-4 text-sm text-blue-300 font-mono mb-4">
+                            int oldCapacity = elementData.length;<br>
+                            int newCapacity = oldCapacity + (oldCapacity >> 1); // 1.5 lần
+                        </div>
+                        <p class="text-sm text-gray-600">Dịch bit <code>>> 1</code> tương đương chia 2. Công thức: $New = Old + Old/2$.</p>
+                    </div>
+                    <!-- Simulation App -->
+                    <div class="bg-white p-6 rounded-xl border-2 border-dashed border-blue-200" id="sim-container">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-bold uppercase">ArrayList Simulation</span>
+                            <div class="space-x-2">
+                                <button onclick="addToSim()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition">Add Element</button>
+                                <button onclick="resetSim()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300">Reset</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-4" id="array-visual">
+                            <!-- Visual squares go here -->
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div class="bg-blue-50 p-2 rounded">
+                                <p class="text-xs text-blue-600 font-bold">SIZE</p>
+                                <p id="sim-size" class="text-xl font-bold">0</p>
+                            </div>
+                            <div class="bg-green-50 p-2 rounded">
+                                <p class="text-xs text-green-600 font-bold">CAPACITY</p>
+                                <p id="sim-cap" class="text-xl font-bold">10</p>
+                            </div>
+                        </div>
+                        <div id="sim-status" class="mt-4 text-center text-xs font-medium text-gray-500 italic h-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Performance -->
+            <section id="performance" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                    Phân tích Hiệu năng (Time Complexity)
+                </h2>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-left bg-white">
+                        <thead class="bg-gray-100 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 font-bold">Thao tác</th>
+                                <th class="px-6 py-4 font-bold">Time Complexity</th>
+                                <th class="px-6 py-4 font-bold">Lý do</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Add (vào cuối)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold">O(1) *</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">Amortized (khấu hao), thỉnh thoảng tốn O(n) khi resize.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Get/Set (theo index)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold">O(1)</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">Nhờ truy cập mảng qua offset bộ nhớ trực tiếp.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Add (giữa/đầu)</td>
+                                <td class="px-6 py-4 text-red-600 font-bold">O(n)</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">Phải dịch chuyển các phần tử phía sau sang phải.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Remove</td>
+                                <td class="px-6 py-4 text-red-600 font-bold">O(n)</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">Phải dịch chuyển các phần tử phía sau sang trái.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 5: Fail-Fast -->
+            <section id="failfast" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">5</span>
+                    Fail-Fast & modCount
+                </h2>
+                <p class="text-gray-700 mb-4">Đã bao giờ em gặp <code>ConcurrentModificationException</code> chưa? Đó chính là cơ chế **Fail-Fast**.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <pre><code class="language-java">List&lt;String&gt; list = new ArrayList&lt;&gt;();
+list.add("Java");
+list.add("Kotlin");
+
+for (String s : list) {
+    if (s.equals("Java")) {
+        list.remove(s); // BOOM! Tung Exception
+    }
+}</code></pre>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <h4 class="font-bold text-lg mb-2">Cơ chế bảo vệ:</h4>
+                        <p class="text-sm text-gray-600 mb-4">ArrayList duy trì một biến `modCount` (số lần mảng bị thay đổi cấu trúc). Khi khởi tạo một Iterator, nó sẽ copy giá trị này vào `expectedModCount`. Mỗi lần loop, nó kiểm tra:</p>
+                        <div class="bg-red-50 border border-red-100 p-3 rounded text-red-700 font-mono text-xs">
+                            if (modCount != expectedModCount) <br>
+                            &nbsp;&nbsp;throw new ConcurrentModificationException();
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Best Practices -->
+            <section id="bestpractices" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">6</span>
+                    Best Practices (Senior Level)
+                </h2>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="flex items-start space-x-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="bg-blue-100 p-3 rounded-lg"><svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold">Luôn chỉ định Initial Capacity nếu biết trước kích thước</h4>
+                            <p class="text-sm text-gray-600">Tránh việc CPU phải resize liên tục 1.5x (copy mảng cực tốn kém).</p>
+                            <code class="text-xs bg-gray-100 p-1 rounded">List&lt;Item&gt; items = new ArrayList&lt;&gt;(1000);</code>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="bg-green-100 p-3 rounded-lg"><svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04c-.243.47-.382 1.002-.382 1.566 0 4.06 2.305 7.583 5.723 9.356a11.954 11.954 0 0010.554 0c3.418-1.773 5.723-5.296 5.723-9.356 0-.564-.139-1.096-.382-1.566z"></path></svg></div>
+                        <div>
+                            <h4 class="font-bold">Ưu tiên `ArrayList` thay vì `LinkedList` trong hầu hết các case thực tế</h4>
+                            <p class="text-sm text-gray-600">LinkedList có chi phí bộ nhớ cực lớn cho mỗi node (Next/Prev pointers) và hiệu năng cache (spatial locality) kém xa ArrayList.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">7</span>
+                    Thử thách Tư duy (Interview Prep)
+                </h2>
+                <div class="space-y-4">
+                    <details class="group bg-white p-4 rounded-lg border border-gray-200 cursor-pointer">
+                        <summary class="font-semibold text-gray-800 flex justify-between items-center">
+                            Câu 1: ArrayList có Thread-safe không? Làm sao để nó Thread-safe?
+                            <span class="group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div class="mt-4 text-sm text-gray-600 space-y-2">
+                            <p>Không. ArrayList không đồng bộ (non-synchronized). Để nó thread-safe, em có 2 cách:</p>
+                            <ol class="list-decimal ml-5">
+                                <li>Dùng <code>Collections.synchronizedList(new ArrayList&lt;&gt;())</code>.</li>
+                                <li>Dùng <code>CopyOnWriteArrayList</code> (Phù hợp cho case Read nhiều Write ít).</li>
+                            </ol>
+                        </div>
+                    </details>
+                    <details class="group bg-white p-4 rounded-lg border border-gray-200 cursor-pointer">
+                        <summary class="font-semibold text-gray-800 flex justify-between items-center">
+                            Câu 2: Tại sao ArrayList xóa phần tử ở đầu lại chậm hơn ở cuối?
+                            <span class="group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p>Vì khi xóa ở đầu (index 0), Java phải gọi <code>System.arraycopy()</code> để dịch chuyển tất cả n-1 phần tử còn lại lên phía trước 1 vị trí để lấp đầy khoảng trống. Xóa ở cuối thì chỉ cần set `null` và giảm `size` (O(1)).</p>
+                        </div>
+                    </details>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Simulation Logic
+        let size = 0;
+        let capacity = 10;
+        const visual = document.getElementById('array-visual');
+        const sizeEl = document.getElementById('sim-size');
+        const capEl = document.getElementById('sim-cap');
+        const statusEl = document.getElementById('sim-status');
+
+        function updateVisual() {
+            visual.innerHTML = '';
+            for (let i = 0; i < capacity; i++) {
+                const box = document.createElement('div');
+                box.className = `w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold capacity-box ${i < size ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`;
+                box.innerText = i < size ? 'E' : '';
+                visual.appendChild(box);
+            }
+            sizeEl.innerText = size;
+            capEl.innerText = capacity;
+        }
+
+        function addToSim() {
+            if (size >= capacity) {
+                const oldCap = capacity;
+                capacity = Math.floor(oldCap + (oldCap / 2));
+                statusEl.innerText = `Growing: ${oldCap} -> ${capacity}...`;
+                statusEl.classList.add('text-orange-500');
+                
+                visual.classList.add('resizing-anim');
+                setTimeout(() => {
+                    visual.classList.remove('resizing-anim');
+                    size++;
+                    updateVisual();
+                }, 400);
+            } else {
+                size++;
+                statusEl.innerText = '';
+                updateVisual();
+            }
+        }
+
+        function resetSim() {
+            size = 0;
+            capacity = 10;
+            statusEl.innerText = '';
+            updateVisual();
+        }
+
+        // Init
+        updateVisual();
+
+        // Highlight sidebar links on scroll
+        const sections = document.querySelectorAll("section");
+        const navLinks = document.querySelectorAll(".sidebar-link");
+
+        window.addEventListener("scroll", () => {
+            let current = "";
+            sections.forEach((section) => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute("id");
+                }
+            });
+
+            navLinks.forEach((link) => {
+                link.classList.remove("active");
+                if (link.getAttribute("href").includes(current)) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

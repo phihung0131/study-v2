@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Synchronization - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; border-right: 1px solid #1e293b; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; border-radius: 16px; }
+        .highlight-box { border-left: 4px solid #38bdf8; background: rgba(56, 189, 248, 0.05); padding: 1.5rem; margin: 1.5rem 0; }
+        
+        /* Animation Styles */
+        .monitor-lock { width: 60px; height: 60px; border-radius: 50%; border: 4px dashed #94a3b8; display: flex; align-items: center; justify-content: center; position: relative; }
+        .monitor-lock.locked { border-color: #f43f5e; border-style: solid; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(244, 63, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); } }
+        
+        .thread-node { width: 100px; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; position: absolute; transition: all 1s ease; }
+        .thread-1 { background: #38bdf8; color: #0f172a; }
+        .thread-2 { background: #fbbf24; color: #0f172a; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-72 bg-slate-900 p-8 flex-shrink-0 hidden lg:block">
+        <div class="mb-10">
+            <h2 class="text-sky-400 font-bold text-2xl tracking-tight">Java Mastery</h2>
+            <p class="text-slate-500 text-xs mt-1">Mentor: Thầy dạy Java</p>
+        </div>
+        <nav class="space-y-6 text-sm">
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Nền tảng</p>
+                <a href="#problem" class="block text-slate-300 hover:text-sky-400 transition mb-2">1. Race Condition là gì?</a>
+                <a href="#syntax" class="block text-slate-300 hover:text-sky-400 transition mb-2">2. Cú pháp Synchronized</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Internal</p>
+                <a href="#monitor" class="block text-slate-300 hover:text-sky-400 transition mb-2">3. Monitor Lock & Intrinsic</a>
+                <a href="#visibility" class="block text-slate-300 hover:text-sky-400 transition mb-2">4. Visibility & Atomicity</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Thực chiến</p>
+                <a href="#simulation" class="block text-slate-300 hover:text-sky-400 transition mb-2">5. Mô phỏng Tương tác</a>
+                <a href="#best-practices" class="block text-slate-300 hover:text-sky-400 transition mb-2">6. Best Practices</a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow">
+        <div class="max-w-5xl mx-auto p-8 lg:p-16">
+            
+            <!-- Header -->
+            <header id="problem" class="mb-16">
+                <span class="px-3 py-1 bg-sky-500/10 text-sky-400 text-xs font-bold rounded-full border border-sky-500/20">MODULE 5.2</span>
+                <h1 class="text-5xl font-black mt-6 mb-6 leading-tight">Synchronization: <br><span class="text-sky-400">Thiết lập Trật tự trong Đa luồng</span></h1>
+                <p class="text-slate-400 text-xl leading-relaxed">
+                    Khi nhiều Thread cùng truy cập và sửa đổi dữ liệu dùng chung, chúng ta đối mặt với thảm họa dữ liệu. <code>synchronized</code> là cơ chế "loại trừ tương hỗ" (Mutual Exclusion) giúp đảm bảo tại một thời điểm chỉ có một Thread được phép thực thi đoạn code nhạy cảm.
+                </p>
+            </header>
+
+            <!-- Section 1: Race Condition -->
+            <section class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-8 h-8 bg-sky-500 text-slate-900 rounded-lg flex items-center justify-center mr-4 text-sm">01</span>
+                    Vấn đề: Race Condition
+                </h2>
+                <div class="glass-card p-8">
+                    <p class="mb-6 text-slate-300">Xét ví dụ kinh điển: Hai Thread cùng tăng một biến <code>count++</code> 10,000 lần. Kết quả mong đợi là 20,000 nhưng thực tế thường thấp hơn. Tại sao?</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <div class="highlight-box border-pink-500 bg-pink-500/5">
+                                <p class="text-pink-400 font-bold mb-2">Cơ chế của count++:</p>
+                                <ol class="text-sm space-y-2 text-slate-400 list-decimal ml-4">
+                                    <li>Đọc giá trị từ Memory vào Register.</li>
+                                    <li>Tăng giá trị trong Register.</li>
+                                    <li>Ghi ngược lại vào Memory.</li>
+                                </ol>
+                            </div>
+                            <p class="text-sm italic text-slate-500">-> Nếu Thread A đang ở bước 2 mà Thread B nhảy vào bước 1, giá trị của A sẽ bị đè mất (Lost Update).</p>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <pre><code class="language-java">// Unsafe code
+public void increment() {
+    count++; // Race condition ở đây!
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Syntax -->
+            <section id="syntax" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-8 h-8 bg-sky-500 text-slate-900 rounded-lg flex items-center justify-center mr-4 text-sm">02</span>
+                    Cú pháp Synchronized
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+                        <h3 class="text-sky-400 font-bold mb-4">Instance Methods</h3>
+                        <pre><code class="language-java">public synchronized void method() {
+    // Khóa trên đối tượng 'this'
+}</code></pre>
+                        <p class="text-xs mt-4 text-slate-500 italic">Dùng khi muốn bảo vệ toàn bộ instance.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+                        <h3 class="text-amber-400 font-bold mb-4">Static Methods</h3>
+                        <pre><code class="language-java">public static synchronized void log() {
+    // Khóa trên Class object (.class)
+}</code></pre>
+                        <p class="text-xs mt-4 text-slate-500 italic">Dùng cho các tài nguyên static chung toàn hệ thống.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 rounded-xl border border-slate-700 md:col-span-2">
+                        <h3 class="text-emerald-400 font-bold mb-4">Synchronized Block (Khuyên dùng)</h3>
+                        <pre><code class="language-java">private final Object lock = new Object();
+public void update() {
+    synchronized(lock) {
+        // Chỉ code bên trong mới được bảo vệ
+    }
+}</code></pre>
+                        <p class="text-sm mt-4 text-slate-400"><strong>Mentor Tip:</strong> Luôn dùng block với một Object lock riêng để tránh "Lock Contention" không đáng có trên toàn bộ instance.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive Simulation -->
+            <section id="simulation" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center text-sky-400">
+                    Mô phỏng: Monitor Lock Visualizer
+                </h2>
+                <div class="glass-card p-10">
+                    <div class="relative h-64 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden mb-8" id="sim-container">
+                        <!-- Critical Section -->
+                        <div class="absolute inset-y-0 right-1/4 w-1/3 bg-red-500/10 border-l border-r border-red-500/30 flex items-center justify-center">
+                            <span class="text-red-500/50 font-bold rotate-90 uppercase tracking-widest text-xs">Critical Section</span>
+                        </div>
+                        
+                        <!-- Monitor -->
+                        <div class="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center">
+                            <div id="visual-lock" class="monitor-lock">
+                                <svg class="w-6 h-6 text-slate-500" id="lock-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            </div>
+                            <span class="text-[10px] mt-2 font-bold text-slate-500 uppercase">Monitor Object</span>
+                        </div>
+
+                        <!-- Threads -->
+                        <div id="t1" class="thread-node thread-1" style="top: 30%; left: 10%;">Thread A</div>
+                        <div id="t2" class="thread-node thread-2" style="top: 60%; left: 10%;">Thread B</div>
+                    </div>
+                    
+                    <div class="flex gap-4 justify-center">
+                        <button onclick="startSimulation()" class="px-6 py-2 bg-sky-500 text-slate-900 font-bold rounded-full hover:bg-sky-400 transition shadow-lg shadow-sky-500/20">Chạy Simulation</button>
+                        <button onclick="resetSimulation()" class="px-6 py-2 bg-slate-700 text-slate-200 font-bold rounded-full hover:bg-slate-600 transition">Reset</button>
+                    </div>
+                    <p id="sim-status" class="text-center mt-6 text-sm text-slate-400 italic">Nhấn Start để xem cách Monitor Lock điều phối 2 Thread.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Monitor Internal -->
+            <section id="monitor" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-8 h-8 bg-sky-500 text-slate-900 rounded-lg flex items-center justify-center mr-4 text-sm">03</span>
+                    Bản chất: Monitor Lock (Intrinsic Lock)
+                </h2>
+                <div class="highlight-box">
+                    <p class="text-slate-300 mb-4">Trong JVM, mọi Object đều có một <strong>Header</strong> chứa thông tin gọi là <strong>Mark Word</strong>. Khi một Thread thực hiện <code>synchronized</code>, nó sẽ cố gắng ghi ID của mình vào Mark Word này.</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center text-sm">
+                            <span class="w-2 h-2 bg-sky-500 rounded-full mr-3"></span>
+                            <span><strong>Biased Locking:</strong> Nếu chỉ 1 thread dùng lock, JVM sẽ "thiên vị" cho nó để giảm chi phí.</span>
+                        </li>
+                        <li class="flex items-center text-sm">
+                            <span class="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
+                            <span><strong>Lightweight Locking:</strong> Khi có 2 thread bắt đầu tranh chấp nhẹ, JVM dùng CAS (Compare-And-Swap).</span>
+                        </li>
+                        <li class="flex items-center text-sm">
+                            <span class="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
+                            <span><strong>Heavyweight Locking:</strong> Khi tranh chấp cao, Thread bị đẩy vào <strong>Entry Set</strong> và chuyển sang trạng thái <code>BLOCKED</code>.</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Visibility Section -->
+            <section id="visibility" class="mb-20 border-t border-slate-800 pt-16">
+                <h2 class="text-3xl font-bold mb-8 text-emerald-400">Hai "Phép màu" của Synchronized</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
+                        <h4 class="text-lg font-bold mb-4 text-emerald-400">1. Atomicity (Tính nguyên tử)</h4>
+                        <p class="text-sm text-slate-400 leading-relaxed">
+                            Đảm bảo một nhóm các câu lệnh được thực thi như một đơn vị duy nhất, không thể bị chia cắt bởi Thread khác.
+                        </p>
+                    </div>
+                    <div class="p-8 bg-sky-500/5 border border-sky-500/20 rounded-2xl">
+                        <h4 class="text-lg font-bold mb-4 text-sky-400">2. Visibility (Tính hiển thị)</h4>
+                        <p class="text-sm text-slate-400 leading-relaxed">
+                            Quan trọng! Khi Thread thoát khỏi <code>synchronized</code> block, nó bắt buộc phải đẩy (flush) mọi thay đổi từ Local Cache vào Main Memory, giúp các Thread khác thấy được kết quả mới nhất.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Best Practices -->
+            <section id="best-practices" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 text-pink-500">Mentor's Best Practices</h2>
+                <div class="bg-slate-900 p-8 rounded-2xl space-y-4 border border-pink-500/20">
+                    <div class="flex items-start gap-4 p-4 hover:bg-slate-800/50 transition rounded-lg">
+                        <span class="text-pink-500 text-xl font-black">!</span>
+                        <div>
+                            <p class="font-bold text-slate-200">Giữ vùng găng (Critical Section) nhỏ nhất có thể.</p>
+                            <p class="text-xs text-slate-500">Chỉ bao bọc code thực sự cần bảo vệ để tránh giảm hiệu năng hệ thống.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 hover:bg-slate-800/50 transition rounded-lg">
+                        <span class="text-pink-500 text-xl font-black">!</span>
+                        <div>
+                            <p class="font-bold text-slate-200">Ưu tiên 'private final Object lock'.</p>
+                            <p class="text-xs text-slate-500">Tránh dùng String literal làm lock vì có thể bị trùng trong String Pool, gây deadlock xuyên ứng dụng.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 hover:bg-slate-800/50 transition rounded-lg">
+                        <span class="text-pink-500 text-xl font-black">!</span>
+                        <div>
+                            <p class="font-bold text-slate-200">Synchronized là Reentrant (Có thể vào lại).</p>
+                            <p class="text-xs text-slate-500">Một Thread đang giữ Lock có thể gọi tiếp một method synchronized khác của chính nó mà không bị kẹt.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q&A Section -->
+            <section class="mb-20 bg-sky-900/10 p-10 rounded-3xl border border-sky-500/20">
+                <h2 class="text-2xl font-bold mb-6 text-sky-400">Câu hỏi tư duy (Senior Level)</h2>
+                <div class="space-y-6">
+                    <div class="bg-slate-800/40 p-5 rounded-xl">
+                        <p class="text-slate-200 font-semibold mb-2 italic">"Tại sao đôi khi dùng synchronized vẫn thấy ứng dụng bị chậm đi đáng kể?"</p>
+                        <p class="text-sm text-slate-400">Đó là hiện tượng <strong>Lock Contention</strong>. Khi quá nhiều Thread đứng xếp hàng đợi một cái Lock duy nhất, thời gian chờ đợi lớn hơn thời gian xử lý thực tế. Lúc này bạn nên cân nhắc chia nhỏ Lock (Lock Stripping) hoặc dùng các cấu trúc Non-blocking như <code>AtomicInteger</code>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10 border-t border-slate-900">
+                &copy; 2024 Thầy dạy Java - Education for Senior Developers
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        const t1 = document.getElementById('t1');
+        const t2 = document.getElementById('t2');
+        const visualLock = document.getElementById('visual-lock');
+        const lockIcon = document.getElementById('lock-icon');
+        const status = document.getElementById('sim-status');
+
+        async function startSimulation() {
+            resetSimulation();
+            status.innerText = "Simulation bắt đầu. Thread A đang di chuyển...";
+            
+            // Thread A moves to lock
+            t1.style.left = "55%";
+            await wait(1000);
+            
+            // A acquires lock
+            visualLock.classList.add('locked');
+            visualLock.style.borderColor = "#38bdf8";
+            lockIcon.style.color = "#38bdf8";
+            status.innerText = "Thread A đã chiếm được Lock và đang ở trong Critical Section.";
+            
+            // Thread B tries to move
+            await wait(500);
+            t2.style.left = "40%";
+            status.innerText = "Thread B đang tới, nhưng thấy Lock bị chiếm. Nó phải chờ (BLOCKED).";
+            
+            // A finishes
+            await wait(2000);
+            t1.style.left = "80%";
+            visualLock.classList.remove('locked');
+            status.innerText = "Thread A hoàn tất và nhả Lock. Thread B lập tức chiếm lấy.";
+            
+            // B acquires lock
+            visualLock.classList.add('locked');
+            visualLock.style.borderColor = "#fbbf24";
+            lockIcon.style.color = "#fbbf24";
+            t2.style.left = "55%";
+            
+            // B finishes
+            await wait(2000);
+            t2.style.left = "80%";
+            visualLock.classList.remove('locked');
+            status.innerText = "Simulation hoàn tất. Cả 2 Thread đã được đồng bộ hóa thành công!";
+        }
+
+        function resetSimulation() {
+            t1.style.left = "10%";
+            t2.style.left = "10%";
+            visualLock.classList.remove('locked');
+            visualLock.style.borderColor = "";
+            lockIcon.style.color = "";
+            status.innerText = "Nhấn Start để xem cách Monitor Lock điều phối 2 Thread.";
+        }
+
+        function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    </script>
+</body>
+</html>

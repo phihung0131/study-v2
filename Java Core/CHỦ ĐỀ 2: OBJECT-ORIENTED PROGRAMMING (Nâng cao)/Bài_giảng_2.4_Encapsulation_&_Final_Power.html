@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Senior: Encapsulation & Final Power</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .modifier-badge { transition: all 0.3s; cursor: help; }
+        .modifier-badge:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .final-box { border: 2px solid #ef4444; position: relative; }
+        .final-box::after { content: 'LOCKED'; position: absolute; top: -10px; right: 10px; background: #ef4444; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-900">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 text-white sticky top-0 h-screen hidden lg:block shadow-2xl">
+        <div class="p-8 border-b border-slate-800">
+            <h1 class="text-2xl font-bold text-indigo-400 italic">Java Masterclass</h1>
+            <p class="text-xs text-gray-400 mt-1">Chương 2: Encapsulation</p>
+        </div>
+        <nav class="mt-6 px-4 space-y-2">
+            <a href="#definition" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">1. Bản chất Đóng gói</a>
+            <a href="#modifiers" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">2. Access Modifiers Matrix</a>
+            <a href="#final" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">3. Sức mạnh của FINAL</a>
+            <a href="#jit" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">4. JIT & Performance</a>
+            <a href="#best-practices" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">5. Senior Best Practices</a>
+            <a href="#qa" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">6. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-16 max-w-5xl mx-auto overflow-y-auto">
+        
+        <!-- Section 1: Intro -->
+        <section id="definition" class="mb-20">
+            <h2 class="text-4xl font-black text-slate-800 mb-6 uppercase tracking-tight">2.4. Encapsulation & Immutability</h2>
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
+                <p class="text-lg leading-relaxed text-slate-600">
+                    <span class="text-indigo-600 font-bold">Encapsulation (Đóng gói)</span> không chỉ là "giấu dữ liệu". 
+                    Nó là việc nhóm dữ liệu và các hành động trên dữ liệu đó vào một đơn vị, đồng thời kiểm soát chặt chẽ cách thức thế giới bên ngoài tương tác với dữ liệu đó để tránh trạng thái không hợp lệ (Inconsistent State).
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Modifiers Matrix -->
+        <section id="modifiers" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-slate-800 flex items-center">
+                <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">A</span>
+                Access Modifiers: Ma trận quyền truy cập
+            </h3>
+            
+            <div class="overflow-x-auto shadow-xl rounded-xl border border-gray-200">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-800 text-white text-sm uppercase">
+                        <tr>
+                            <th class="p-4">Modifier</th>
+                            <th class="p-4 text-center">Class</th>
+                            <th class="p-4 text-center">Package</th>
+                            <th class="p-4 text-center">Subclass</th>
+                            <th class="p-4 text-center">World</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b">
+                            <td class="p-4 font-bold text-red-600">private</td>
+                            <td class="p-4 text-center">✅</td><td class="p-4 text-center">❌</td><td class="p-4 text-center">❌</td><td class="p-4 text-center">❌</td>
+                        </tr>
+                        <tr class="border-b bg-slate-50">
+                            <td class="p-4 font-bold text-gray-600">default (no modifier)</td>
+                            <td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td><td class="p-4 text-center">❌</td><td class="p-4 text-center">❌</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="p-4 font-bold text-amber-600">protected</td>
+                            <td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td><td class="p-4 text-center">❌</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-bold text-emerald-600">public</td>
+                            <td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td><td class="p-4 text-center">✅</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-400">
+                    <h5 class="font-bold text-indigo-800 text-sm">Lời khuyên của Thầy:</h5>
+                    <p class="text-xs text-indigo-700 mt-1">Luôn bắt đầu với <strong>private</strong>. Chỉ nới lỏng khi thực sự cần thiết. Quyền truy cập càng hẹp, hệ thống càng ít lỗi "side-effect".</p>
+                </div>
+                <div class="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400">
+                    <h5 class="font-bold text-amber-800 text-sm">Cảnh báo Protected:</h5>
+                    <p class="text-xs text-amber-700 mt-1">Protected cho phép các class cùng package truy cập, dù không kế thừa. Đây là một "lỗ hổng" thiết kế cần cẩn trọng.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Final Power -->
+        <section id="final" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-slate-800 flex items-center">
+                <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">F</span>
+                Từ khóa FINAL: Chìa khóa của sự bất biến
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Final Variable -->
+                <div class="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-red-400 transition shadow-sm">
+                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <h4 class="font-bold mb-2">Final Variable</h4>
+                    <p class="text-xs text-gray-500">Chỉ được gán giá trị 1 lần duy nhất. Giúp đảm bảo <strong>Thread-Safety</strong> trong lập trình đa luồng.</p>
+                </div>
+                <!-- Final Method -->
+                <div class="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-red-400 transition shadow-sm">
+                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                    </div>
+                    <h4 class="font-bold mb-2">Final Method</h4>
+                    <p class="text-xs text-gray-500">Không thể bị Override ở lớp con. Ngăn chặn việc làm thay đổi logic cốt lõi của class cha.</p>
+                </div>
+                <!-- Final Class -->
+                <div class="p-6 bg-white border-2 border-slate-100 rounded-2xl hover:border-red-400 transition shadow-sm">
+                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </div>
+                    <h4 class="font-bold mb-2">Final Class</h4>
+                    <p class="text-xs text-gray-500">Không thể bị kế thừa. Ví dụ tiêu biểu là <code>String</code>. Giúp đảm bảo an ninh và tối ưu hóa bộ nhớ.</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-xl p-6 shadow-2xl">
+                <h4 class="text-indigo-400 font-mono mb-4">// Một Immutable Class mẫu mực</h4>
+<pre><code class="language-java">public final class UserAccount {
+    private final String username; // Immutable
+    private final List&lt;String&gt; roles; // Phải cẩn thận với Mutable objects
+
+    public UserAccount(String username, List&lt;String&gt; roles) {
+        this.username = username;
+        // Defensive Copy: Senior tip để bảo mật dữ liệu
+        this.roles = List.copyOf(roles); 
+    }
+
+    public String getUsername() { return username; }
+    
+    // Không bao giờ trả về trực tiếp reference của mutable object
+    public List&lt;String&gt; getRoles() { return roles; } 
+}
+</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 4: JIT Performance -->
+        <section id="jit" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Tại sao nên dùng Final cho hiệu năng?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h5 class="font-bold text-indigo-600 mb-3">JIT Inlining</h5>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Khi một method là <code>final</code>, JVM biết chắc chắn nó sẽ không bị ghi đè. 
+                        <strong>JIT Compiler</strong> có thể thực hiện <strong>Method Inlining</strong>: thay thế lời gọi hàm bằng mã nguồn thực tế của hàm đó. 
+                        Việc này loại bỏ chi phí đẩy tham số vào Stack và nhảy địa chỉ lệnh (Jump).
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h5 class="font-bold text-indigo-600 mb-3">Constant Folding</h5>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Với <code>static final</code>, compiler có thể tính toán trước giá trị ngay từ khi biên dịch. 
+                        Giúp giảm thiểu các phép tính toán không cần thiết lúc Runtime.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Best Practices -->
+        <section id="best-practices" class="mb-20">
+            <h3 class="text-3xl font-bold mb-8 text-slate-800">Senior Best Practices</h3>
+            <div class="space-y-4">
+                <div class="flex items-start p-4 bg-emerald-50 rounded-lg">
+                    <div class="mr-4 text-emerald-600 font-bold text-xl">01</div>
+                    <div>
+                        <h6 class="font-bold text-emerald-900">Thiết kế cho sự bất biến (Immutability)</h6>
+                        <p class="text-sm text-emerald-700 italic">"Classes should be immutable unless there's a very good reason to make them mutable." (Joshua Bloch - Effective Java)</p>
+                    </div>
+                </div>
+                <div class="flex items-start p-4 bg-blue-50 rounded-lg">
+                    <div class="mr-4 text-blue-600 font-bold text-xl">02</div>
+                    <div>
+                        <h6 class="font-bold text-blue-900">Defensive Copying</h6>
+                        <p class="text-sm text-blue-700">Khi nhận vào hoặc trả về một Mutable Object (như Date, List), hãy tạo một bản sao mới thay vì dùng chung reference để tránh bị sửa lén dữ liệu từ bên ngoài.</p>
+                    </div>
+                </div>
+                <div class="flex items-start p-4 bg-purple-50 rounded-lg">
+                    <div class="mr-4 text-purple-600 font-bold text-xl">03</div>
+                    <div>
+                        <h6 class="font-bold text-purple-900">Tell, Don't Ask</h6>
+                        <p class="text-sm text-purple-700">Đừng lấy dữ liệu ra để xử lý (Asking), hãy ra lệnh cho đối tượng thực hiện hành động trên chính dữ liệu của nó (Telling).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Q&A -->
+        <section id="qa" class="mb-20">
+            <h2 class="text-3xl font-bold mb-8 text-center text-slate-800 uppercase tracking-widest">Góc Senior Interview</h2>
+            <div class="space-y-4">
+                <details class="group bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        <span>Q1: Từ khóa "final" có ý nghĩa gì đối với một Reference Variable trỏ tới một List?</span>
+                        <span class="group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-4 text-gray-700 text-sm leading-relaxed border-t pt-4">
+                        Nó có nghĩa là biến tham chiếu đó không thể trỏ tới một List khác. Tuy nhiên, nội dung bên trong List đó <strong>vẫn có thể bị thay đổi</strong> (add, remove). Để làm cho List thực sự bất biến, ta phải dùng <code>Collections.unmodifiableList()</code> hoặc <code>List.copyOf()</code>.
+                    </div>
+                </details>
+
+                <details class="group bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        <span>Q2: Tại sao các hằng số thường được khai báo là "public static final"?</span>
+                        <span class="group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-4 text-gray-700 text-sm leading-relaxed border-t pt-4">
+                        - <strong>public:</strong> Để mọi nơi có thể truy cập.<br>
+                        - <strong>static:</strong> Để biến đó thuộc về class, không tốn bộ nhớ cho từng instance.<br>
+                        - <strong>final:</strong> Để giá trị không bao giờ bị thay đổi.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <footer class="mt-20 py-10 border-t text-center text-slate-400 text-sm">
+            Cảm ơn em đã chú ý lắng nghe bài học về Encapsulation. Đây là nền tảng của bảo mật mã nguồn!
+        </footer>
+    </main>
+</div>
+
+</body>
+</html>

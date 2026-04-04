@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Visualizer: Merge Sorted Array</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .string { color: #ce9178; }
+        .number { color: #b5cea8; }
+
+        .array-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: white;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .cell.active { border-color: #3b82f6; background-color: #dbeafe; transform: translateY(-5px); }
+        .cell.target { border-color: #10b981; background-color: #dcfce7; }
+        .cell.empty { border-style: dashed; color: #94a3b8; }
+        .cell.moving { background-color: #fef08a; border-color: #eab308; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -25px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .step-description {
+            min-height: 60px;
+            background-color: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-slate-900 mb-4">Merge Sorted Array</h1>
+            <p class="text-lg text-slate-600 italic">LeetCode #88 | Difficulty: Easy | Array, Two Pointers, Sorting</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-xl shadow-sm mb-8">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">Problem Summary</h2>
+            <p class="mb-4">
+                You are given two integer arrays <b>nums1</b> and <b>nums2</b>, sorted in non-decreasing order, and two integers <b>m</b> and <b>n</b>, representing the number of elements in <b>nums1</b> and <b>nums2</b> respectively.
+            </p>
+            <p class="mb-4">
+                <b>Merge</b> nums2 into nums1 as a single sorted array.
+            </p>
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
+                <p class="font-semibold text-amber-800">Crucial Constraint:</p>
+                <p class="text-amber-700">The final sorted array should not be returned by the function, but instead be <b>stored inside the array nums1</b>. nums1 has a length of <b>m + n</b>, where the first m elements denote the elements that should be merged, and the last n elements are set to 0 and should be ignored.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-16">
+            <div class="bg-blue-600 text-white px-4 py-2 rounded-t-lg inline-block font-bold">
+                Approach 1: Merge and Sort (Brute Force)
+            </div>
+            <div class="bg-white p-6 rounded-b-xl rounded-tr-xl shadow-md">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="mb-6 text-slate-700">
+                    The simplest way to solve this is to follow the instructions literally: 
+                    1. Fill the empty slots at the end of <b>nums1</b> with the elements from <b>nums2</b>.
+                    2. Sort the entire <b>nums1</b> array using a built-in sorting algorithm.
+                    While this works, it doesn't take advantage of the fact that the input arrays are <b>already sorted</b>.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="mb-8 border rounded-xl p-6 bg-slate-50">
+                    <h4 class="font-bold text-center mb-4">Animation: Merge then Sort</h4>
+                    <div id="bf-step-info" class="step-description">Click "Next Step" to begin the visualization.</div>
+                    
+                    <div class="mb-2 font-semibold text-slate-500">nums1 (m=3, n=3):</div>
+                    <div id="bf-array1" class="array-container"></div>
+                    
+                    <div class="mb-2 font-semibold text-slate-500">nums2:</div>
+                    <div id="bf-array2" class="array-container"></div>
+
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="bfVisualizer.reset()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded font-semibold transition">Reset</button>
+                        <button onclick="bfVisualizer.next()" id="bf-next-btn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-6">
+<pre>
+<span class="keyword">class</span> <span class="type">Solution</span> {
+    <span class="keyword">public void</span> <span class="type">merge</span>(<span class="keyword">int</span>[] nums1, <span class="keyword">int</span> m, <span class="keyword">int</span>[] nums2, <span class="keyword">int</span> n) {
+        <span class="comment">// 1. Copy nums2 into the end of nums1</span>
+        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+            nums1[m + i] = nums2[i];
+        }
+
+        <span class="comment">// 2. Sort the entire array</span>
+        <span class="comment">// Time Complexity: O((m+n) log(m+n))</span>
+        <span class="type">Arrays</span>.sort(nums1);
+    }
+}
+</pre>
+                </div>
+
+                <!-- Analysis Zone 1 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Time Complexity:</b> <b>O((m + n) log(m + n))</b> due to the sorting step.</li>
+                            <li><b>Space Complexity:</b> <b>O(log(m + n))</b> or <b>O(1)</b> depending on the sort implementation (e.g., QuickSort space).</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <h4 class="font-bold mb-2">Pros & Cons</h4>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><span class="text-green-600 font-bold">Pros:</span> Extremely simple to write; uses built-in library methods.</li>
+                            <li><span class="text-red-600 font-bold">Cons:</span> Slowest performance; ignores the "sorted" property of inputs.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: OPTIMAL THREE POINTERS -->
+        <section class="mb-16">
+            <div class="bg-emerald-600 text-white px-4 py-2 rounded-t-lg inline-block font-bold">
+                Approach 2: Three Pointers (Optimal - Reverse Order)
+            </div>
+            <div class="bg-white p-6 rounded-b-xl rounded-tr-xl shadow-md border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="mb-6 text-slate-700">
+                    If we try to merge from the <b>start</b>, we would have to shift elements in <b>nums1</b> to make room, which is inefficient <b>O(n^2)</b>. 
+                    <br><br>
+                    <b>The Insight:</b> Start from the <b>end</b>! Since the back of <b>nums1</b> is empty (zeros), we can compare the largest elements from both arrays and place the winner at the very end of <b>nums1</b>. This way, we never overwrite data we haven't processed yet.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="mb-8 border rounded-xl p-6 bg-slate-50">
+                    <h4 class="font-bold text-center mb-4">Animation: Reverse Three Pointers</h4>
+                    <div id="opt-step-info" class="step-description">Click "Next Step" to visualize the O(m+n) approach.</div>
+                    
+                    <div class="mb-2 font-semibold text-slate-500">nums1 (with m valid elements):</div>
+                    <div id="opt-array1" class="array-container"></div>
+                    
+                    <div class="mb-2 font-semibold text-slate-500">nums2:</div>
+                    <div id="opt-array2" class="array-container"></div>
+
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="optVisualizer.reset()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded font-semibold transition">Reset</button>
+                        <button onclick="optVisualizer.next()" id="opt-next-btn" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-6">
+<pre>
+<span class="keyword">class</span> <span class="type">Solution</span> {
+    <span class="keyword">public void</span> <span class="type">merge</span>(<span class="keyword">int</span>[] nums1, <span class="keyword">int</span> m, <span class="keyword">int</span>[] nums2, <span class="keyword">int</span> n) {
+        <span class="comment">// Set pointers at the last elements to be compared</span>
+        <span class="keyword">int</span> firstPointer = m - <span class="number">1</span>;
+        <span class="keyword">int</span> secondPointer = n - <span class="number">1</span>;
+        
+        <span class="comment">// Set pointer at the last index of the merged result</span>
+        <span class="keyword">int</span> writePointer = m + n - <span class="number">1</span>;
+        
+        <span class="comment">// Iterate as long as there are elements in both arrays</span>
+        <span class="keyword">while</span> (firstPointer >= <span class="number">0</span> && secondPointer >= <span class="number">0</span>) {
+            <span class="comment">// Compare the elements and place the larger one at the back</span>
+            <span class="keyword">if</span> (nums1[firstPointer] > nums2[secondPointer]) {
+                nums1[writePointer] = nums1[firstPointer];
+                firstPointer--;
+            } <span class="keyword">else</span> {
+                nums1[writePointer] = nums2[secondPointer];
+                secondPointer--;
+            }
+            writePointer--;
+        }
+        
+        <span class="comment">// If there are leftover elements in nums2, copy them</span>
+        <span class="comment">// (Leftovers in nums1 are already in place)</span>
+        <span class="keyword">while</span> (secondPointer >= <span class="number">0</span>) {
+            nums1[writePointer] = nums2[secondPointer];
+            secondPointer--;
+            writePointer--;
+        }
+    }
+}
+</pre>
+                </div>
+
+                <!-- Analysis Zone 2 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><b>Time Complexity:</b> <b>O(m + n)</b>. We iterate through each element once.</li>
+                            <li><b>Space Complexity:</b> <b>O(1)</b>. We modify the array in-place without extra space.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <h4 class="font-bold mb-2">Pros & Cons</h4>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><span class="text-green-600 font-bold">Pros:</span> Most efficient possible solution. No extra memory.</li>
+                            <li><span class="text-red-600 font-bold">Cons:</span> Slightly harder to implement than sorting.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-6 rounded-xl shadow-sm mb-8">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Difficulty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-semibold">Merge and Sort</td>
+                            <td class="p-4 border"><b>O((m+n) log(m+n))</b></td>
+                            <td class="p-4 border"><b>O(1)</b> / <b>O(log n)</b></td>
+                            <td class="p-4 border text-blue-600">Beginner</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-semibold">Two Pointers (Optimal)</td>
+                            <td class="p-4 border text-emerald-700"><b>O(m+n)</b></td>
+                            <td class="p-4 border text-emerald-700"><b>O(1)</b></td>
+                            <td class="p-4 border text-emerald-600">Intermediate</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet & Edge Cases -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-xl font-bold mb-4">💡 Key Takeaways</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-start">
+                        <span class="bg-blue-100 text-blue-800 p-1 rounded mr-2 text-xs font-bold">PATTERN</span>
+                        <span>When merging two sorted arrays into one that has extra space at the end, <b>work backwards</b>.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-blue-100 text-blue-800 p-1 rounded mr-2 text-xs font-bold">TIP</span>
+                        <span>Always check if one pointer finishes before the other. Leftover <b>nums2</b> elements must be copied.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-blue-100 text-blue-800 p-1 rounded mr-2 text-xs font-bold">TIP</span>
+                        <span>Leftover <b>nums1</b> elements are already sorted and in their correct final positions.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-400">
+                <h3 class="text-xl font-bold mb-4">⚠️ Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-700">
+                    <li><b>n = 0:</b> nums2 is empty. nums1 is already correctly merged.</li>
+                    <li><b>m = 0:</b> nums1 has no valid elements. Just copy all of nums2 into nums1.</li>
+                    <li><b>Duplicate Values:</b> Arrays with identical numbers should be handled by the <b>>=</b> or <b><=</b> logic.</li>
+                    <li><b>Single Element Arrays:</b> m=1, n=0 or m=0, n=1.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ANIMATION ENGINE FOR BRUTE FORCE
+         */
+        const bfVisualizer = {
+            m: 3, n: 3,
+            nums1: [1, 2, 3, 0, 0, 0],
+            nums2: [2, 5, 6],
+            originalNums1: [1, 2, 3, 0, 0, 0],
+            step: 0,
+            
+            init() {
+                this.render();
+            },
+
+            reset() {
+                this.nums1 = [...this.originalNums1];
+                this.step = 0;
+                document.getElementById('bf-next-btn').disabled = false;
+                this.render();
+                document.getElementById('bf-step-info').innerText = "Click 'Next Step' to begin.";
+            },
+
+            render() {
+                const container1 = document.getElementById('bf-array1');
+                const container2 = document.getElementById('bf-array2');
+                
+                container1.innerHTML = '';
+                container2.innerHTML = '';
+
+                this.nums1.forEach((val, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${val === 0 && i >= this.m ? 'empty' : ''}`;
+                    cell.innerText = val === 0 && i >= this.m && this.step < 3 ? '-' : val;
+                    if (this.step > 0 && this.step < 4 && i >= this.m && i < this.m + this.step) {
+                        cell.classList.add('moving');
+                    }
+                    if (this.step === 4) cell.classList.add('target');
+                    container1.appendChild(cell);
+                });
+
+                this.nums2.forEach((val, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.innerText = val;
+                    if (this.step > 0 && i < this.step && this.step < 4) {
+                        cell.classList.add('active');
+                    }
+                    container2.appendChild(cell);
+                });
+            },
+
+            next() {
+                this.step++;
+                const info = document.getElementById('bf-step-info');
+
+                if (this.step <= 3) {
+                    this.nums1[this.m + this.step - 1] = this.nums2[this.step - 1];
+                    info.innerText = `Step ${this.step}: Copying nums2[${this.step-1}] (${this.nums2[this.step-1]}) to end of nums1.`;
+                } else if (this.step === 4) {
+                    this.nums1.sort((a,b) => a - b);
+                    info.innerText = "Step 4: Sorting nums1 using Arrays.sort(). Done!";
+                    document.getElementById('bf-next-btn').disabled = true;
+                }
+                this.render();
+            }
+        };
+
+        /**
+         * ANIMATION ENGINE FOR OPTIMAL
+         */
+        const optVisualizer = {
+            m: 3, n: 3,
+            nums1: [1, 3, 5, 0, 0, 0],
+            nums2: [2, 4, 6],
+            p1: 2, p2: 2, wp: 5,
+            original: { nums1: [1, 3, 5, 0, 0, 0], nums2: [2, 4, 6], p1: 2, p2: 2, wp: 5 },
+            finished: false,
+
+            init() {
+                this.render();
+            },
+
+            reset() {
+                this.nums1 = [...this.original.nums1];
+                this.nums2 = [...this.original.nums2];
+                this.p1 = this.original.p1;
+                this.p2 = this.original.p2;
+                this.wp = this.original.wp;
+                this.finished = false;
+                document.getElementById('opt-next-btn').disabled = false;
+                document.getElementById('opt-step-info').innerText = "Starting pointers at the back of valid data.";
+                this.render();
+            },
+
+            render() {
+                const c1 = document.getElementById('opt-array1');
+                const c2 = document.getElementById('opt-array2');
+                c1.innerHTML = '';
+                c2.innerHTML = '';
+
+                this.nums1.forEach((val, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${val === 0 && i > this.p1 && i < this.wp ? 'empty' : ''}`;
+                    cell.innerText = (val === 0 && i > this.p1 && i >= 3 && i <= this.wp) ? '-' : val;
+                    
+                    if (i === this.p1) {
+                        cell.classList.add('active');
+                        cell.innerHTML += '<span class="pointer-label">P1</span>';
+                    }
+                    if (i === this.wp) {
+                        cell.classList.add('target');
+                        cell.innerHTML += '<span class="pointer-label">WRITE</span>';
+                    }
+                    c1.appendChild(cell);
+                });
+
+                this.nums2.forEach((val, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.innerText = val;
+                    if (i === this.p2) {
+                        cell.classList.add('active');
+                        cell.innerHTML += '<span class="pointer-label">P2</span>';
+                    }
+                    c2.appendChild(cell);
+                });
+            },
+
+            next() {
+                if (this.finished) return;
+
+                const info = document.getElementById('opt-step-info');
+                
+                if (this.p1 >= 0 && this.p2 >= 0) {
+                    const val1 = this.nums1[this.p1];
+                    const val2 = this.nums2[this.p2];
+                    
+                    if (val1 > val2) {
+                        info.innerText = `Compare: ${val1} > ${val2}. Place ${val1} at write pointer index ${this.wp}.`;
+                        this.nums1[this.wp] = val1;
+                        this.p1--;
+                    } else {
+                        info.innerText = `Compare: ${val1} <= ${val2}. Place ${val2} at write pointer index ${this.wp}.`;
+                        this.nums1[this.wp] = val2;
+                        this.p2--;
+                    }
+                    this.wp--;
+                } else if (this.p2 >= 0) {
+                    info.innerText = `nums1 exhausted. Copying remaining nums2 elements. Placing ${this.nums2[this.p2]} at ${this.wp}.`;
+                    this.nums1[this.wp] = this.nums2[this.p2];
+                    this.p2--;
+                    this.wp--;
+                } else {
+                    info.innerText = "Merge complete! All elements placed correctly.";
+                    this.finished = true;
+                    document.getElementById('opt-next-btn').disabled = true;
+                }
+
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfVisualizer.init();
+            optVisualizer.init();
+        };
+    </script>
+</body>
+</html>

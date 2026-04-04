@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java ThreadLocal - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; background: #020617; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .card-expert { background: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .warning-pro { border-left: 4px solid #f43f5e; background: rgba(244, 63, 94, 0.05); padding: 1.5rem; }
+        .tip-pro { border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); padding: 1.5rem; }
+        
+        /* Interactive ThreadLocal Visualizer */
+        .thread-box { width: 280px; height: 200px; border: 2px solid #334155; border-radius: 16px; position: relative; background: #0f172a; padding: 20px; transition: 0.3s; }
+        .thread-box.active { border-color: #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+        .local-storage { background: #1e293b; border-radius: 8px; padding: 10px; margin-top: 20px; min-height: 60px; border: 1px dashed #475569; }
+        .data-item { background: #38bdf8; color: #0f172a; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-72 p-8 flex-shrink-0 border-r border-slate-800 hidden lg:block">
+        <h2 class="text-sky-400 font-bold text-2xl mb-10">Java 5.7</h2>
+        <nav class="space-y-6 text-sm">
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest text-pink-500">Bản chất</p>
+                <a href="#concept" class="block text-slate-300 hover:text-sky-400 py-1">ThreadLocal là gì?</a>
+                <a href="#visualizer" class="block text-slate-300 hover:text-sky-400 py-1">Mô phỏng "Vách ngăn"</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest text-sky-500">Internal</p>
+                <a href="#internals" class="block text-slate-300 hover:text-sky-400 py-1">ThreadLocalMap & WeakRef</a>
+                <a href="#memory-leak" class="block text-slate-300 hover:text-sky-400 py-1 text-red-400">Nguy cơ Memory Leak</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest text-emerald-500">Thực chiến</p>
+                <a href="#usage" class="block text-slate-300 hover:text-sky-400 py-1">Cách dùng & Patterns</a>
+                <a href="#virtual-threads" class="block text-slate-300 hover:text-sky-400 py-1">Với Virtual Threads</a>
+                <a href="#interview" class="block text-slate-300 hover:text-sky-400 py-1">Câu hỏi Mentor</a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow p-8 lg:p-16">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Header -->
+            <header id="concept" class="mb-16">
+                <span class="text-pink-500 font-bold tracking-tighter text-sm uppercase">Phần 5: Concurrency Mastery</span>
+                <h1 class="text-5xl font-black mt-4 mb-6 leading-tight">ThreadLocal: <br><span class="text-sky-400">Dữ liệu Riêng tư tuyệt đối</span></h1>
+                <p class="text-slate-400 text-lg leading-relaxed">
+                    Trong khi <code>synchronized</code> cố gắng điều phối nhiều thread truy cập 1 biến, thì <strong>ThreadLocal</strong> giải quyết vấn đề bằng cách cung cấp cho mỗi thread một bản sao riêng của biến đó.
+                </p>
+            </header>
+
+            <!-- Section 1: The Invisible Wall -->
+            <section id="visualizer" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    Mô phỏng: "Vách ngăn" giữa các luồng
+                </h2>
+                <div class="flex flex-wrap gap-8 justify-center mb-10">
+                    <!-- Thread A -->
+                    <div id="box-a" class="thread-box">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Thread A</span>
+                            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        </div>
+                        <div class="local-storage" id="storage-a">
+                            <!-- Data here -->
+                        </div>
+                        <button onclick="setData('a')" class="mt-4 w-full py-2 bg-slate-800 rounded text-xs hover:bg-sky-600 transition">Set User: "Admin"</button>
+                    </div>
+
+                    <!-- Thread B -->
+                    <div id="box-b" class="thread-box">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Thread B</span>
+                            <span class="h-2 w-2 rounded-full bg-pink-500 animate-pulse"></span>
+                        </div>
+                        <div class="local-storage" id="storage-b">
+                            <!-- Data here -->
+                        </div>
+                        <button onclick="setData('b')" class="mt-4 w-full py-2 bg-slate-800 rounded text-xs hover:bg-pink-600 transition">Set User: "Guest"</button>
+                    </div>
+                </div>
+                <div class="tip-pro">
+                    <p class="text-sm text-slate-300">
+                        <strong>Mentor Note:</strong> Cả hai Thread cùng gọi biến <code>context</code>, nhưng kết quả nhận được là hoàn toàn độc lập. Không có sự tranh chấp, không cần Lock, hiệu năng đạt mức tối đa.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 2: Usage & Code -->
+            <section id="usage" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">Triển khai ThreadLocal</h2>
+                <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                    <div class="p-4 bg-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+                        <span>UserContextHolder.java</span>
+                        <span class="text-sky-400 italic">Production Style</span>
+                    </div>
+                    <pre><code class="language-java">public class UserContextHolder {
+    // Khởi tạo với giá trị mặc định
+    private static final ThreadLocal&lt;User&gt; userContext = 
+        ThreadLocal.withInitial(() -> null);
+
+    public static void setUser(User user) {
+        userContext.set(user);
+    }
+
+    public static User getUser() {
+        return userContext.get();
+    }
+
+    public static void clear() {
+        userContext.remove(); // Cực kỳ quan trọng!
+    }
+}</code></pre>
+                </div>
+                <div class="mt-6 p-6 card-expert">
+                    <h4 class="text-sky-400 font-bold mb-3">Ứng dụng phổ biến:</h4>
+                    <ul class="text-sm space-y-2 text-slate-400">
+                        <li>• Lưu trữ <strong>Transaction ID</strong> hoặc <strong>User Session</strong> xuyên suốt các tầng (Controller -> Service -> Repo).</li>
+                        <li>• Xử lý các đối tượng không an toàn đa luồng (ví dụ: <code>SimpleDateFormat</code>).</li>
+                        <li>• Database Connection Management (mỗi thread một kết nối).</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 3: Internals -->
+            <section id="internals" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 text-sky-400 underline decoration-slate-800">Internal Working: ThreadLocalMap</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <p class="text-sm text-slate-400 leading-relaxed mb-4">
+                            Sự thật bất ngờ: Dữ liệu không được lưu bên trong đối tượng <code>ThreadLocal</code>. <br><br>
+                            Nó được lưu ngay bên trong mỗi đối tượng <strong>Thread</strong> dưới dạng một biến instance gọi là <code>ThreadLocalMap</code>.
+                        </p>
+                        <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                            <p class="text-xs font-bold text-slate-200 uppercase mb-2">Cấu trúc Entry:</p>
+                            <code class="text-pink-400 text-xs">Entry extends WeakReference&lt;ThreadLocal&lt;?&gt;&gt;</code>
+                            <p class="text-[10px] text-slate-500 mt-2">Key là một WeakReference tới ThreadLocal object. Value là giá trị bạn set.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center">
+                        <div class="inline-block p-4 border-2 border-sky-500 rounded-full mb-4">Thread Object</div>
+                        <div class="text-slate-500 text-xs">⬇ contains ⬇</div>
+                        <div class="p-4 bg-sky-900/20 border border-sky-500/50 rounded-lg mt-4">
+                            <p class="font-bold text-sky-400">ThreadLocalMap</p>
+                            <p class="text-[10px] mt-1 text-slate-400">[Key: ThreadLocal, Value: Object]</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: The Silent Killer - Memory Leak -->
+            <section id="memory-leak" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 text-red-500">Cảnh báo: Memory Leak trong Thread Pool</h2>
+                <div class="warning-pro mb-8">
+                    <h4 class="font-bold text-red-400 mb-2">Tại sao Leak xảy ra?</h4>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Trong môi trường Web Server (Tomcat/Spring), các Thread được tái sử dụng qua **Thread Pool**. <br><br>
+                        Nếu bạn gọi <code>set()</code> mà quên gọi <code>remove()</code>, dữ liệu sẽ ở lại mãi mãi trong <code>ThreadLocalMap</code> của Thread đó, kể cả khi Request đã kết thúc. <br><br>
+                        Hậu quả: 
+                        1. **Sai lệch dữ liệu:** Request sau có thể nhìn thấy User của Request trước. <br>
+                        2. **Tràn bộ nhớ:** Các Object lớn không bao giờ được GC giải phóng.
+                    </p>
+                </div>
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+                    <p class="text-xs font-bold text-emerald-400 uppercase mb-4">Giải pháp Senior:</p>
+                    <pre><code class="language-java">// Luôn sử dụng try-finally
+try {
+    UserContextHolder.setUser(currentUser);
+    processRequest();
+} finally {
+    UserContextHolder.clear(); // BẮT BUỘC
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 5: Virtual Threads Age -->
+            <section id="virtual-threads" class="mb-20 pt-16 border-t border-slate-800">
+                <h2 class="text-3xl font-bold mb-8 text-purple-400">ThreadLocal trong kỷ nguyên Java 21</h2>
+                <div class="card-expert p-8">
+                    <p class="text-sm text-slate-300 leading-relaxed mb-6">
+                        Với **Virtual Threads**, bạn có thể có hàng triệu Thread. Nếu mỗi Thread tạo một <code>ThreadLocalMap</code> lớn, RAM của bạn sẽ bốc hơi ngay lập tức.
+                    </p>
+                    <div class="flex gap-4">
+                        <div class="flex-1 p-4 bg-slate-800/50 rounded-lg">
+                            <p class="font-bold text-pink-400 text-xs">Rủi ro</p>
+                            <p class="text-[10px] text-slate-500 mt-2">InheritableThreadLocal sẽ rất đắt đỏ khi copy dữ liệu qua hàng triệu Virtual Thread con.</p>
+                        </div>
+                        <div class="flex-1 p-4 bg-emerald-900/20 rounded-lg">
+                            <p class="font-bold text-emerald-400 text-xs">Tương lai: Scoped Values</p>
+                            <p class="text-[10px] text-slate-500 mt-2">Java 21 giới thiệu <strong>ScopedValue</strong> như một giải pháp thay thế nhẹ nhàng hơn, Immutable và an toàn hơn cho Virtual Threads.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interview Questions -->
+            <section id="interview" class="mb-20 bg-sky-900/10 p-10 rounded-3xl border border-sky-500/20">
+                <h2 class="text-2xl font-bold mb-8 text-sky-400">Câu hỏi Mentor (Interview Prep)</h2>
+                <div class="space-y-6">
+                    <div class="p-5 bg-slate-800/40 rounded-xl border-l-4 border-emerald-500">
+                        <p class="font-bold text-slate-200">Q: Tại sao Key trong ThreadLocalMap lại là WeakReference?</p>
+                        <p class="text-xs text-slate-400 mt-2 italic text-emerald-300">A: Để khi ThreadLocal object không còn biến nào tham chiếu tới nữa, Garbage Collector có thể thu hồi nó. Nếu là Strong Reference, Key này sẽ giữ cho toàn bộ Entry sống mãi cùng Thread (Memory Leak).</p>
+                    </div>
+                    <div class="p-5 bg-slate-800/40 rounded-xl border-l-4 border-emerald-500">
+                        <p class="font-bold text-slate-200">Q: Nếu dùng WeakReference rồi, tại sao vẫn phải gọi remove()?</p>
+                        <p class="text-xs text-slate-400 mt-2 italic text-emerald-300">A: Vì WeakReference chỉ áp dụng cho <strong>Key</strong>. Phần <strong>Value</strong> vẫn là Strong Reference. Nếu không gọi remove(), Value sẽ bị treo lơ lửng cho đến khi Thread chết.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10">
+                &copy; 2024 Thầy dạy Java - System Internals & Memory Management
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        function setData(thread) {
+            const storage = document.getElementById('storage-' + thread);
+            const box = document.getElementById('box-' + thread);
+            
+            // Highlight active thread
+            document.querySelectorAll('.thread-box').forEach(b => b.classList.remove('active'));
+            box.classList.add('active');
+
+            // Add data
+            const val = thread === 'a' ? 'User: Admin' : 'User: Guest';
+            storage.innerHTML = `<div class="data-item">${val}</div>`;
+            
+            setTimeout(() => {
+                box.classList.remove('active');
+            }, 500);
+        }
+    </script>
+</body>
+</html>

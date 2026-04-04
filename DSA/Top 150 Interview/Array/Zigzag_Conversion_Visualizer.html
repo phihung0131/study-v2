@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Zigzag Conversion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .zigzag-grid {
+            display: grid;
+            gap: 4px;
+            padding: 20px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            min-height: 200px;
+        }
+
+        .char-cell {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        .char-filled { background-color: #3b82f6; color: white; border: 1px solid #2563eb; }
+        .char-active { transform: scale(1.2); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); z-index: 10; border: 2px solid #ef4444; }
+        .row-label { font-size: 10px; font-weight: 800; color: #64748b; text-align: right; padding-right: 10px; display: flex; align-items: center; justify-content: flex-end; }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Zigzag Conversion</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #6 | Difficulty: Medium | String Manipulation</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📝</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                The string <b>"PAYPALISHIRING"</b> is written in a zigzag pattern on a given number of rows like this:
+            </p>
+            <div class="bg-slate-50 p-4 font-mono text-sm rounded mb-4 overflow-x-auto">
+                P . . . A . . . H . . . N<br>
+                A . P . L . S . I . I . G<br>
+                Y . . . I . . . R . . . .
+            </div>
+            <p class="text-slate-700 mb-4">And then read line by line: <b>"PAHNAPLSIIGYIR"</b>.</p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 italic"><b>Goal:</b> Write the code that will take a string and make this conversion given a number of rows.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: ROW SIMULATION -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Row-by-Row Simulation
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The String Elevator"</h3>
+                <p class="text-slate-600 mb-8">
+                    Imagine <b>numRows</b> buckets. We iterate through the string and place each character in a bucket. 
+                    We move "down" the buckets until we reach the bottom, then reverse direction and move "up" until we reach the top. 
+                    Finally, we concatenate all buckets.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="sim-msg" class="step-msg">Click Next to start the "elevator" simulation. (Rows: 3)</div>
+                    <div class="mb-4 text-center font-mono font-bold text-slate-400" id="sim-input-track">PAYPALISHIRING</div>
+                    <div class="overflow-x-auto">
+                        <div id="sim-viz" class="zigzag-grid" style="grid-template-columns: repeat(14, 35px);">
+                            <!-- Grid cells generated by JS -->
+                        </div>
+                    </div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="simViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="simViz.next()" id="sim-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public String</span> <span class="type">convert</span>(<span class="type">String</span> s, <span class="keyword">int</span> numRows) {
+    <span class="keyword">if</span> (numRows == <span class="number">1</span> || s.length() <= numRows) <span class="keyword">return</span> s;
+
+    <span class="comment">// 1. Initialize buckets for each row</span>
+    <span class="type">List</span>&lt;<span class="type">StringBuilder</span>&gt; rows = <span class="keyword">new</span> <span class="type">ArrayList</span>&lt;&gt;();
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < <span class="type">Math</span>.min(numRows, s.length()); i++) {
+        rows.add(<span class="keyword">new</span> <span class="type">StringBuilder</span>());
+    }
+
+    <span class="keyword">int</span> currentRow = <span class="number">0</span>;
+    <span class="keyword">boolean</span> goingDown = <span class="keyword">false</span>;
+
+    <span class="comment">// 2. Traverse string and simulate the zigzag direction</span>
+    <span class="keyword">for</span> (<span class="keyword">char</span> c : s.toCharArray()) {
+        rows.get(currentRow).append(c);
+        
+        <span class="comment">// Flip direction at the top or bottom row</span>
+        <span class="keyword">if</span> (currentRow == <span class="number">0</span> || currentRow == numRows - <span class="number">1</span>) {
+            goingDown = !goingDown;
+        }
+        
+        currentRow += goingDown ? <span class="number">1</span> : -<span class="number">1</span>;
+    }
+
+    <span class="comment">// 3. Combine rows into a single string</span>
+    <span class="type">StringBuilder</span> result = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+    <span class="keyword">for</span> (<span class="type">StringBuilder</span> row : rows) result.append(row);
+    <span class="keyword">return</span> result.toString();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Every character is processed once.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. Storing characters in row-specific buckets.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-600">The most intuitive way to solve the problem. Easy to debug and explain in an interview.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: MATHEMATICAL CONSTRUCTION -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: Mathematical Jumps
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Cycle Formula"</h3>
+                <p class="text-slate-600 mb-8">
+                    Instead of simulating, we can calculate which character goes into which row. 
+                    The pattern repeats every <b>cycle = 2 * numRows - 2</b> steps. 
+                    Row 0 and Row <b>n-1</b> have one character per cycle. Middle rows have two.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="math-msg" class="step-msg text-blue-900">Click Next to pick characters using the cycle formula.</div>
+                    <div class="mb-6 flex justify-center gap-1 flex-wrap" id="math-string-track"></div>
+                    <div class="result-box bg-white p-4 border rounded font-mono text-center text-blue-600" id="math-result">...</div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="mathViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="mathViz.next()" id="math-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8 border-l-8 border-blue-600">
+<pre>
+<span class="keyword">public String</span> <span class="type">convert</span>(<span class="type">String</span> s, <span class="keyword">int</span> numRows) {
+    <span class="keyword">if</span> (numRows == <span class="number">1</span>) <span class="keyword">return</span> s;
+
+    <span class="type">StringBuilder</span> result = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+    <span class="keyword">int</span> n = s.length();
+    <span class="keyword">int</span> cycleLen = <span class="number">2</span> * numRows - <span class="number">2</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < numRows; i++) {
+        <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j + i < n; j += cycleLen) {
+            <span class="comment">// First character in cycle</span>
+            result.append(s.charAt(j + i));
+            
+            <span class="comment">// Middle rows have a second character in the cycle</span>
+            <span class="keyword">if</span> (i != <span class="number">0</span> && i != numRows - <span class="number">1</span> && j + cycleLen - i < n) {
+                result.append(s.charAt(j + cycleLen - i));
+            }
+        }
+    }
+    <span class="keyword">return</span> result.toString();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Each index is visited exactly once.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> (excluding output). No extra lists or builders used.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-4 rounded-xl">
+                        <h4 class="font-bold text-blue-400 mb-2 uppercase text-xs">Aha! Moment</h4>
+                        <p class="text-sm text-slate-300 italic">For a middle row `i`, the two indices in a cycle starting at `j` are `j+i` and `j+cycleLen-i`. This is purely mathematical construction!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Readability</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Row Simulation</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border text-red-600">O(n)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">High</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-800">Mathematical construction</td>
+                            <td class="p-4 border text-emerald-700">O(n)</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(1)</td>
+                            <td class="p-4 border">Medium</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                    <span>⚡</span> Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li>• <b>Elevator Pattern:</b> Use a flag <code>goingDown</code> to bounce between 0 and <code>numRows-1</code>.</li>
+                    <li>• <b>Cycle Formula:</b> <code>2 * numRows - 2</code>.</li>
+                    <li>• <b>In-between indices:</b> Only exist for rows that are not 0 or <code>numRows-1</code>.</li>
+                    <li>• <b>Safety First:</b> Always handle <code>numRows == 1</code> as an early return.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="text-emerald-500">🧩</span> Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>numRows = 1:</b> Zigzag is just the straight string.</li>
+                    <li><b>String length < numRows:</b> Just the string.</li>
+                    <li><b>numRows = 2:</b> Even indices in row 0, odd in row 1.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_STR = "PAYPALISHIRING";
+        const ROWS = 3;
+
+        // --- SIMULATION VISUALIZER ---
+        const simViz = {
+            s: TEST_STR,
+            idx: 0,
+            currRow: 0,
+            goingDown: false,
+            grid: [], // 2D grid for visual display
+            init() {
+                const container = document.getElementById('sim-viz');
+                container.style.gridTemplateRows = `repeat(${ROWS}, 35px)`;
+                this.grid = Array.from({length: ROWS}, () => Array(this.s.length).fill(null));
+                this.render();
+            },
+            reset() {
+                this.idx = 0;
+                this.currRow = 0;
+                this.goingDown = false;
+                this.grid = Array.from({length: ROWS}, () => Array(this.s.length).fill(null));
+                document.getElementById('sim-next-btn').disabled = false;
+                this.render("Reset. Starting with 'P'...");
+            },
+            render(msg) {
+                const container = document.getElementById('sim-viz');
+                const msgEl = document.getElementById('sim-msg');
+                const inputTrack = document.getElementById('sim-input-track');
+                if (msg) msgEl.innerText = msg;
+
+                // Render Input Track
+                inputTrack.innerHTML = this.s.split('').map((c, i) => 
+                    `<span class="${i === this.idx ? 'text-blue-600 underline scale-125' : ''}">${c}</span>`
+                ).join(' ');
+
+                // Render Grid
+                let html = "";
+                // Note: We display columns based on zigzag geometry
+                let col = 0;
+                let r = 0;
+                let d = true;
+                
+                // Helper to calculate column placement for visual
+                let colPositions = [];
+                let currCol = 0;
+                let dir = true;
+                let row = 0;
+                for(let i=0; i<this.s.length; i++) {
+                    colPositions.push({r: row, c: currCol});
+                    if (ROWS > 1) {
+                        if (row === 0) dir = true;
+                        if (row === ROWS - 1) dir = false;
+                        row += dir ? 1 : -1;
+                        if (!dir) currCol++;
+                        else if (row === 0) {} // stay in col
+                    } else currCol++;
+                }
+
+                container.innerHTML = "";
+                for(let rowIdx = 0; rowIdx < ROWS; rowIdx++) {
+                    // Row label
+                    const label = document.createElement('div');
+                    label.className = "row-label";
+                    label.innerText = `Row ${rowIdx}`;
+                    container.appendChild(label);
+
+                    for(let colIdx = 0; colIdx < 12; colIdx++) {
+                        const cell = document.createElement('div');
+                        cell.className = "char-cell";
+                        
+                        // Check if a char was placed here
+                        const charData = colPositions.find(p => p.r === rowIdx && p.c === colIdx && colPositions.indexOf(p) < this.idx);
+                        const isActive = colPositions.find(p => p.r === rowIdx && p.c === colIdx && colPositions.indexOf(p) === this.idx);
+                        
+                        if (charData) {
+                            cell.innerText = this.s[colPositions.indexOf(charData)];
+                            cell.classList.add('char-filled');
+                        }
+                        if (isActive) {
+                            cell.innerText = this.s[this.idx];
+                            cell.classList.add('char-active');
+                        }
+                        container.appendChild(cell);
+                    }
+                }
+            },
+            next() {
+                if (this.idx >= this.s.length) {
+                    document.getElementById('sim-msg').innerText = "All characters placed! Combine rows line-by-line.";
+                    document.getElementById('sim-next-btn').disabled = true;
+                    return;
+                }
+
+                let char = this.s[this.idx];
+                let msg = `Placing '${char}' in Row ${this.currRow}. `;
+                
+                if (this.currRow === 0 || this.currRow === ROWS - 1) {
+                    this.goingDown = !this.goingDown;
+                    msg += "Direction flipped!";
+                }
+
+                this.render(msg);
+                this.idx++;
+                this.currRow += this.goingDown ? 1 : -1;
+            }
+        };
+
+        // --- MATH VISUALIZER ---
+        const mathViz = {
+            s: TEST_STR,
+            row: 0,
+            cycleIdx: 0,
+            res: [],
+            cycleLen: 2 * ROWS - 2,
+            init() { this.render(); },
+            reset() {
+                this.row = 0;
+                this.cycleIdx = 0;
+                this.res = [];
+                document.getElementById('math-next-btn').disabled = false;
+                this.render("Starting with Row 0.");
+            },
+            render(msg) {
+                const track = document.getElementById('math-string-track');
+                const result = document.getElementById('math-result');
+                const msgEl = document.getElementById('math-msg');
+                if (msg) msgEl.innerText = msg;
+
+                track.innerHTML = this.s.split('').map((c, i) => {
+                    let cls = "char-cell";
+                    if (this.res.includes(i)) cls += " char-filled opacity-50";
+                    return `<div class="${cls}" id="m-char-${i}">${c}</div>`;
+                }).join('');
+
+                result.innerText = "Current String: " + this.res.map(i => this.s[i]).join('');
+            },
+            next() {
+                if (this.row >= ROWS) {
+                    document.getElementById('math-msg').innerText = "Done!";
+                    document.getElementById('math-next-btn').disabled = true;
+                    return;
+                }
+
+                const i = this.row;
+                const j = this.cycleIdx;
+                const n = this.s.length;
+
+                if (j + i < n) {
+                    const firstIdx = j + i;
+                    this.res.push(firstIdx);
+                    document.getElementById(`m-char-${firstIdx}`).classList.add('char-active');
+                    
+                    let msg = `Row ${i}, Cycle starting at ${j}: Pick index ${firstIdx} ('${this.s[firstIdx]}')`;
+
+                    // Handle second character for middle rows
+                    const secondIdx = j + this.cycleLen - i;
+                    if (i !== 0 && i !== ROWS - 1 && secondIdx < n) {
+                        this.res.push(secondIdx);
+                        document.getElementById(`m-char-${secondIdx}`).classList.add('char-active');
+                        msg += ` and index ${secondIdx} ('${this.s[secondIdx]}')`;
+                    }
+
+                    this.cycleIdx += this.cycleLen;
+                    if (this.cycleIdx >= n) {
+                        this.row++;
+                        this.cycleIdx = 0;
+                    }
+                    this.render(msg);
+                }
+            }
+        };
+
+        window.onload = () => {
+            simViz.init();
+            mathViz.init();
+        };
+    </script>
+</body>
+</html>

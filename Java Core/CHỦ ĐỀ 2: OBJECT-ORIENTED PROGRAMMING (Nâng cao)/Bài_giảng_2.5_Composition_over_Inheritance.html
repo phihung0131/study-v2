@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Senior: Composition over Inheritance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-item:hover { background-color: #1e293b; }
+        .code-window { border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .comparison-card { transition: all 0.3s ease; }
+        .comparison-card:hover { transform: translateY(-5px); }
+        
+        /* Animation cho Fragile Base Class */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .base-class-change { animation: shake 0.5s infinite; }
+        .broken-link { stroke-dasharray: 5; animation: dash 1s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: -10; } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 text-white sticky top-0 h-screen hidden lg:block">
+        <div class="p-8 border-b border-slate-800">
+            <h1 class="text-2xl font-bold text-indigo-400">Java Architect</h1>
+            <p class="text-xs text-gray-400 mt-1">Thầy dạy Java - Mentor</p>
+        </div>
+        <nav class="mt-6 px-4 space-y-1">
+            <a href="#intro" class="block py-3 px-4 rounded-lg sidebar-item transition">1. Khái niệm IS-A vs HAS-A</a>
+            <a href="#inheritance-trap" class="block py-3 px-4 rounded-lg sidebar-item transition">2. Cái bẫy Kế thừa (Fragile)</a>
+            <a href="#composition-power" class="block py-3 px-4 rounded-lg sidebar-item transition">3. Sức mạnh Thành phần</a>
+            <a href="#visual-demo" class="block py-3 px-4 rounded-lg sidebar-item transition">4. Mô phỏng Trực quan</a>
+            <a href="#best-practices" class="block py-3 px-4 rounded-lg sidebar-item transition">5. Nguyên tắc thiết kế</a>
+            <a href="#interview" class="block py-3 px-4 rounded-lg sidebar-item transition">6. Câu hỏi hóc búa</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-12 max-w-5xl mx-auto">
+        
+        <!-- Header -->
+        <header id="intro" class="mb-16">
+            <div class="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase mb-4">Design Principles</div>
+            <h2 class="text-4xl font-black text-slate-800 mb-6">2.5. Composition over Inheritance</h2>
+            <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                Trong lập trình hướng đối tượng, ta thường đứng trước 2 lựa chọn để tái sử dụng mã nguồn: <br>
+                1. <b>Inheritance (Kế thừa):</b> Lớp con "là một" lớp cha (IS-A). <br>
+                2. <b>Composition (Thành phần):</b> Lớp mới "có một" đối tượng của lớp khác (HAS-A).
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h4 class="font-bold text-slate-800 mb-2">Inheritance (White-box)</h4>
+                    <p class="text-sm text-slate-500 italic">Mọi chi tiết của lớp cha đều phơi bày cho lớp con. Rất khó thay đổi lớp cha mà không làm hỏng lớp con.</p>
+                </div>
+                <div class="p-6 bg-indigo-600 text-white rounded-xl shadow-lg">
+                    <h4 class="font-bold mb-2">Composition (Black-box)</h4>
+                    <p class="text-sm text-indigo-100 italic">Lớp mới chỉ biết "cái gì" lớp thành phần làm được thông qua interface. Dễ dàng thay thế và bảo trì.</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Section 2: The Trap -->
+        <section id="inheritance-trap" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Cái bẫy Kế thừa: Fragile Base Class</h3>
+            <p class="mb-6 text-slate-600">Hãy xem ví dụ kinh điển khi ta muốn đếm số lượng phần tử được thêm vào một <code>HashSet</code>.</p>
+            
+            <div class="code-window bg-slate-900 mb-8">
+                <div class="flex items-center px-4 py-2 bg-slate-800 space-x-2">
+                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span class="text-xs text-slate-400 ml-4 font-mono">BrokenInheritance.java</span>
+                </div>
+<pre><code class="language-java">public class InstrumentedHashSet&lt;E&gt; extends HashSet&lt;E&gt; {
+    private int addCount = 0;
+
+    @Override
+    public boolean add(E e) {
+        addCount++;
+        return super.add(e);
+    }
+
+    @Override
+    public boolean addAll(Collection&lt;? extends E&gt; c) {
+        addCount += c.size();
+        return super.addAll(c); // LỖI Ở ĐÂY!
+    }
+}
+</code></pre>
+            </div>
+            
+            <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-xl">
+                <h5 class="font-bold text-red-800 mb-2">Tại sao nó lỗi? (Self-Recursion)</h5>
+                <p class="text-sm text-red-700">
+                    Bên trong JDK, <code>HashSet.addAll()</code> thực tế lại gọi hàm <code>add()</code> cho từng phần tử. <br>
+                    Nếu em thêm 3 phần tử bằng <code>addAll()</code>: <br>
+                    1. <code>addCount</code> tăng lên 3 trong <code>addAll</code>. <br>
+                    2. <code>super.addAll()</code> gọi <code>add()</code> 3 lần. <br>
+                    3. Mỗi lần <code>add()</code> lại nhảy vào hàm đã override của em -> tăng tiếp 3 lần nữa. <br>
+                    <b>Kết quả: addCount = 6 thay vì 3!</b>
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 3: Visual Demo -->
+        <section id="visual-demo" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-slate-800">Mô phỏng: Sự mong manh của Kế thừa</h3>
+            <div class="bg-white p-10 rounded-2xl border border-slate-200 shadow-inner flex flex-col items-center">
+                <div class="flex space-x-20 mb-12">
+                    <!-- Inheritance Visual -->
+                    <div class="flex flex-col items-center">
+                        <div id="parent-box" class="w-32 h-16 bg-slate-700 text-white flex items-center justify-center rounded font-bold transition-all">Parent</div>
+                        <svg width="40" height="40"><line x1="20" y1="0" x2="20" y2="40" stroke="#94a3b8" stroke-width="2" id="link-line" /></svg>
+                        <div class="w-32 h-16 bg-red-400 text-white flex items-center justify-center rounded font-bold shadow-lg">Child (Broken)</div>
+                        <p class="mt-4 text-xs font-bold text-slate-500">INHERITANCE</p>
+                    </div>
+                    <!-- Composition Visual -->
+                    <div class="flex flex-col items-center">
+                        <div class="w-32 h-16 bg-emerald-500 text-white flex items-center justify-center rounded font-bold shadow-lg">Wrapper</div>
+                        <div class="h-10 flex items-center text-slate-400">--- HAS-A ---</div>
+                        <div id="component-box" class="w-32 h-16 bg-slate-700 text-white flex items-center justify-center rounded font-bold">Component</div>
+                        <p class="mt-4 text-xs font-bold text-slate-500">COMPOSITION</p>
+                    </div>
+                </div>
+                <button onclick="simulateChange()" class="bg-indigo-600 text-white px-6 py-2 rounded-full hover:bg-indigo-700 transition font-bold">
+                    Mô phỏng thay đổi lớp Cha
+                </button>
+                <p id="sim-text" class="mt-4 text-sm text-slate-500">Bấm nút để xem chuyện gì xảy ra khi lớp cha thay đổi logic nội bộ.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Composition Power -->
+        <section id="composition-power" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Giải pháp: Wrapper Class (Decorator Pattern)</h3>
+            <p class="mb-6 text-slate-600">Thay vì kế thừa, ta bao bọc (wrap) thực thể đó và điều hướng (forwarding) các phương thức.</p>
+            
+            <div class="code-window bg-slate-900">
+<pre><code class="language-java">// 1. Lớp chuyển tiếp (Forwarding class)
+public class ForwardingSet&lt;E&gt; implements Set&lt;E&gt; {
+    private final Set&lt;E&gt; s; // Composition
+    public ForwardingSet(Set&lt;E&gt; s) { this.s = s; }
+
+    public boolean add(E e) { return s.add(e); }
+    public boolean addAll(Collection&lt;? extends E&gt; c) { return s.addAll(c); }
+    // ... implement các methods khác bằng cách gọi s.method()
+}
+
+// 2. Lớp Wrapper thực tế
+public class InstrumentedSet&lt;E&gt; extends ForwardingSet&lt;E&gt; {
+    private int addCount = 0;
+    public InstrumentedSet(Set&lt;E&gt; s) { super(s); }
+
+    @Override public boolean add(E e) {
+        addCount++;
+        return super.add(e);
+    }
+}
+</code></pre>
+            </div>
+            <div class="mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-sm">
+                <b>Ưu điểm:</b> Bây giờ <code>InstrumentedSet</code> cực kỳ linh hoạt. Em có thể dùng nó để "đính kèm" tính năng đếm vào <code>HashSet</code>, <code>TreeSet</code>, hay bất kỳ <code>Set</code> nào khác! 
+            </div>
+        </section>
+
+        <!-- Section 5: Best Practices -->
+        <section id="best-practices" class="mb-20">
+            <h3 class="text-3xl font-bold mb-8 text-slate-800">Khi nào dùng cái nào?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h5 class="text-indigo-600 font-bold mb-4">Dùng Inheritance khi:</h5>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Quan hệ thực sự là IS-A (Cat is an Animal).</li>
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Lớp cha được thiết kế chuyên biệt để kế thừa (có tài liệu hướng dẫn override).</li>
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Cả lớp cha và lớp con nằm trong cùng một package (cùng quyền kiểm soát).</li>
+                    </ul>
+                </div>
+                <div class="p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h5 class="text-indigo-600 font-bold mb-4">Dùng Composition khi:</h5>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Muốn tái sử dụng code từ lớp khác nhưng không muốn bị ràng buộc chặt.</li>
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Muốn thay đổi component linh hoạt tại Runtime (Dependency Injection).</li>
+                        <li class="flex items-center"><span class="text-green-500 mr-2">✔</span> Cần tránh "Đa kế thừa" (Java không cho phép nhưng Interface + Composition thì được).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Interview -->
+        <section id="interview" class="mb-20">
+            <h2 class="text-2xl font-bold mb-8 text-center text-slate-800 uppercase tracking-widest">Phỏng vấn Senior</h2>
+            <div class="space-y-4">
+                <div class="p-6 bg-slate-800 text-white rounded-xl shadow-lg">
+                    <h5 class="font-bold text-indigo-400 mb-2">Q: "Inheritance phá vỡ tính đóng gói như thế nào?"</h5>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        A: Vì lớp con phụ thuộc vào chi tiết triển khai (implementation details) của lớp cha. Nếu lớp cha thay đổi logic bên trong một public method, hoặc thêm một method mới trùng tên với method của lớp con nhưng khác kiểu trả về, lớp con sẽ bị lỗi hoặc chạy sai logic mà không hề biết. 
+                        Điều này vi phạm nguyên tắc: "Lớp con chỉ nên biết interface của lớp cha, không nên biết lớp cha làm gì bên trong".
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="mt-20 py-10 border-t text-center text-slate-400 text-sm">
+            Học thiết kế là học cách nhìn xa trông rộng. Hãy dùng Composition nhiều hơn, em nhé!
+        </footer>
+    </main>
+</div>
+
+<script>
+    function simulateChange() {
+        const parent = document.getElementById('parent-box');
+        const component = document.getElementById('component-box');
+        const line = document.getElementById('link-line');
+        const text = document.getElementById('sim-text');
+
+        // Shake parent
+        parent.classList.add('base-class-change');
+        line.classList.add('broken-link');
+        line.setAttribute('stroke', '#ef4444');
+        text.innerText = "CẢNH BÁO: Lớp Cha thay đổi logic! Lớp con (Kế thừa) bị ảnh hưởng trực tiếp và dễ bị bug. Lớp Thành phần (Composition) vẫn an toàn.";
+        text.classList.add('text-red-600');
+
+        setTimeout(() => {
+            parent.classList.remove('base-class-change');
+            line.classList.remove('broken-link');
+            line.setAttribute('stroke', '#94a3b8');
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>

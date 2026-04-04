@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Remove Duplicates from Sorted Array II</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .array-slot {
+            width: 54px;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .slot-active { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-4px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .slot-duplicate { border-color: #ef4444; background-color: #fef2f2; color: #ef4444; }
+        .slot-keep { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        .slot-ignored { opacity: 0.3; border-style: dashed; transform: scale(0.9); }
+
+        .pointer-tag {
+            position: absolute;
+            top: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tag-write { background: #10b981; color: white; }
+        .tag-read { background: #3b82f6; color: white; }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            font-size: 1.1rem;
+            color: #334155;
+        }
+    </style>
+</head>
+<body class="py-12 px-6">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black tracking-tight text-slate-900 mb-4">Remove Duplicates II</h1>
+            <p class="text-xl text-slate-500 font-medium">LeetCode #80 | <span class="text-amber-600">Medium</span> | Arrays, Two Pointers</p>
+        </header>
+
+        <!-- Problem Card -->
+        <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span class="text-blue-600">📋</span> Problem Requirement
+            </h2>
+            <p class="text-lg leading-relaxed text-slate-700 mb-6">
+                Given a sorted array <b>nums</b>, remove duplicates in-place such that each unique element appears <b>at most twice</b>. The relative order must be preserved. Return the number of elements remaining.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p class="font-bold text-slate-500 text-sm mb-1 uppercase tracking-wider">Example Input</p>
+                    <code class="text-blue-600 font-bold">[1, 1, 1, 2, 2, 3]</code>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p class="font-bold text-slate-500 text-sm mb-1 uppercase tracking-wider">Expected Output</p>
+                    <code class="text-emerald-600 font-bold">k = 5, nums = [1, 1, 2, 2, 3]</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-slate-800 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 1</span>
+                <span class="opacity-50">|</span>
+                <span>LINEAR SCAN & SHIFT</span>
+            </div>
+
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <div class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">Intuition: "The Manual Cleanup"</h3>
+                    <p class="text-slate-600 text-lg">
+                        Iterate through the array while keeping a <b>count</b> of the current number. If we encounter a third (or more) instance of the same number, we <b>shift</b> all elements to the right of it one position to the left. This "erases" the extra duplicate.
+                    </p>
+                </div>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="bf-msg" class="step-msg mb-8">Ready to scan. Pointers initialized.</div>
+                    
+                    <div class="flex justify-center gap-3 mb-12 h-20" id="bf-container">
+                        <!-- Array cells -->
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="bfVisualizer.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition-all">Reset</button>
+                        <button onclick="bfVisualizer.next()" id="bf-next" class="px-12 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition-all shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4 text-slate-800">Java Implementation (Brute Force)</h3>
+                <div class="code-block mb-10">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeDuplicates</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">int</span> currentSize = nums.length;
+    <span class="keyword">if</span> (currentSize < <span class="number">3</span>) <span class="keyword">return</span> currentSize;
+
+    <span class="keyword">int</span> currentIndex = <span class="number">1</span>;
+    <span class="keyword">int</span> sameElementCount = <span class="number">1</span>;
+
+    <span class="keyword">while</span> (currentIndex < currentSize) {
+        <span class="keyword">if</span> (nums[currentIndex] == nums[currentIndex - <span class="number">1</span>]) {
+            sameElementCount++;
+        } <span class="keyword">else</span> {
+            sameElementCount = <span class="number">1</span>;
+        }
+
+        <span class="comment">// If we find more than 2, shift everything left</span>
+        <span class="keyword">if</span> (sameElementCount > <span class="number">2</span>) {
+            <span class="keyword">for</span> (<span class="keyword">int</span> k = currentIndex; k < currentSize - <span class="number">1</span>; k++) {
+                nums[k] = nums[k + <span class="number">1</span>];
+            }
+            currentSize--;
+            sameElementCount--; <span class="comment">// We stayed at the same index, so decrement count</span>
+        } <span class="keyword">else</span> {
+            currentIndex++;
+        }
+    }
+    <span class="keyword">return</span> currentSize;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-red-50 p-6 rounded-2xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-slate-700"><b>Time:</b> <b class="text-red-600">O(n²)</b>. For every extra duplicate, we shift <b>O(n)</b> elements.</p>
+                        <p class="text-slate-700 mt-2"><b>Space:</b> <b>O(1)</b>. In-place modification.</p>
+                    </div>
+                    <div class="bg-slate-100 p-6 rounded-2xl">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Trade-off</h4>
+                        <p class="text-slate-600">Simple to reason about but highly inefficient for large arrays with many duplicates. Repeatedly moving data is the primary bottleneck.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: TWO POINTERS -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-emerald-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide shadow-lg">
+                <span>APPROACH 2</span>
+                <span class="opacity-50">|</span>
+                <span>OPTIMAL TWO-POINTER</span>
+            </div>
+
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-xl border border-emerald-100 ring-4 ring-emerald-50">
+                <div class="mb-10">
+                    <h3 class="text-2xl font-bold mb-4">Intuition: "The Smart Overwrite"</h3>
+                    <p class="text-slate-600 text-lg">
+                        Since the array is sorted, duplicates are grouped. We maintain a <b>writeIndex</b> pointer. For every element seen by the <b>readIndex</b>, we only write it if it's different from the element <b>two positions back</b> from our current write position. This automatically allows up to two duplicates.
+                    </p>
+                </div>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-emerald-50 p-8 rounded-3xl mb-10 border border-emerald-100">
+                    <div id="opt-msg" class="step-msg mb-8 border-l-emerald-500 text-emerald-900">Starting optimal scan. First two elements are always kept.</div>
+                    
+                    <div class="flex justify-center gap-3 mb-12 h-20" id="opt-container">
+                        <!-- Array cells -->
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="optVisualizer.reset()" class="px-8 py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl font-bold transition-all">Reset</button>
+                        <button onclick="optVisualizer.next()" id="opt-next" class="px-12 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition-all shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeDuplicates</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">if</span> (nums.length <= <span class="number">2</span>) <span class="keyword">return</span> nums.length;
+
+    <span class="comment">// writeIndex: Position where we will write the next valid element</span>
+    <span class="keyword">int</span> writeIndex = <span class="number">2</span>;
+
+    <span class="comment">// currentIndex: Explores the rest of the array</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> currentIndex = <span class="number">2</span>; currentIndex < nums.length; currentIndex++) {
+        <span class="comment">// Core Logic: Only keep if it's NOT a 3rd duplicate.
+        // We compare against the element at (writeIndex - 2).</span>
+        <span class="keyword">if</span> (nums[currentIndex] != nums[writeIndex - <span class="number">2</span>]) {
+            nums[writeIndex] = nums[currentIndex];
+            writeIndex++;
+        }
+    }
+    
+    <span class="keyword">return</span> writeIndex;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-emerald-100 p-6 rounded-2xl border border-emerald-200">
+                        <h4 class="font-bold text-emerald-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-emerald-900"><b>Time:</b> <b class="text-emerald-700">O(n)</b>. Exactly one pass through the array.</p>
+                        <p class="text-emerald-900 mt-2"><b>Space:</b> <b>O(1)</b>. No auxiliary space used.</p>
+                    </div>
+                    <div class="bg-emerald-600 text-white p-6 rounded-2xl shadow-inner">
+                        <h4 class="font-bold text-white opacity-80 mb-3 uppercase text-sm tracking-widest">Why it works</h4>
+                        <p class="text-emerald-50 text-sm leading-relaxed">
+                            Because the array is sorted, any value occurring more than twice will be equal to the value at <code>writeIndex - 2</code>. If <code>nums[currentIndex] == nums[writeIndex - 2]</code>, it means we already have two instances of that value in our "clean" portion, so we skip the current one.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Performance Comparison</h2>
+            <div class="overflow-hidden rounded-2xl border border-slate-200">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="p-6 font-bold text-slate-800">Approach</th>
+                            <th class="p-6 font-bold text-slate-800">Time</th>
+                            <th class="p-6 font-bold text-slate-800">Space</th>
+                            <th class="p-6 font-bold text-slate-800">Efficiency</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-6 font-semibold">Brute Force (Shift)</td>
+                            <td class="p-6"><b>O(n²)</b></td>
+                            <td class="p-6"><b>O(1)</b></td>
+                            <td class="p-6 text-red-500 font-bold uppercase text-xs">Low</td>
+                        </tr>
+                        <tr class="bg-emerald-50/50">
+                            <td class="p-6 font-semibold">Two Pointers (Optimal)</td>
+                            <td class="p-6 text-emerald-700"><b>O(n)</b></td>
+                            <td class="p-6 text-emerald-700"><b>O(1)</b></td>
+                            <td class="p-6 text-emerald-600 font-bold uppercase text-xs">Maximum</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-8 opacity-10">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            </div>
+            <h2 class="text-3xl font-bold mb-8 text-emerald-400">⚡ Fast Recall Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">The "K-Duplicates" Pattern</h4>
+                    <p class="text-slate-400 leading-relaxed mb-4">
+                        This problem is a specific case of "Allow at most K duplicates". The logic generalizes perfectly:
+                    </p>
+                    <div class="bg-slate-800 p-4 rounded-xl font-mono text-sm text-emerald-300">
+                        if (n > nums[write - K]) { <br>
+                        &nbsp;&nbsp;nums[write++] = n; <br>
+                        }
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Visual Memory Hook</h4>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">1.</span>
+                            <span><b>Write Pointer</b> is your boundary of "clean" data.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">2.</span>
+                            <span>Always compare the <b>New Candidate</b> with the <b>Backdoor</b> (write - K).</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">3.</span>
+                            <span>If they match, the current spot is "saturated". Skip it.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const TEST_DATA = [1, 1, 1, 2, 2, 3];
+
+        // --- BRUTE FORCE VISUALIZER ---
+        const bfVisualizer = {
+            data: [...TEST_DATA],
+            idx: 0,
+            size: 6,
+            count: 0,
+            isShifting: false,
+            shiftIdx: -1,
+            
+            init() { this.render(); },
+            reset() {
+                this.data = [...TEST_DATA];
+                this.idx = 0;
+                this.size = 6;
+                this.count = 0;
+                this.isShifting = false;
+                this.shiftIdx = -1;
+                document.getElementById('bf-next').disabled = false;
+                this.render("Reset. Click Next to start.");
+            },
+            render(msg) {
+                const container = document.getElementById('bf-container');
+                const msgEl = document.getElementById('bf-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = '';
+                this.data.forEach((val, i) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'array-slot';
+                    slot.innerText = val;
+                    if (i < this.size) {
+                        if (this.isShifting) {
+                            if (i === this.idx) slot.classList.add('slot-duplicate');
+                            if (i >= this.shiftIdx) slot.classList.add('slot-active');
+                        } else {
+                            if (i === this.idx) slot.classList.add('slot-active');
+                        }
+                    } else {
+                        slot.classList.add('slot-ignored');
+                    }
+                    container.appendChild(slot);
+                });
+            },
+            next() {
+                if (this.idx >= this.size) {
+                    this.render(`Finished! Remaining size k = ${this.size}`);
+                    document.getElementById('bf-next').disabled = true;
+                    return;
+                }
+
+                if (this.isShifting) {
+                    if (this.shiftIdx < this.size - 1) {
+                        this.data[this.shiftIdx] = this.data[this.shiftIdx + 1];
+                        this.shiftIdx++;
+                        this.render(`Shifting left... Moved index ${this.shiftIdx} to ${this.shiftIdx-1}`);
+                    } else {
+                        this.size--;
+                        this.isShifting = false;
+                        this.count--; // Compensate because we stay at same index
+                        this.render(`Shift done. New logical size: ${this.size}. Re-checking index ${this.idx}.`);
+                    }
+                } else {
+                    if (this.idx > 0 && this.data[this.idx] === this.data[this.idx-1]) {
+                        this.count++;
+                    } else {
+                        this.count = 1;
+                    }
+
+                    if (this.count > 2) {
+                        this.isShifting = true;
+                        this.shiftIdx = this.idx;
+                        this.render(`Duplicate found! Element ${this.data[this.idx]} appears for the 3rd time. Starting shift...`);
+                    } else {
+                        this.render(`Index ${this.idx}: Value ${this.data[this.idx]} is valid (Count: ${this.count}).`);
+                        this.idx++;
+                    }
+                }
+            }
+        };
+
+        // --- OPTIMAL VISUALIZER ---
+        const optVisualizer = {
+            data: [...TEST_DATA],
+            write: 2,
+            read: 2,
+            finished: false,
+
+            init() { this.render(); },
+            reset() {
+                this.data = [...TEST_DATA];
+                this.write = 2;
+                this.read = 2;
+                this.finished = false;
+                document.getElementById('opt-next').disabled = false;
+                this.render("First two elements [1, 1] are automatically valid.");
+            },
+            render(msg) {
+                const container = document.getElementById('opt-container');
+                const msgEl = document.getElementById('opt-msg');
+                if (msg) msgEl.innerText = msg;
+
+                container.innerHTML = '';
+                this.data.forEach((val, i) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'array-slot';
+                    slot.innerText = val;
+
+                    if (i < this.write) slot.classList.add('slot-keep');
+                    
+                    if (i === this.write) {
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag tag-write';
+                        tag.innerText = 'Write';
+                        slot.appendChild(tag);
+                    }
+
+                    if (i === this.read) {
+                        slot.classList.add('slot-active');
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag tag-read';
+                        tag.style.top = '62px';
+                        tag.innerText = 'Read';
+                        slot.appendChild(tag);
+                    }
+
+                    container.appendChild(slot);
+                });
+            },
+            next() {
+                if (this.read >= this.data.length) {
+                    this.render(`Process complete! k = ${this.write}. Result: [${this.data.slice(0, this.write).join(', ')}]`);
+                    document.getElementById('opt-next').disabled = true;
+                    return;
+                }
+
+                const candidate = this.data[this.read];
+                const backdoor = this.data[this.write - 2];
+
+                if (candidate !== backdoor) {
+                    this.render(`Read ${candidate} != Backdoor ${backdoor}. It's safe to write!`);
+                    this.data[this.write] = candidate;
+                    this.write++;
+                } else {
+                    this.render(`Read ${candidate} == Backdoor ${backdoor}. Already have 2 instances. Skip.`);
+                }
+                
+                this.read++;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfVisualizer.init();
+            optVisualizer.init();
+        }
+    </script>
+</body>
+</html>

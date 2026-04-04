@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Optional Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f1f5f9; }
+        code { font-family: 'Fira Code', monospace !important; }
+        .sidebar-item:hover { background-color: #0f172a; color: #38bdf8; }
+        .active-section { border-left: 4px solid #38bdf8; background-color: #0f172a; }
+        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* Optional Box Animation */
+        .optional-box { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .empty-box { border: 2px dashed #475569; }
+        .full-box { border: 2px solid #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+        
+        .floating { animation: floating 3s ease-in-out infinite; }
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-950 border-r border-slate-900 sticky top-0 h-screen overflow-y-auto p-6 hidden md:block">
+        <div class="mb-10">
+            <h1 class="text-xl font-bold text-sky-400">Thầy Dạy Java</h1>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Chapter 7.4: The Safety Net</p>
+        </div>
+        <nav class="space-y-1">
+            <a href="#concept" class="sidebar-item block p-3 rounded-lg transition">1. Tại sao dùng Optional?</a>
+            <a href="#creation" class="sidebar-item block p-3 rounded-lg transition">2. Cách tạo Optional</a>
+            <a href="#transformation" class="sidebar-item block p-3 rounded-lg transition">3. Transform (Map/Filter)</a>
+            <a href="#unwrap" class="sidebar-item block p-3 rounded-lg transition">4. Lấy giá trị (Unwrapping)</a>
+            <a href="#performance" class="sidebar-item block p-3 rounded-lg transition">5. Hiệu năng & Bộ nhớ</a>
+            <a href="#best-practices" class="sidebar-item block p-3 rounded-lg transition">6. Anti-patterns</a>
+            <a href="#interview" class="sidebar-item block p-3 rounded-lg transition">7. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-12 overflow-y-auto">
+        
+        <!-- Header -->
+        <header id="concept" class="mb-16">
+            <span class="text-sky-500 font-semibold text-sm">CHƯƠNG 7.4</span>
+            <h2 class="text-5xl font-black mt-2 mb-6">Optional Class</h2>
+            <div class="p-6 glass-card rounded-2xl border-l-4 border-sky-500">
+                <p class="text-lg text-slate-300">
+                    "Optional không phải là cách để tránh NPE hoàn toàn, mà là cách để <strong>giao tiếp</strong> với người dùng API rằng: Giá trị này có thể không tồn tại, hãy xử lý nó!"
+                </p>
+            </div>
+        </header>
+
+        <!-- Interactive Simulation -->
+        <section class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 flex items-center">
+                <span class="w-10 h-10 bg-sky-600 rounded-lg flex items-center justify-center mr-4">01</span>
+                Mô phỏng "Chiếc hộp" Optional
+            </h3>
+            
+            <div class="bg-slate-900 rounded-3xl p-10 border border-slate-800 text-center">
+                <div class="flex justify-center items-center space-x-20 mb-10">
+                    <div id="opt-container" class="w-32 h-32 rounded-2xl flex items-center justify-center optional-box empty-box relative">
+                        <span id="opt-value" class="text-slate-500 font-mono text-sm">Empty</span>
+                    </div>
+                    <div class="text-4xl text-slate-700">→</div>
+                    <div id="action-result" class="text-xl font-bold text-slate-400 italic">"Chờ lệnh..."</div>
+                </div>
+                
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="setOptional('Java')" class="px-4 py-2 bg-slate-800 hover:bg-sky-600 rounded-lg transition text-xs font-bold">Optional.of("Java")</button>
+                    <button onclick="setOptional(null)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition text-xs font-bold">Optional.empty()</button>
+                    <button onclick="runMap()" class="px-4 py-2 bg-amber-600/20 text-amber-400 border border-amber-600/30 rounded-lg transition text-xs font-bold">.map(String::toUpperCase)</button>
+                    <button onclick="runOrElse()" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 rounded-lg transition text-xs font-bold">.orElse("N/A")</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Creation Section -->
+        <section id="creation" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6">2. Ba cách khởi tạo cơ bản</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-6 bg-slate-900 rounded-xl border border-slate-800">
+                    <code class="text-sky-400 block mb-2">Optional.of(value)</code>
+                    <p class="text-xs text-slate-400">Dùng khi em <strong>chắc chắn</strong> giá trị không null. Nếu null, nó quăng NPE ngay lập tức.</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-xl border border-slate-800">
+                    <code class="text-sky-400 block mb-2">Optional.ofNullable(val)</code>
+                    <p class="text-xs text-slate-400">An toàn nhất. Nếu val null, nó trả về <code>Optional.empty()</code>.</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-xl border border-slate-800">
+                    <code class="text-sky-400 block mb-2">Optional.empty()</code>
+                    <p class="text-xs text-slate-400">Trả về một chiếc hộp rỗng (Singleton instance).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Functional Methods -->
+        <section id="transformation" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6">3. Transformation: Tư duy như Stream</h3>
+            <div class="glass-card p-8 rounded-2xl">
+                <p class="text-slate-400 mb-6 italic">Em có thể coi Optional là một Stream có tối đa 1 phần tử.</p>
+                <div class="space-y-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="mt-1 p-2 bg-sky-500/10 rounded text-sky-500 font-bold">map</div>
+                        <div>
+                            <p class="text-sm font-semibold">Biến đổi giá trị bên trong nếu nó tồn tại.</p>
+                            <code class="text-xs text-slate-500">opt.map(s -> s.length())</code>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="mt-1 p-2 bg-emerald-500/10 rounded text-emerald-500 font-bold">filter</div>
+                        <div>
+                            <p class="text-sm font-semibold">Giữ lại giá trị nếu thỏa mãn điều kiện, nếu không biến thành Empty.</p>
+                            <code class="text-xs text-slate-500">opt.filter(s -> s.startsWith("J"))</code>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="mt-1 p-2 bg-purple-500/10 rounded text-purple-500 font-bold">flatMap</div>
+                        <div>
+                            <p class="text-sm font-semibold">Dùng khi hàm biến đổi bản thân nó cũng trả về Optional (tránh lồng hộp).</p>
+                            <code class="text-xs text-slate-500">userOpt.flatMap(User::getAddressOpt)</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Unwrapping -->
+        <section id="unwrap" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-emerald-400">4. Unwrapping: Lấy giá trị ra an toàn</h3>
+            <div class="bg-slate-900 rounded-2xl p-8 border border-slate-800">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h5 class="text-sky-400 font-bold mb-4">orElse vs orElseGet</h5>
+                        <pre><code class="language-java">// Eager: Luôn gọi phương thức default cho dù opt có giá trị
+String res = opt.orElse(getDefault()); 
+
+// Lazy: Chỉ gọi phương thức default khi opt rỗng
+String res = opt.orElseGet(() -> getDefault()); </code></pre>
+                        <p class="text-[10px] mt-2 text-rose-400">Senior Note: Luôn ưu tiên <strong>orElseGet</strong> nếu việc tạo giá trị mặc định tốn tài nguyên.</p>
+                    </div>
+                    <div>
+                        <h5 class="text-sky-400 font-bold mb-4">Xử lý ném Exception</h5>
+                        <pre><code class="language-java">// Java 10+
+User user = opt.orElseThrow(); 
+
+// Tùy chỉnh Exception
+User user = opt.orElseThrow(() -> 
+    new NotFoundException("User not found"));</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Memory & Internal -->
+        <section id="performance" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 flex items-center">
+                <span class="w-8 h-8 bg-purple-600 rounded flex items-center justify-center mr-4 text-sm">#</span>
+                Internals: Hiệu năng và Bộ nhớ
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+                    <h5 class="font-bold mb-2 text-purple-400">Cost of Optional</h5>
+                    <p class="text-sm text-slate-400">
+                        Optional là một <strong>Object</strong>. Việc bao bọc một giá trị vào Optional tốn thêm bộ nhớ trên Heap và thêm một bước truy xuất (indirection).
+                        <br><br>
+                        Đối với Primitive, hãy dùng: <code>OptionalInt</code>, <code>OptionalLong</code>, <code>OptionalDouble</code> để tránh boxing/unboxing lãng phí.
+                    </p>
+                </div>
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+                    <h5 class="font-bold mb-2 text-purple-400">Serialization Issue</h5>
+                    <p class="text-sm text-slate-400">
+                        Optional <strong>KHÔNG</strong> thực thi interface <code>Serializable</code>. 
+                        <br><br>
+                        <strong>Rule:</strong> Đừng bao giờ dùng Optional cho các Field trong Entity/POJO. Chỉ dùng làm kiểu trả về cho Method.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Best Practices -->
+        <section id="best-practices" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-rose-500">6. Những sai lầm phổ biến (Anti-patterns)</h3>
+            <div class="space-y-4">
+                <div class="p-4 bg-rose-500/10 border-l-4 border-rose-500 rounded-r-lg">
+                    <h5 class="font-bold text-rose-400">1. Gọi .get() mà không kiểm tra</h5>
+                    <p class="text-xs text-slate-400 italic">Code: <code>opt.get();</code> -> Vẫn dính NoSuchElementException. Chẳng khác gì NPE!</p>
+                </div>
+                <div class="p-4 bg-rose-500/10 border-l-4 border-rose-500 rounded-r-lg">
+                    <h5 class="font-bold text-rose-400">2. Dùng Optional cho tham số (Parameters)</h5>
+                    <p class="text-xs text-slate-400 italic">Code: <code>public void find(Optional&lt;String&gt; name)</code> -> Ép người gọi phải bọc data vào hộp, làm code rườm rà không cần thiết. Hãy dùng Overloading hoặc check null trực tiếp.</p>
+                </div>
+                <div class="p-4 bg-rose-500/10 border-l-4 border-rose-500 rounded-r-lg">
+                    <h5 class="font-bold text-rose-400">3. Gán null cho biến Optional</h5>
+                    <p class="text-xs text-slate-400 italic">Code: <code>Optional&lt;User&gt; user = null;</code> -> Đây là "tội ác". Hãy dùng <code>Optional.empty()</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interview Questions -->
+        <section id="interview" class="mb-20 pb-20">
+            <h3 class="text-2xl font-bold mb-8 text-sky-400 underline decoration-sky-800">🎯 Senior Interview Challenge</h3>
+            <div class="space-y-4">
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800">
+                    <p class="font-bold mb-2">Q1: Tại sao Optional không implements Serializable?</p>
+                    <p class="text-slate-500 text-sm italic">A: Các nhà thiết kế Java dự định Optional chỉ dùng làm kiểu trả về tạm thời (short-lived) cho library APIs, không phải để lưu trữ lâu dài trong database hay gửi qua mạng (RMI).</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800">
+                    <p class="font-bold mb-2">Q2: ifPresent() và ifPresentOrElse() khác gì nhau?</p>
+                    <p class="text-slate-500 text-sm italic">A: <code>ifPresent</code> chỉ nhận 1 Consumer xử lý khi có data. <code>ifPresentOrElse</code> (Java 9+) nhận thêm 1 Runnable để xử lý trường hợp rỗng, giúp loại bỏ hoàn toàn câu lệnh <code>if-else</code>.</p>
+                </div>
+                <div class="p-6 bg-slate-900 rounded-2xl border border-slate-800">
+                    <p class="font-bold mb-2">Q3: Sự khác biệt giữa flatMap của Stream và flatMap của Optional?</p>
+                    <p class="text-slate-500 text-sm italic">A: Stream flatMap làm phẳng các Stream bên trong. Optional flatMap làm phẳng (unwrap) các Optional lồng nhau để trả về 1 Optional duy nhất.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    let currentVal = null;
+
+    function setOptional(val) {
+        currentVal = val;
+        const box = document.getElementById('opt-container');
+        const text = document.getElementById('opt-value');
+        const res = document.getElementById('action-result');
+        
+        if (val) {
+            box.classList.remove('empty-box');
+            box.classList.add('full-box', 'floating');
+            text.textContent = `"${val}"`;
+            text.classList.remove('text-slate-500');
+            text.classList.add('text-sky-400', 'font-bold');
+            res.textContent = "Hộp đã có dữ liệu!";
+            res.className = "text-xl font-bold text-sky-400 italic animate-pulse";
+        } else {
+            box.classList.add('empty-box');
+            box.classList.remove('full-box', 'floating');
+            text.textContent = "Empty";
+            text.className = "text-slate-500 font-mono text-sm";
+            res.textContent = "Hộp đang rỗng.";
+            res.className = "text-xl font-bold text-slate-500 italic";
+        }
+    }
+
+    function runMap() {
+        const res = document.getElementById('action-result');
+        if (currentVal) {
+            currentVal = currentVal.toUpperCase();
+            document.getElementById('opt-value').textContent = `"${currentVal}"`;
+            res.textContent = "Đã biến đổi (UPPERCASE)!";
+            res.className = "text-xl font-bold text-amber-400 italic";
+        } else {
+            res.textContent = "Hộp rỗng, map không làm gì cả.";
+            res.className = "text-xl font-bold text-rose-400 italic";
+        }
+    }
+
+    function runOrElse() {
+        const res = document.getElementById('action-result');
+        if (!currentVal) {
+            res.textContent = "Lấy giá trị mặc định: N/A";
+            res.className = "text-xl font-bold text-emerald-400 italic";
+        } else {
+            res.textContent = `Giá trị thực tế: ${currentVal}`;
+            res.className = "text-xl font-bold text-sky-400 italic";
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        Prism.highlightAll();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java CompletableFuture - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f1f5f9; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .card-glass { background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 16px; transition: 0.3s; }
+        .card-glass:hover { border-color: #38bdf8; background: rgba(30, 41, 59, 0.9); }
+        .status-pill { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        
+        /* Pipeline Visualizer */
+        .pipeline-container { height: 300px; background: #0f172a; border-radius: 20px; position: relative; border: 1px solid #1e293b; overflow: hidden; display: flex; align-items: center; justify-content: space-around; }
+        .step-node { width: 120px; height: 120px; border: 2px solid #334155; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1e293b; z-index: 10; transition: 0.5s; position: relative; }
+        .step-node.active { border-color: #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }
+        .connector { height: 4px; background: #334155; flex-grow: 1; position: relative; }
+        .connector-fill { height: 100%; background: #38bdf8; width: 0%; transition: width 1s linear; }
+        .data-flow { width: 12px; height: 12px; background: #38bdf8; border-radius: 50%; position: absolute; top: -4px; left: 0; box-shadow: 0 0 10px #38bdf8; display: none; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-72 bg-slate-900 p-8 flex-shrink-0 border-r border-slate-800 hidden lg:block">
+        <h2 class="text-sky-400 font-bold text-2xl mb-8">Java Core 5.5</h2>
+        <nav class="space-y-6 text-sm">
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Cơ bản</p>
+                <a href="#future-vs-cf" class="block text-slate-300 hover:text-sky-400 py-1">Future vs CompletableFuture</a>
+                <a href="#creation" class="block text-slate-300 hover:text-sky-400 py-1">Khởi tạo Async</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Chaining</p>
+                <a href="#callback" class="block text-slate-300 hover:text-sky-400 py-1">Biến đổi (thenApply)</a>
+                <a href="#compose" class="block text-slate-300 hover:text-sky-400 py-1">Kết hợp (thenCompose/Combine)</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Nâng cao</p>
+                <a href="#exception" class="block text-slate-300 hover:text-sky-400 py-1">Xử lý Exception</a>
+                <a href="#internals" class="block text-slate-300 hover:text-sky-400 py-1">ForkJoinPool & Executor</a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow p-8 lg:p-16">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Header -->
+            <header id="future-vs-cf" class="mb-16">
+                <span class="text-sky-500 font-bold tracking-tighter text-sm uppercase">Phần 5: Reactive Java</span>
+                <h1 class="text-5xl font-black mt-4 mb-6 leading-tight">CompletableFuture: <br><span class="text-sky-400">The Power of Asynchrony</span></h1>
+                <div class="card-glass p-8 border-l-4 border-sky-500">
+                    <h4 class="font-bold mb-2">Tại sao Future thôi là chưa đủ?</h4>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Interface <code>Future</code> chỉ cho phép bạn kiểm tra xem task xong chưa. Nó không cho phép bạn nói: "Khi task này xong, hãy tự động làm việc tiếp theo". <br><br>
+                        <strong>CompletableFuture</strong> giải quyết điều này bằng mô hình <strong>Callback-driven</strong>. Bạn định nghĩa pipeline, và data sẽ tự động chảy qua đó.
+                    </p>
+                </div>
+            </header>
+
+            <!-- Section 1: Creation -->
+            <section id="creation" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">1. Khởi tạo tác vụ bất đồng bộ</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="p-6 card-glass">
+                        <span class="status-pill bg-sky-500/20 text-sky-400">No Result</span>
+                        <h4 class="font-bold mt-3 mb-2">runAsync()</h4>
+                        <p class="text-xs text-slate-400">Dùng cho các task không trả về kết quả (Runnable).</p>
+                    </div>
+                    <div class="p-6 card-glass">
+                        <span class="status-pill bg-emerald-500/20 text-emerald-400">Has Result</span>
+                        <h4 class="font-bold mt-3 mb-2">supplyAsync()</h4>
+                        <p class="text-xs text-slate-400">Dùng cho các task trả về giá trị (Supplier).</p>
+                    </div>
+                </div>
+                <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                    <pre><code class="language-java">// Tự động chạy trên ForkJoinPool.commonPool()
+CompletableFuture&lt;String&gt; cf = CompletableFuture.supplyAsync(() -> {
+    simulateSlowNetwork();
+    return "Dữ liệu từ Server";
+});</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 2: Visualizer (The Pipeline) -->
+            <section id="visualizer" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 text-sky-400">Mô phỏng: Chaining Pipeline</h2>
+                <div class="pipeline-container mb-8">
+                    <div id="node-1" class="step-node">
+                        <span class="text-[10px] text-slate-500 uppercase">Step 1</span>
+                        <span class="font-bold text-xs text-center">Fetch<br>User</span>
+                    </div>
+                    <div class="connector"><div id="fill-1" class="connector-fill"></div></div>
+                    <div id="node-2" class="step-node">
+                        <span class="text-[10px] text-slate-500 uppercase">Step 2</span>
+                        <span class="font-bold text-xs text-center">Process<br>Order</span>
+                    </div>
+                    <div class="connector"><div id="fill-2" class="connector-fill"></div></div>
+                    <div id="node-3" class="step-node">
+                        <span class="text-[10px] text-slate-500 uppercase">Step 3</span>
+                        <span class="font-bold text-xs text-center">Send<br>Email</span>
+                    </div>
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button onclick="startPipeline()" class="px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-full hover:bg-sky-400 transition shadow-lg shadow-sky-500/20">Chạy Pipeline</button>
+                    <button onclick="resetPipeline()" class="px-8 py-3 bg-slate-700 text-slate-200 font-bold rounded-full hover:bg-slate-600 transition">Reset</button>
+                </div>
+                <p id="pipe-status" class="text-center mt-6 text-sm text-slate-400 italic">Nhấn nút để xem sức mạnh của Non-blocking Chaining.</p>
+            </section>
+
+            <!-- Section 3: Chaining Methods -->
+            <section id="callback" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">2. Nghệ thuật nối chuỗi (Chaining)</h2>
+                <div class="space-y-6">
+                    <div class="p-6 bg-slate-800/50 rounded-xl border-l-4 border-emerald-500">
+                        <h4 class="font-bold text-emerald-400 mb-2">thenApply(Function)</h4>
+                        <p class="text-sm text-slate-400">Biến đổi kết quả từ kiểu A sang kiểu B (Giống <code>map</code> trong Stream).</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 rounded-xl border-l-4 border-amber-500">
+                        <h4 class="font-bold text-amber-400 mb-2">thenAccept(Consumer)</h4>
+                        <p class="text-sm text-slate-400">Sử dụng kết quả cuối cùng (thường để in log hoặc lưu DB) và không trả về gì nữa.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 rounded-xl border-l-4 border-pink-500">
+                        <h4 class="font-bold text-pink-400 mb-2">thenCompose vs thenCombine</h4>
+                        <p class="text-sm text-slate-400 mb-2"><strong>Compose:</strong> Khi task 2 phụ thuộc vào kết quả task 1 (FlatMap).</p>
+                        <p class="text-sm text-slate-400"><strong>Combine:</strong> Chạy 2 task độc lập và kết hợp kết quả khi cả hai đều xong.</p>
+                    </div>
+                </div>
+                <div class="mt-8 bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                    <pre><code class="language-java">CompletableFuture.supplyAsync(() -> fetchUser(id))
+    .thenApply(user -> user.getName().toUpperCase()) // Biến đổi
+    .thenCompose(name -> fetchOrders(name))          // Nối tiếp task khác
+    .thenAccept(orders -> System.out.println(orders)); // Kết thúc</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 4: Exceptions -->
+            <section id="exception" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center text-red-400">
+                    <span class="mr-3">⚠️</span> Xử lý lỗi trong thế giới Async
+                </h2>
+                <p class="text-slate-400 mb-6">Trong đa luồng, Exception xảy ra ở thread con sẽ không làm crash thread chính. Bạn cần bắt nó chủ động.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-6 card-glass border-red-500/30">
+                        <h4 class="font-bold text-red-400 mb-2">exceptionally()</h4>
+                        <p class="text-xs text-slate-400">Cung cấp giá trị mặc định nếu có lỗi xảy ra ở bất kỳ mắt xích nào phía trước.</p>
+                    </div>
+                    <div class="p-6 card-glass border-blue-500/30">
+                        <h4 class="font-bold text-blue-400 mb-2">handle()</h4>
+                        <p class="text-xs text-slate-400">Mạnh mẽ hơn, cho phép xử lý cả trường hợp thành công và thất bại trong một hàm.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Executor Internals -->
+            <section id="internals" class="mb-20 pt-16 border-t border-slate-800">
+                <h2 class="text-3xl font-bold mb-8">Deep Dive: Threading Model</h2>
+                <div class="bg-sky-900/10 p-8 rounded-2xl border border-sky-500/20">
+                    <h4 class="font-bold text-sky-400 mb-4">Mặc định: ForkJoinPool.commonPool()</h4>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Mặc định, CF sử dụng Pool chung của toàn JVM. <br><br>
+                        <strong class="text-red-400">Nguy hiểm:</strong> Nếu bạn chạy các task I/O (gọi API chậm) trên commonPool, bạn có thể làm nghẽn toàn bộ ứng dụng (kể cả Parallel Streams). <br><br>
+                        <strong class="text-emerald-400">Best Practice:</strong> Luôn truyền một <code>Custom Executor</code> (Thread Pool riêng) cho các phương thức có hậu tố <code>*Async</code>.
+                    </p>
+                    <div class="mt-6 bg-black/40 p-4 rounded-lg">
+                        <pre><code class="language-java">Executor myPool = Executors.newFixedThreadPool(50);
+CompletableFuture.supplyAsync(() -> task(), myPool);</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interview / Best Practice -->
+            <section class="mb-20 bg-slate-900 p-10 rounded-3xl border border-slate-800">
+                <h2 class="text-2xl font-bold mb-8">Mentor's Interview Tips</h2>
+                <div class="space-y-6">
+                    <div class="p-4 bg-slate-800/50 rounded-lg border-l-4 border-sky-500">
+                        <p class="font-bold text-slate-200">Q1: Sự khác biệt giữa thenApply và thenApplyAsync?</p>
+                        <p class="text-xs text-slate-400 mt-2 italic text-sky-300">Trả lời: thenApply chạy callback trên cùng thread của task trước đó. thenApplyAsync sẽ đẩy callback vào một thread khác từ Pool để thực thi, giúp giải phóng thread hiện tại nhanh hơn.</p>
+                    </div>
+                    <div class="p-4 bg-slate-800/50 rounded-lg border-l-4 border-sky-500">
+                        <p class="font-bold text-slate-200">Q2: Làm sao để chờ NHIỀU CompletableFuture cùng lúc?</p>
+                        <p class="text-xs text-slate-400 mt-2 italic text-sky-300">Trả lời: Dùng CompletableFuture.allOf(cf1, cf2, ...) để đợi tất cả xong, hoặc anyOf(...) để lấy kết quả từ thằng nhanh nhất.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10 border-t border-slate-900">
+                &copy; 2024 Thầy dạy Java - Advanced Concurrency Series
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        async function startPipeline() {
+            resetPipeline();
+            const status = document.getElementById('pipe-status');
+            
+            // Step 1
+            status.innerText = "Đang lấy dữ liệu User (Async)...";
+            document.getElementById('node-1').classList.add('active');
+            await wait(1500);
+            document.getElementById('fill-1').style.width = '100%';
+            await wait(1000);
+
+            // Step 2
+            status.innerText = "Xử lý đơn hàng của User...";
+            document.getElementById('node-2').classList.add('active');
+            await wait(1500);
+            document.getElementById('fill-2').style.width = '100%';
+            await wait(1000);
+
+            // Step 3
+            status.innerText = "Gửi email xác nhận thành công!";
+            document.getElementById('node-3').classList.add('active');
+            await wait(1000);
+            
+            status.innerText = "Pipeline hoàn tất mà không hề block Thread Main!";
+        }
+
+        function resetPipeline() {
+            document.querySelectorAll('.step-node').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.connector-fill').forEach(f => f.style.width = '0%');
+            document.getElementById('pipe-status').innerText = "Nhấn nút để chạy lại.";
+        }
+
+        function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jump Game Visualizer - LeetCode #55</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .cell-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2); }
+        .cell-reachable { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        .cell-unreachable { border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; }
+        .cell-target { border-width: 4px; border-style: double; border-color: #8b5cf6; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Jump Game</h1>
+            <p class="text-slate-500 font-medium">LeetCode #55 | Difficulty: Medium</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📝</span> Problem Summary
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                You are given an integer array <b>nums</b>. You are initially positioned at the array's <b>first index</b>, and each element in the array represents your <b>maximum jump length</b> at that position.
+            </p>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Return <b>true</b> if you can reach the last index, or <b>false</b> otherwise.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 italic"><b>Example:</b> [2, 3, 1, 1, 4] -> True (Jump 1 step from index 0 to 1, then 3 steps to the end).</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Backtracking (Brute Force)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 text-slate-800">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    The most naive way is to try <b>every possible jump</b> from the current position. If we are at index <b>i</b> and <b>nums[i] = 3</b>, we recursively try jumping 1 step, 2 steps, and 3 steps. This explores a massive decision tree.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <h4 class="text-center font-bold text-slate-500 mb-6 uppercase text-xs tracking-widest">Interactive Simulation: Recursive Exploration</h4>
+                    <div id="bf-msg" class="step-msg">Click "Next Step" to simulate recursion.</div>
+                    <div class="flex flex-wrap justify-center gap-3 mb-12" id="bf-array"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-container mb-8 code-font">
+<pre>
+<span class="keyword">public boolean</span> <span class="type">canJump</span>(<span class="keyword">int</span>[] nums) {
+    <span class="keyword">return</span> canJumpFromIndex(<span class="number">0</span>, nums);
+}
+
+<span class="keyword">private boolean</span> <span class="type">canJumpFromIndex</span>(<span class="keyword">int</span> position, <span class="keyword">int</span>[] nums) {
+    <span class="comment">// Base case: if we reached the last index</span>
+    <span class="keyword">if</span> (position == nums.length - <span class="number">1</span>) {
+        <span class="keyword">return true</span>;
+    }
+
+    <span class="comment">// Calculate the furthest jump possible</span>
+    <span class="keyword">int</span> furthestJump = <span class="type">Math</span>.min(position + nums[position], nums.length - <span class="number">1</span>);
+
+    <span class="comment">// Try every jump distance from 1 to furthestJump</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> nextPosition = position + <span class="number">1</span>; nextPosition <= furthestJump; nextPosition++) {
+        <span class="keyword">if</span> (canJumpFromIndex(nextPosition, nums)) {
+            <span class="keyword">return true</span>;
+        }
+    }
+
+    <span class="keyword">return false</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm text-red-900"><b>Time:</b> <b>O(2ⁿ)</b>. In the worst case, every index can jump to every subsequent index.</p>
+                        <p class="text-sm text-red-900"><b>Space:</b> <b>O(n)</b>. Recursion stack depth.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Pros & Cons</h4>
+                        <p class="text-sm text-slate-600"><b>Pros:</b> Correct logical flow. <b>Cons:</b> Extremely slow; redundant work solving the same index multiple times.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: DYNAMIC PROGRAMMING -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: DP (Bottom-Up)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-100">
+                <h3 class="text-xl font-bold mb-4 text-blue-900">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    Instead of recursion, we can use a <b>Memoization table</b>. We work backwards from the last index. If an index <b>i</b> can reach any index that is already marked as <b>REACHABLE</b>, then index <b>i</b> is also <b>REACHABLE</b>.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <h4 class="text-center font-bold text-slate-500 mb-6 uppercase text-xs tracking-widest">Interactive Simulation: Right-to-Left DP filling</h4>
+                    <div id="dp-msg" class="step-msg">Click "Next Step" to fill the DP table from the end.</div>
+                    <div class="flex flex-wrap justify-center gap-3 mb-12" id="dp-array"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="dpViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="dpViz.next()" id="dp-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-container mb-8 code-font">
+<pre>
+<span class="keyword">public boolean</span> <span class="type">canJump</span>(<span class="keyword">int</span>[] nums) {
+    <span class="type">Boolean</span>[] memo = <span class="keyword">new</span> <span class="type">Boolean</span>[nums.length];
+    memo[nums.length - <span class="number">1</span>] = <span class="keyword">true</span>; <span class="comment">// The end is reachable from the end</span>
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = nums.length - <span class="number">2</span>; i >= <span class="number">0</span>; i--) {
+        <span class="keyword">int</span> furthestJump = <span class="type">Math</span>.min(i + nums[i], nums.length - <span class="number">1</span>);
+        <span class="keyword">for</span> (<span class="keyword">int</span> j = i + <span class="number">1</span>; j <= furthestJump; j++) {
+            <span class="keyword">if</span> (memo[j] != <span class="keyword">null</span> && memo[j]) {
+                memo[i] = <span class="keyword">true</span>;
+                <span class="keyword">break</span>;
+            }
+        }
+    }
+    <span class="keyword">return</span> memo[<span class="number">0</span>] != <span class="keyword">null</span> && memo[<span class="number">0</span>];
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm text-blue-900"><b>Time:</b> <b>O(n²)</b>. For each index, we look ahead up to <b>n</b> steps.</p>
+                        <p class="text-sm text-blue-900"><b>Space:</b> <b>O(n)</b>. To store the memo table.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Efficiency</h4>
+                        <p class="text-sm text-slate-600">Greatly improved! We eliminate redundant recursive calls by saving results. However, we still have nested loops.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: GREEDY (OPTIMAL) -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 3: Greedy (Goal Post Shifting)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Intuition: "The Shifting Target"</h3>
+                <p class="text-slate-600 mb-8">
+                    Instead of a table, we only need to keep track of the <b>left-most position</b> that can reach the end. Let's call this our <b>Goal Post</b>. Initially, the Goal Post is at the last index. If we find an index that can jump to the Goal Post, that index becomes our <b>new</b> Goal Post.
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <h4 class="text-center font-bold text-slate-500 mb-6 uppercase text-xs tracking-widest">Interactive Simulation: The Greedy Goal Post</h4>
+                    <div id="greedy-msg" class="step-msg">Click "Next Step" to move the goal post backwards.</div>
+                    <div class="flex flex-wrap justify-center gap-3 mb-12" id="greedy-array"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="greedyViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="greedyViz.next()" id="greedy-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 3 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-container mb-8 code-font border-2 border-emerald-900">
+<pre>
+<span class="keyword">public boolean</span> <span class="type">canJump</span>(<span class="keyword">int</span>[] nums) {
+    <span class="comment">// Start the goal at the very last index</span>
+    <span class="keyword">int</span> lastReachablePosition = nums.length - <span class="number">1</span>;
+
+    <span class="comment">// Iterate backwards from right to left</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = nums.length - <span class="number">1</span>; i >= <span class="number">0</span>; i--) {
+        <span class="comment">// If current index + max jump >= current goal post</span>
+        <span class="keyword">if</span> (i + nums[i] >= lastReachablePosition) {
+            <span class="comment">// Shift the goal post to our current index</span>
+            lastReachablePosition = i;
+        }
+    }
+
+    <span class="comment">// If the goal post reached the start (index 0), success!</span>
+    <span class="keyword">return</span> lastReachablePosition == <span class="number">0</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                        <p class="text-sm text-emerald-900"><b>Time:</b> <b>O(n)</b>. One single pass through the array.</p>
+                        <p class="text-sm text-emerald-900"><b>Space:</b> <b>O(1)</b>. Only one integer variable needed.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Key Insight</h4>
+                        <p class="text-sm text-slate-600 italic">"Can I get to the current 'safe' spot from here?" If yes, then I am now the new 'safe' spot. This eliminates the need for any nested loops or extra memory.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Backtracking</td>
+                            <td class="p-4 border text-red-600">O(2ⁿ)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border">TLE for n > 20</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-bold text-blue-700">Dynamic Programming</td>
+                            <td class="p-4 border">O(n²)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border">Solid Improvement</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-700">Greedy</td>
+                            <td class="p-4 border text-emerald-700">O(n)</td>
+                            <td class="p-4 border text-emerald-700">O(1)</td>
+                            <td class="p-4 border text-emerald-600 font-bold uppercase">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet & Edge Cases -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-blue-400">⚡ Interview Cheat Sheet</h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>Pattern:</b> Shifting Goal Post (Greedy).</li>
+                    <li>• <b>Keyword:</b> "Farthest Reach" or "Last Reachable Index".</li>
+                    <li>• <b>Logic:</b> Work backwards. If you can jump to a known good spot, your current spot is now the <i>closest</i> good spot.</li>
+                    <li>• <b>Complexity Tip:</b> Always mention the O(n) Greedy solution after explaining why O(2ⁿ) Backtracking is bad.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>[0]:</b> True (Already at the end).</li>
+                    <li><b>[3, 0, 0, 0]:</b> True (Can reach the end exactly).</li>
+                    <li><b>[1, 0, 1, 0]:</b> False (Stuck at the second zero).</li>
+                    <li><b>Huge Numbers:</b> [1000, 0, 0...]. Greedy handles large jump values perfectly.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SAMPLE_DATA = [2, 3, 1, 1, 4];
+        const FAIL_DATA = [3, 2, 1, 0, 4];
+
+        // --- BRUTE FORCE VIZ ---
+        const bfViz = {
+            data: [...SAMPLE_DATA],
+            idx: 0,
+            path: [0],
+            jumpIdx: 1,
+            init() { this.render(); },
+            reset() { this.idx = 0; this.path = [0]; this.jumpIdx = 1; this.render(); document.getElementById('bf-next-btn').disabled = false; },
+            render() {
+                const container = document.getElementById('bf-array');
+                container.innerHTML = this.data.map((v, i) => {
+                    let cls = "cell";
+                    if (i === this.idx) cls += " cell-active";
+                    if (i === this.data.length - 1) cls += " cell-target";
+                    return `<div class="${cls}">${v}<span class="pointer-label">${i === this.idx ? 'curr' : ''}</span></div>`;
+                }).join('');
+            },
+            next() {
+                const maxJump = this.data[this.idx];
+                if (this.idx === this.data.length - 1) {
+                    document.getElementById('bf-msg').innerText = "Target reached! True returned up the call stack.";
+                    document.getElementById('bf-next-btn').disabled = true;
+                    return;
+                }
+                
+                if (this.jumpIdx <= maxJump) {
+                    let next = this.idx + this.jumpIdx;
+                    document.getElementById('bf-msg').innerText = `Recursion: Trying jump of size ${this.jumpIdx} to index ${next}.`;
+                    this.idx = next;
+                    this.jumpIdx = 1;
+                } else {
+                    document.getElementById('bf-msg').innerText = `Backtracking from index ${this.idx}. No more jumps to try here.`;
+                    // Simple simulation of one success path
+                    this.idx = 0;
+                    this.jumpIdx++; 
+                }
+                this.render();
+            }
+        };
+
+        // --- DP VIZ ---
+        const dpViz = {
+            data: [...FAIL_DATA],
+            idx: 4,
+            reachable: [false, false, false, false, true],
+            init() { this.render(); },
+            reset() { this.idx = 3; this.reachable = [false, false, false, false, true]; this.render(); document.getElementById('dp-next-btn').disabled = false; },
+            render() {
+                const container = document.getElementById('dp-array');
+                container.innerHTML = this.data.map((v, i) => {
+                    let cls = "cell";
+                    if (this.reachable[i]) cls += " cell-reachable";
+                    else if (i > this.idx) cls += " cell-unreachable";
+                    if (i === this.idx) cls += " cell-active";
+                    return `<div class="${cls}">${v}<span class="pointer-label">${this.reachable[i] ? 'OK' : (i > this.idx ? 'NO' : '')}</span></div>`;
+                }).join('');
+            },
+            next() {
+                if (this.idx < 0) {
+                    document.getElementById('dp-msg').innerText = "Table complete. Index 0 is FALSE. Result: False.";
+                    document.getElementById('dp-next-btn').disabled = true;
+                    return;
+                }
+                
+                let canReach = false;
+                let maxJump = this.data[this.idx];
+                for(let j = 1; j <= maxJump; j++) {
+                    if (this.idx + j < this.data.length && this.reachable[this.idx + j]) {
+                        canReach = true;
+                        break;
+                    }
+                }
+                
+                this.reachable[this.idx] = canReach;
+                document.getElementById('dp-msg').innerText = `Checking Index ${this.idx} (value ${this.data[this.idx]}): Can it reach any green cell? ${canReach ? 'Yes!' : 'No.'}`;
+                this.idx--;
+                this.render();
+            }
+        };
+
+        // --- GREEDY VIZ ---
+        const greedyViz = {
+            data: [...SAMPLE_DATA],
+            idx: 4,
+            goal: 4,
+            init() { this.render(); },
+            reset() { this.idx = 4; this.goal = 4; this.render(); document.getElementById('greedy-next-btn').disabled = false; },
+            render() {
+                const container = document.getElementById('greedy-array');
+                container.innerHTML = this.data.map((v, i) => {
+                    let cls = "cell";
+                    if (i === this.goal) cls += " cell-reachable";
+                    if (i === this.idx) cls += " cell-active";
+                    return `<div class="${cls}">${v}<span class="pointer-label">${i === this.goal ? 'GOAL' : ''}</span></div>`;
+                }).join('');
+            },
+            next() {
+                if (this.idx < 0) {
+                    document.getElementById('greedy-msg').innerText = `Final Check: Goal is at 0? ${this.goal === 0 ? 'TRUE' : 'FALSE'}`;
+                    document.getElementById('greedy-next-btn').disabled = true;
+                    return;
+                }
+
+                let canReachGoal = (this.idx + this.data[this.idx] >= this.goal);
+                if (canReachGoal) {
+                    this.goal = this.idx;
+                    document.getElementById('greedy-msg').innerText = `Index ${this.idx} reaches current goal! Goal shifts to ${this.idx}.`;
+                } else {
+                    document.getElementById('greedy-msg').innerText = `Index ${this.idx} cannot reach goal at ${this.goal}. Goal stays put.`;
+                }
+                
+                this.idx--;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            dpViz.init();
+            greedyViz.init();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: JVM Architecture Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        code { font-family: 'Fira Code', monospace; }
+        
+        .jvm-box {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .jvm-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+        }
+        .highlight-yellow { background-color: #fef9c3; padding: 2px 4px; border-radius: 4px; }
+        .expert-note {
+            border-left: 4px solid #3b82f6;
+            background-color: #eff6ff;
+        }
+        .warning-note {
+            border-left: 4px solid #ef4444;
+            background-color: #fef2f2;
+        }
+        
+        /* Animation for Memory Flow */
+        @keyframes flow {
+            0% { left: -10%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { left: 110%; opacity: 0; }
+        }
+        .flow-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #60a5fa;
+            border-radius: 50%;
+            animation: flow 3s infinite linear;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-800 mb-4">Bài 1.1: Kiến trúc JVM (Deep Dive)</h1>
+            <p class="text-lg text-slate-600">Hiểu rõ cơ chế "Write Once, Run Anywhere" và cách Java vận hành ở mức hệ thống.</p>
+            <div class="mt-6 flex justify-center gap-4">
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">Java Core</span>
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">JVM Internals</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">Memory Model</span>
+            </div>
+        </header>
+
+        <!-- section 1: Tổng quan -->
+        <section class="mb-12 bg-white rounded-2xl p-6 md:p-8 shadow-sm">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-microchip text-blue-500"></i> 1. JVM là gì? Tại sao phải học JVM?
+            </h2>
+            <p class="mb-4">
+                Java Virtual Machine (JVM) là một **máy ảo** đóng vai trò là môi trường thực thi cho các ứng dụng Java. Nó chuyển đổi mã Bytecode thành mã máy (Native Machine Code) mà CPU có thể hiểu được.
+            </p>
+            <div class="grid md:grid-cols-2 gap-6 mt-8">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h3 class="font-semibold text-blue-700 mb-2">Triết lý thiết kế</h3>
+                    <ul class="list-disc ml-5 space-y-2 text-sm">
+                        <li><strong>Platform Independence:</strong> Bytecode giống nhau trên Windows/Linux, chỉ cần JVM tương ứng.</li>
+                        <li><strong>Automatic Memory Management:</strong> Giải phóng lập trình viên khỏi nỗi lo <code>malloc/free</code> nhờ Garbage Collector.</li>
+                    </ul>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h3 class="font-semibold text-blue-700 mb-2">Phân biệt JDK, JRE, JVM</h3>
+                    <ul class="list-disc ml-5 space-y-2 text-sm">
+                        <li><strong>JVM:</strong> Trái tim thực thi code.</li>
+                        <li><strong>JRE:</strong> JVM + Libraries (Để chạy app).</li>
+                        <li><strong>JDK:</strong> JRE + Tools (javac, debugger... Để phát triển app).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- section 2: JVM Architecture Diagram -->
+        <section class="mb-12 bg-white rounded-2xl p-6 md:p-8 shadow-sm overflow-hidden">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-project-diagram text-blue-500"></i> 2. Sơ đồ kiến trúc tổng quát
+            </h2>
+            <div class="relative bg-slate-900 rounded-xl p-8 text-white">
+                <!-- Class Loader -->
+                <div class="mb-10 text-center">
+                    <div class="inline-block px-6 py-3 bg-blue-600 rounded-lg font-bold border-2 border-blue-400 jvm-box">
+                        CLASS LOADER SUBSYSTEM
+                    </div>
+                </div>
+
+                <!-- Memory Areas -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-10">
+                    <div class="p-3 bg-slate-800 border border-slate-600 rounded text-center text-xs jvm-box">Method Area</div>
+                    <div class="p-3 bg-slate-800 border border-slate-600 rounded text-center text-xs jvm-box">Heap Area</div>
+                    <div class="p-3 bg-slate-800 border border-slate-600 rounded text-center text-xs jvm-box">Stack Area</div>
+                    <div class="p-3 bg-slate-800 border border-slate-600 rounded text-center text-xs jvm-box">PC Registers</div>
+                    <div class="p-3 bg-slate-800 border border-slate-600 rounded text-center text-xs jvm-box">Native Stack</div>
+                </div>
+
+                <!-- Execution Engine -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-red-600/80 rounded-lg text-center font-semibold jvm-box">Interpreter</div>
+                    <div class="p-4 bg-red-600/80 rounded-lg text-center font-semibold jvm-box">JIT Compiler</div>
+                    <div class="p-4 bg-red-600/80 rounded-lg text-center font-semibold jvm-box">Garbage Collector</div>
+                </div>
+                
+                <div class="mt-8 text-center text-slate-400 text-sm">
+                    <i class="fas fa-arrow-down mb-2 block"></i>
+                    Native Method Interface (JNI) & Libraries
+                </div>
+            </div>
+        </section>
+
+        <!-- section 3: Deep Dive Class Loader -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 border-b-2 border-blue-200 pb-2">3. Class Loader Subsystem: "Cánh cổng vào"</h2>
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <p class="mb-4">JVM không load tất cả class ngay khi khởi động. Nó load theo kiểu **Lazy Loading** (cần mới load).</p>
+                <div class="space-y-6">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 font-bold">1</div>
+                        <div>
+                            <h4 class="font-bold text-lg">Loading (Cơ chế ủy quyền - Delegation Model)</h4>
+                            <p class="text-sm text-slate-600">Khi một class được yêu cầu, ClassLoader sẽ hỏi cha của nó trước (theo thứ tự: Bootstrap -> Extension -> Application). Nếu cha không tìm thấy, con mới tự load. Điều này giúp bảo mật, tránh việc người dùng tạo class giả mạo (vd: <code>java.lang.String</code>).</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 font-bold">2</div>
+                        <div>
+                            <h4 class="font-bold text-lg">Linking</h4>
+                            <p class="text-sm text-slate-600 italic">Verify (Kiểm tra bytecode hợp lệ) -> Prepare (Cấp phát memory cho static variables với giá trị default) -> Resolve (Thay thế các tham chiếu ký hiệu bằng địa chỉ thực).</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 items-start">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 font-bold">3</div>
+                        <div>
+                            <h4 class="font-bold text-lg">Initialization</h4>
+                            <p class="text-sm text-slate-600">Đây là lúc các khối <code>static { ... }</code> được thực thi và các biến static được gán giá trị thực sự.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- section 4: Runtime Data Areas -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 border-b-2 border-green-200 pb-2 text-green-800">4. Runtime Data Areas: Bộ não và Bộ nhớ</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Stack vs Heap -->
+                <div class="bg-white p-6 rounded-xl shadow-sm expert-note">
+                    <h3 class="font-bold text-xl mb-4 text-blue-600"><i class="fas fa-layer-group"></i> Stack Area (Per Thread)</h3>
+                    <p class="text-sm mb-4">Mỗi Thread khi sinh ra sẽ có một Stack riêng. Nó lưu trữ các **Stack Frames**.</p>
+                    <ul class="text-sm space-y-2 list-disc ml-5">
+                        <li>Lưu biến cục bộ (primitive types, object references).</li>
+                        <li>Hoạt động theo cơ chế LIFO.</li>
+                        <li><strong>Lỗi:</strong> <code>StackOverflowError</code> (do đệ quy vô tận).</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm expert-note">
+                    <h3 class="font-bold text-xl mb-4 text-green-600"><i class="fas fa-database"></i> Heap Area (Shared)</h3>
+                    <p class="text-sm mb-4">Dùng chung cho toàn bộ ứng dụng. Là nơi "cư ngụ" của tất cả các **Objects** và **Arrays**.</p>
+                    <ul class="text-sm space-y-2 list-disc ml-5">
+                        <li>Được quản lý bởi Garbage Collector.</li>
+                        <li>Chia thành: Young Generation, Old Generation.</li>
+                        <li><strong>Lỗi:</strong> <code>OutOfMemoryError</code> (khi heap đầy).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Code Visualization -->
+            <div class="mt-8 bg-slate-900 rounded-xl p-6 text-slate-300">
+                <h4 class="text-white font-mono mb-4 text-sm">// Ví dụ minh họa Memory</h4>
+                <pre class="text-sm font-mono leading-relaxed">
+<span class="text-purple-400">public class</span> <span class="text-yellow-400">MemoryDemo</span> {
+    <span class="text-purple-400">public static void</span> <span class="text-blue-400">main</span>(String[] args) {
+        <span class="text-green-500">// 'x' nằm trong Stack</span>
+        <span class="text-purple-400">int</span> x = <span class="text-orange-400">10</span>; 
+        
+        <span class="text-green-500">// Biến 'p' (tham chiếu) nằm trong Stack
+        // Đối tượng Person thực sự nằm trong Heap</span>
+        Person p = <span class="text-purple-400">new</span> Person(<span class="text-green-400">"Học viên"</span>); 
+    }
+}
+                </pre>
+            </div>
+        </section>
+
+        <!-- section 5: JIT & Execution Engine -->
+        <section class="mb-12 bg-white rounded-2xl p-6 md:p-8 shadow-sm">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-bolt text-yellow-500"></i> 5. Execution Engine: Cỗ máy tốc độ
+            </h2>
+            <p class="mb-4 text-slate-700">Tại sao Java "chậm" lúc đầu nhưng "nhanh" về sau? Câu trả lời là **JIT (Just-In-Time) Compiler**.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="p-4 border border-slate-200 rounded-lg">
+                    <h4 class="font-bold mb-2">Interpreter</h4>
+                    <p class="text-sm">Đọc Bytecode và thực thi từng dòng. Nhanh lúc bắt đầu nhưng chậm nếu lặp lại nhiều lần.</p>
+                </div>
+                <div class="p-4 border border-blue-200 bg-blue-50 rounded-lg">
+                    <h4 class="font-bold mb-2 text-blue-700">JIT Compiler</h4>
+                    <p class="text-sm">Theo dõi các "Hot Spots" (đoạn code chạy nhiều). Nó compile thẳng đoạn code đó sang mã máy và lưu vào cache. Lần sau gọi lại sẽ cực nhanh!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- section 6: Expert Mindset & Best Practices -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-blue-900 underline decoration-blue-300">6. Tư duy Senior: Performance & Optimization</h2>
+            <div class="space-y-4">
+                <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                    <h4 class="font-bold flex items-center gap-2"><i class="fas fa-lightbulb"></i> Hiểu về -Xms và -Xmx</h4>
+                    <p class="text-sm">Trong Production, hãy luôn đặt <code>-Xms</code> (Initial Heap) bằng <code>-Xmx</code> (Max Heap). Việc này giúp JVM không phải tốn tài nguyên để co giãn vùng nhớ Heap liên tục, từ đó giảm Pause Time của Garbage Collector.</p>
+                </div>
+                <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                    <h4 class="font-bold flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i> Cảnh giác với Memory Leak</h4>
+                    <p class="text-sm">Dù có Garbage Collector, nhưng nếu bạn giữ tham chiếu đến một đối tượng không còn dùng (ví dụ: static list chứa mọi request), GC sẽ không thể dọn dẹp nó. Đây chính là nguyên nhân gây chết app âm thầm.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Interview Q&A -->
+        <section class="mb-12 bg-slate-100 rounded-2xl p-6 md:p-8">
+            <h2 class="text-2xl font-bold mb-6"><i class="fas fa-question-circle"></i> Kiểm tra kiến thức (Interview Style)</h2>
+            <div class="space-y-4">
+                <details class="bg-white p-4 rounded-lg shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-slate-800">Câu 1: Chuyện gì xảy ra nếu bạn gọi một hàm đệ quy không có điểm dừng?</summary>
+                    <p class="mt-4 text-slate-600 text-sm pl-4 border-l-2 border-slate-200">
+                        JVM sẽ sinh ra <strong>StackOverflowError</strong>. Vì mỗi lần gọi hàm, một Frame mới được đẩy vào Stack. Khi Stack đầy (vượt quá kích thước quy định bởi <code>-Xss</code>), lỗi sẽ xảy ra.
+                    </p>
+                </details>
+                <details class="bg-white p-4 rounded-lg shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-slate-800">Câu 2: Tại sao chúng ta không thể load lại class java.lang.String bằng ClassLoader tự tạo?</summary>
+                    <p class="mt-4 text-slate-600 text-sm pl-4 border-l-2 border-slate-200">
+                        Nhờ cơ chế <strong>Parent Delegation</strong>. ClassLoader của bạn sẽ hỏi cha nó trước. Bootstrap ClassLoader (cao nhất) đã load <code>java.lang.String</code> chuẩn của JDK rồi, nên nó sẽ trả về class đó, ngăn chặn việc nạp class giả mạo.
+                    </p>
+                </details>
+                <details class="bg-white p-4 rounded-lg shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-slate-800">Câu 3: Metaspace (Java 8+) khác gì so với PermGen (Java 7-)?</summary>
+                    <p class="mt-4 text-slate-600 text-sm pl-4 border-l-2 border-slate-200">
+                        PermGen có kích thước cố định, dễ gây <code>java.lang.OutOfMemoryError: PermGen space</code>. Metaspace sử dụng bộ nhớ Native (RAM của OS), nó có thể tự mở rộng linh hoạt, giúp hạn chế lỗi OOM cho metadata của class.
+                    </p>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-slate-500 py-10 border-t border-slate-200">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.1: Trở thành bậc thầy JVM</p>
+            <p class="text-xs mt-2 italic">"Hiểu bản chất để không bao giờ bị động trước lỗi."</p>
+        </footer>
+    </div>
+</body>
+</html>

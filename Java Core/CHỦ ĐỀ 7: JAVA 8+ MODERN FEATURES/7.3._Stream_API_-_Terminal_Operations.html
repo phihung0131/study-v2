@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Stream Terminal Operations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
+        code { font-family: 'Fira Code', monospace !important; }
+        .sidebar-item:hover { background-color: #1e293b; color: #38bdf8; }
+        .active-section { border-left: 4px solid #38bdf8; background-color: #1e293b; }
+        .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* Collector Animation */
+        .box { transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .group-tag { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto p-6 hidden md:block">
+        <div class="mb-10">
+            <h1 class="text-xl font-bold text-sky-400">Thầy Dạy Java</h1>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Chapter 7.3: The End Game</p>
+        </div>
+        <nav class="space-y-1">
+            <a href="#intro" class="sidebar-item block p-3 rounded-lg transition">1. Khái niệm Terminal</a>
+            <a href="#collect" class="sidebar-item block p-3 rounded-lg transition">2. Mutable Reduction (collect)</a>
+            <a href="#grouping" class="sidebar-item block p-3 rounded-lg transition">3. Grouping & Partitioning</a>
+            <a href="#reduce" class="sidebar-item block p-3 rounded-lg transition">4. Immutable Reduction (reduce)</a>
+            <a href="#short-circuit" class="sidebar-item block p-3 rounded-lg transition">5. Short-circuiting</a>
+            <a href="#internal" class="sidebar-item block p-3 rounded-lg transition">6. Internal: Collector Interface</a>
+            <a href="#interview" class="sidebar-item block p-3 rounded-lg transition">7. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-12 overflow-y-auto">
+        
+        <header id="intro" class="mb-16">
+            <span class="text-sky-500 font-semibold text-sm tracking-tighter">PHẦN KẾT CỦA STREAM</span>
+            <h2 class="text-5xl font-black mt-2 mb-6 tracking-tight">Terminal Operations</h2>
+            <p class="text-lg text-slate-400 max-w-3xl leading-relaxed">
+                Nếu Intermediate Ops định nghĩa <strong>cách thức</strong> xử lý dữ liệu, thì Terminal Ops định nghĩa <strong>kết quả</strong> cuối cùng. Khi một Terminal Op được gọi: Pipeline được thực thi, dữ liệu được tiêu thụ, và Stream sẽ bị đóng lại.
+            </p>
+        </header>
+
+        <!-- The Trigger Section -->
+        <section class="mb-20 glass-card p-8 rounded-3xl border border-sky-500/10">
+            <h3 class="text-2xl font-bold mb-6 flex items-center">
+                <span class="w-8 h-8 bg-sky-500 rounded flex items-center justify-center mr-4 text-sm">!</span>
+                Đặc điểm cốt lõi
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <h4 class="text-sky-400 font-bold mb-2">Eager Execution</h4>
+                    <p class="text-xs text-slate-400 italic">Kích hoạt toàn bộ Pipeline ngay lập tức.</p>
+                </div>
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <h4 class="text-sky-400 font-bold mb-2">Single Use</h4>
+                    <p class="text-xs text-slate-400 italic">Sau khi gọi, Stream không thể tái sử dụng.</p>
+                </div>
+                <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <h4 class="text-sky-400 font-bold mb-2">Return Value</h4>
+                    <p class="text-xs text-slate-400 italic">Trả về List, Map, Optional, Primitive hoặc Void.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Collect Deep Dive -->
+        <section id="collect" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8">2. Mutable Reduction: <code>collect()</code></h3>
+            <div class="bg-slate-900 rounded-2xl p-8 border border-slate-800">
+                <p class="text-slate-300 mb-6 italic">Đây là phương thức quan trọng nhất. Nó biến đổi Stream thành một Collection hoặc một cấu trúc dữ liệu tùy chỉnh.</p>
+                <pre><code class="language-java">// Gom vào List
+List&lt;String&gt; list = stream.collect(Collectors.toList());
+
+// Gom vào Map (Key: ID, Value: Name)
+Map&lt;Integer, String&gt; map = users.stream()
+    .collect(Collectors.toMap(User::getId, User::getName));</code></pre>
+            </div>
+        </section>
+
+        <!-- Grouping Visualizer -->
+        <section id="grouping" class="mb-20">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold">3. Power of <code>groupingBy</code></h3>
+                <button onclick="animateGrouping()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg text-xs font-bold transition">Chạy mô phỏng Grouping</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 bg-slate-900 rounded-2xl">
+                    <h5 class="text-slate-500 text-xs uppercase mb-4">Input: List<Product></h5>
+                    <div class="flex flex-wrap gap-2" id="input-items">
+                        <div class="box p-3 bg-slate-800 rounded border border-slate-700 text-[10px]" data-cat="Tech">Laptop</div>
+                        <div class="box p-3 bg-slate-800 rounded border border-slate-700 text-[10px]" data-cat="Food">Apple</div>
+                        <div class="box p-3 bg-slate-800 rounded border border-slate-700 text-[10px]" data-cat="Tech">Phone</div>
+                        <div class="box p-3 bg-slate-800 rounded border border-slate-700 text-[10px]" data-cat="Food">Bread</div>
+                        <div class="box p-3 bg-slate-800 rounded border border-slate-700 text-[10px]" data-cat="Tech">Mouse</div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-slate-900 rounded-2xl">
+                    <h5 class="text-slate-500 text-xs uppercase mb-4">Output: Map&lt;Category, List&lt;Product&gt;&gt;</h5>
+                    <div class="space-y-4" id="output-groups">
+                        <div class="p-4 bg-slate-800/30 rounded border-l-4 border-sky-500 min-h-[60px]" id="group-Tech">
+                            <span class="group-tag bg-sky-900 text-sky-300">TECH</span>
+                            <div class="flex gap-2 mt-2 items-container"></div>
+                        </div>
+                        <div class="p-4 bg-slate-800/30 rounded border-l-4 border-emerald-500 min-h-[60px]" id="group-Food">
+                            <span class="group-tag bg-emerald-900 text-emerald-300">FOOD</span>
+                            <div class="flex gap-2 mt-2 items-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6">
+                <pre><code class="language-java">Map&lt;Category, List&lt;Product&gt;&gt; byCategory = products.stream()
+    .collect(Collectors.groupingBy(Product::getCategory));</code></pre>
+            </div>
+        </section>
+
+        <!-- Reduce Section -->
+        <section id="reduce" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-pink-400">4. Immutable Reduction: <code>reduce()</code></h3>
+            <div class="p-8 bg-pink-900/10 border border-pink-500/20 rounded-2xl">
+                <p class="mb-4">Dùng khi em muốn kết hợp các phần tử thành **một giá trị duy nhất** (như tính tổng, tích, hoặc tìm chuỗi dài nhất).</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h5 class="text-xs font-bold text-slate-500 mb-2">Cú pháp 2 tham số:</h5>
+                        <pre><code class="language-java">int sum = numbers.stream()
+    .reduce(0, (a, b) -> a + b);</code></pre>
+                        <p class="text-[10px] mt-2 text-slate-500 italic">0 là giá trị khởi tạo (Identity).</p>
+                    </div>
+                    <div>
+                        <h5 class="text-xs font-bold text-slate-500 mb-2">Cú pháp 1 tham số:</h5>
+                        <pre><code class="language-java">Optional&lt;Integer&gt; max = numbers.stream()
+    .reduce(Math::max);</code></pre>
+                        <p class="text-[10px] mt-2 text-slate-500 italic">Trả về Optional vì stream có thể rỗng.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Short Circuiting -->
+        <section id="short-circuit" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6">5. Short-circuiting Operations</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+                    <h5 class="text-emerald-400 font-bold mb-3">Matching</h5>
+                    <ul class="text-sm space-y-2 opacity-80">
+                        <li>• <code>anyMatch</code>: Trả về true nếu ít nhất 1 cái đúng.</li>
+                        <li>• <code>allMatch</code>: Trả về true nếu tất cả đều đúng.</li>
+                        <li>• <code>noneMatch</code>: Trả về true nếu không cái nào đúng.</li>
+                    </ul>
+                </div>
+                <div class="p-6 bg-slate-900 border border-slate-800 rounded-xl">
+                    <h5 class="text-sky-400 font-bold mb-3">Finding</h5>
+                    <ul class="text-sm space-y-2 opacity-80">
+                        <li>• <code>findFirst</code>: Lấy phần tử đầu tiên gặp được.</li>
+                        <li>• <code>findAny</code>: Lấy bất kỳ phần tử nào (tốt cho Parallel).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-amber-500/10 border-l-4 border-amber-500 text-xs text-amber-200">
+                <strong>Senior Insight:</strong> Các hàm này không duyệt hết Stream. Ngay khi có kết quả, nó sẽ dừng Pipeline -> Cực kỳ tối ưu hiệu năng.
+            </div>
+        </section>
+
+        <!-- Internal Collector Interface -->
+        <section id="internal" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6">6. Deep Dive: Collector Interface</h3>
+            <div class="p-8 bg-slate-900 rounded-3xl border border-slate-800">
+                <p class="text-sm text-slate-400 mb-6">Để tùy chỉnh cách <code>collect()</code> hoạt động, em cần hiểu 4 thành phần của interface <code>Collector&lt;T, A, R&gt;</code>:</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-sky-400 font-bold">Supplier</div>
+                        <div class="text-[10px]">Tạo container rỗng (new ArrayList)</div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-emerald-400 font-bold">Accumulator</div>
+                        <div class="text-[10px]">Thêm phần tử vào container</div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-amber-400 font-bold">Combiner</div>
+                        <div class="text-[10px]">Gộp 2 container (cho Parallel)</div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-rose-400 font-bold">Finisher</div>
+                        <div class="text-[10px]">Biến đổi container thành kết quả cuối</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interview Questions -->
+        <section id="interview" class="mb-20 pb-20">
+            <h3 class="text-2xl font-bold mb-8 text-sky-400 underline underline-offset-8">🎯 Senior Interview Prep</h3>
+            <div class="space-y-4">
+                <details class="group p-6 bg-slate-900 rounded-2xl border border-slate-800 hover:border-sky-500 transition">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        Q1: Phân biệt reduce() và collect()? Khi nào dùng cái nào?
+                        <span class="text-sky-500 group-open:rotate-180 transition-transform">↓</span>
+                    </summary>
+                    <div class="mt-4 text-slate-400 text-sm leading-relaxed border-t border-slate-800 pt-4">
+                        - <strong>collect()</strong> thực hiện <strong>Mutable Reduction</strong>. Nó thay đổi một container có sẵn (như thêm vào List). Rất hiệu quả về bộ nhớ khi làm việc với Collections.<br>
+                        - <strong>reduce()</strong> thực hiện <strong>Immutable Reduction</strong>. Nó luôn tạo ra một giá trị mới từ hai giá trị cũ. Thích hợp cho các kiểu dữ liệu primitive (int, double) hoặc các Immutable Objects (String, BigInteger).<br>
+                        - <strong>Rule:</strong> Nếu muốn gom vào Collection, hãy dùng <code>collect</code>. Nếu muốn tính toán ra một giá trị duy nhất, hãy dùng <code>reduce</code>.
+                    </div>
+                </details>
+
+                <details class="group p-6 bg-slate-900 rounded-2xl border border-slate-800 hover:border-sky-500 transition">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        Q2: Tại sao collect(Collectors.toList()) đôi khi tốt hơn collect(Collectors.toUnmodifiableList())?
+                        <span class="text-sky-500 group-open:rotate-180 transition-transform">↓</span>
+                    </summary>
+                    <div class="mt-4 text-slate-400 text-sm leading-relaxed border-t border-slate-800 pt-4">
+                        <code>toList()</code> mặc định (trong Java 16+) có thể cho phép sửa đổi (tùy implementation). <code>toUnmodifiableList()</code> đảm bảo tính an toàn dữ liệu nhưng sẽ ném Exception nếu em cố ý <code>add()</code> thêm phần tử sau này. Trong kiến trúc Microservices, việc dùng Unmodifiable giúp tránh các lỗi logic khó debug do thay đổi trạng thái bất ngờ.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    async function animateGrouping() {
+        const items = document.querySelectorAll('#input-items .box');
+        const groups = {
+            'Tech': document.querySelector('#group-Tech .items-container'),
+            'Food': document.querySelector('#group-Food .items-container')
+        };
+
+        // Reset
+        items.forEach(item => {
+            document.getElementById('input-items').appendChild(item);
+            item.style.opacity = '1';
+            item.style.transform = 'scale(1)';
+        });
+
+        for (const item of items) {
+            const cat = item.getAttribute('data-cat');
+            item.style.transform = 'scale(1.2)';
+            item.style.borderColor = '#38bdf8';
+            
+            await new Promise(r => setTimeout(r, 600));
+            
+            item.style.opacity = '0';
+            await new Promise(r => setTimeout(r, 300));
+            
+            groups[cat].appendChild(item);
+            item.style.opacity = '1';
+            item.style.transform = 'scale(1)';
+            item.style.borderColor = 'transparent';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        Prism.highlightAll();
+    });
+</script>
+
+</body>
+</html>

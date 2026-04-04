@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Visualizer: Remove Element</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .string { color: #ce9178; }
+        .number { color: #b5cea8; }
+
+        .array-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 20px;
+            min-height: 120px;
+            flex-wrap: wrap;
+        }
+
+        .cell {
+            width: 54px;
+            height: 54px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: white;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .cell.active { border-color: #3b82f6; background-color: #dbeafe; transform: scale(1.1); z-index: 10; }
+        .cell.match { border-color: #ef4444; background-color: #fee2e2; }
+        .cell.keep { border-color: #10b981; background-color: #dcfce7; }
+        .cell.ignored { opacity: 0.4; background-color: #f1f5f9; border-style: dashed; }
+        
+        .pointer-label {
+            position: absolute;
+            top: -22px;
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 800;
+            white-space: nowrap;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .label-reader { background: #3b82f6; color: white; }
+        .label-writer { background: #10b981; color: white; }
+
+        .step-description {
+            min-height: 70px;
+            background-color: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-slate-900 mb-2">Remove Element</h1>
+            <p class="text-lg text-slate-600">LeetCode #27 | Difficulty: Easy | In-Place Modification</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-xl shadow-sm mb-8 border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="mr-2">📝</span> Problem Summary
+            </h2>
+            <p class="mb-4">
+                Given an integer array <b>nums</b> and an integer <b>val</b>, remove all occurrences of <b>val</b> in <b>nums</b> <b>in-place</b>. The relative order of the elements may be changed.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-4">
+                <p class="text-blue-800"><b>Return Value:</b> Return <b>k</b>, where <b>k</b> is the number of elements in <b>nums</b> which are not equal to <b>val</b>. The first <b>k</b> elements of <b>nums</b> should contain the elements which are not equal to <b>val</b>.</p>
+            </div>
+            <p class="text-slate-600 italic">Example: nums = [3, 2, 2, 3], val = 3 → Result: k = 2, nums = [2, 2, _, _]</p>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-16">
+            <div class="bg-slate-700 text-white px-5 py-2 rounded-t-lg inline-block font-bold">
+                Approach 1: Shifting Elements (Brute Force)
+            </div>
+            <div class="bg-white p-6 rounded-b-xl rounded-tr-xl shadow-md border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="mb-6 text-slate-700">
+                    The most intuitive way is to iterate through the array, and every time we find <b>val</b>, we "delete" it by shifting all subsequent elements one position to the left. 
+                    While easy to understand, this is inefficient because a single removal can trigger <b>O(n)</b> shifts.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="mb-8 border rounded-xl p-6 bg-slate-50">
+                    <h4 class="font-bold text-center mb-4 text-slate-500 uppercase tracking-widest text-sm">Animation: Scan & Shift</h4>
+                    <div id="bf-step-info" class="step-description text-slate-700">Click "Next" to see the shifting process.</div>
+                    
+                    <div class="text-center mb-2 font-mono font-bold text-blue-600">val to remove: <span id="bf-target-val">3</span></div>
+                    <div id="bf-array" class="array-container"></div>
+
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="bfEngine.reset()" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button onclick="bfEngine.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-6">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeElement</span>(<span class="keyword">int</span>[] nums, <span class="keyword">int</span> val) {
+    <span class="keyword">int</span> currentSize = nums.length;
+    <span class="keyword">int</span> index = <span class="number">0</span>;
+    
+    <span class="keyword">while</span> (index < currentSize) {
+        <span class="keyword">if</span> (nums[index] == val) {
+            <span class="comment">// Shift everything left</span>
+            <span class="keyword">for</span> (<span class="keyword">int</span> j = index; j < currentSize - <span class="number">1</span>; j++) {
+                nums[j] = nums[j + <span class="number">1</span>];
+            }
+            currentSize--; <span class="comment">// Array effectively shrinks</span>
+            <span class="comment">// Don't increment index, need to check the NEW element at this position</span>
+        } <span class="keyword">else</span> {
+            index++;
+        }
+    }
+    <span class="keyword">return</span> currentSize;
+}
+</pre>
+                </div>
+
+                <!-- Analysis Zone 1 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <h4 class="font-bold mb-2 text-slate-800 underline decoration-slate-300">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li>⏱️ <b>Time Complexity:</b> <b>O(n²)</b>. In the worst case (all elements are <b>val</b>), we perform <b>n</b> shifts for <b>n</b> elements.</li>
+                            <li>📦 <b>Space Complexity:</b> <b>O(1)</b>. We modify the original array.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <h4 class="font-bold mb-2 text-slate-800 underline decoration-slate-300">Pros & Cons</h4>
+                        <p class="text-red-600 font-bold mb-1">Cons:</p>
+                        <p class="text-sm">Very slow for large arrays. Repeated data movement is redundant.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: OPTIMAL TWO POINTERS -->
+        <section class="mb-16">
+            <div class="bg-blue-600 text-white px-5 py-2 rounded-t-lg inline-block font-bold">
+                Approach 2: Two Pointers (Optimal)
+            </div>
+            <div class="bg-white p-6 rounded-b-xl rounded-tr-xl shadow-md border-2 border-blue-100">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="mb-6 text-slate-700">
+                    Instead of shifting elements every time, we use two pointers:
+                    <br>1. <b>reader:</b> Scans through every element in the array.
+                    <br>2. <b>writer:</b> Keeps track of where the next "valid" element should be placed.
+                    If the reader finds a value <b>not equal</b> to <b>val</b>, it gives it to the writer to "keep" it.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="mb-8 border rounded-xl p-6 bg-slate-50">
+                    <h4 class="font-bold text-center mb-4 text-blue-500 uppercase tracking-widest text-sm">Animation: Reader/Writer Pattern</h4>
+                    <div id="opt-step-info" class="step-description text-slate-700">Click "Next Step" to start the optimized visualization.</div>
+                    
+                    <div class="text-center mb-2 font-mono font-bold text-blue-600">val to remove: <span id="opt-target-val">3</span></div>
+                    <div id="opt-array" class="array-container"></div>
+
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="optEngine.reset()" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button onclick="optEngine.next()" id="opt-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-6">
+<pre>
+<span class="keyword">public int</span> <span class="type">removeElement</span>(<span class="keyword">int</span>[] nums, <span class="keyword">int</span> val) {
+    <span class="comment">// The writePointer tracks the position for the next valid element</span>
+    <span class="keyword">int</span> writePointer = <span class="number">0</span>;
+    
+    <span class="comment">// The readPointer explores the entire array</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> readPointer = <span class="number">0</span>; readPointer < nums.length; readPointer++) {
+        <span class="comment">// If the current element is NOT the one we want to remove</span>
+        <span class="keyword">if</span> (nums[readPointer] != val) {
+            <span class="comment">// Place it at the writePointer position</span>
+            nums[writePointer] = nums[readPointer];
+            <span class="comment">// Increment writePointer for the next valid element</span>
+            writePointer++;
+        }
+    }
+    
+    <span class="comment">// writePointer now equals the count of elements that aren't 'val'</span>
+    <span class="keyword">return</span> writePointer;
+}
+</pre>
+                </div>
+
+                <!-- Analysis Zone 2 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                        <h4 class="font-bold mb-2 text-blue-800 underline decoration-blue-200">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li>⏱️ <b>Time Complexity:</b> <b>O(n)</b>. We traverse the array exactly once.</li>
+                            <li>📦 <b>Space Complexity:</b> <b>O(1)</b>. Only two integer variables used for pointers.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                        <h4 class="font-bold mb-2 text-blue-800 underline decoration-blue-200">Pros & Cons</h4>
+                        <p class="text-emerald-600 font-bold mb-1">Pros:</p>
+                        <p class="text-sm">Maximum efficiency. Elements are only moved once if necessary.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-6 rounded-xl shadow-sm mb-8 border border-slate-200">
+            <h2 class="text-2xl font-bold mb-6">Strategy Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Complexity</th>
+                            <th class="p-4 border">Data Movement</th>
+                            <th class="p-4 border">Code Complexity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-semibold">Shifting (Brute)</td>
+                            <td class="p-4 border"><b>O(n²)</b></td>
+                            <td class="p-4 border text-red-500 font-medium">High (Redundant)</td>
+                            <td class="p-4 border">Medium (Nested Loop)</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="p-4 border font-semibold">Two Pointers (Optimal)</td>
+                            <td class="p-4 border text-blue-700"><b>O(n)</b></td>
+                            <td class="p-4 border text-emerald-600 font-medium">Minimal (Once per val)</td>
+                            <td class="p-4 border">Low (Single Pass)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Tips -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 flex items-center"><span class="mr-2">💡</span> Takeaways</h3>
+                <ul class="space-y-2 text-slate-700">
+                    <li>• Two pointers (Fast/Slow) is the standard for <b>In-place Array Modification</b>.</li>
+                    <li>• The <b>Slow Pointer (Writer)</b> defines the boundary of the "answer" array.</li>
+                    <li>• The <b>Fast Pointer (Reader)</b> filters data from the source.</li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                <h3 class="text-xl font-bold mb-4 text-amber-800 flex items-center"><span class="mr-2">🧩</span> Interview Note</h3>
+                <p class="text-amber-900 text-sm leading-relaxed">
+                    If the elements to remove are rare, you can optimize further by swapping <b>val</b> with the <b>last element</b> in the array and decreasing length. This avoids copying valid elements repeatedly.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * BRUTE FORCE ENGINE
+         */
+        const bfEngine = {
+            nums: [3, 2, 2, 3],
+            val: 3,
+            idx: 0,
+            innerIdx: -1,
+            size: 4,
+            isShifting: false,
+            
+            init() { this.render(); },
+            reset() {
+                this.nums = [3, 2, 2, 3];
+                this.idx = 0;
+                this.innerIdx = -1;
+                this.size = 4;
+                this.isShifting = false;
+                document.getElementById('bf-next-btn').disabled = false;
+                this.render();
+                document.getElementById('bf-step-info').innerText = "Click Next to start.";
+            },
+            render() {
+                const container = document.getElementById('bf-array');
+                container.innerHTML = '';
+                this.nums.forEach((v, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${i >= this.size ? 'ignored' : ''}`;
+                    if (i === this.idx && !this.isShifting) cell.classList.add('active');
+                    if (v === this.val && i < this.size) cell.classList.add('match');
+                    if (this.isShifting && i >= this.innerIdx && i < this.size) cell.classList.add('active');
+                    cell.innerText = v;
+                    container.appendChild(cell);
+                });
+            },
+            next() {
+                const info = document.getElementById('bf-step-info');
+                if (this.idx >= this.size) {
+                    info.innerText = `Done! Result size k = ${this.size}`;
+                    document.getElementById('bf-next-btn').disabled = true;
+                    return;
+                }
+
+                if (!this.isShifting) {
+                    if (this.nums[this.idx] === this.val) {
+                        info.innerText = `Found val (${this.val}) at index ${this.idx}. Starting shift...`;
+                        this.isShifting = true;
+                        this.innerIdx = this.idx;
+                    } else {
+                        info.innerText = `${this.nums[this.idx]} is not ${this.val}. Moving forward.`;
+                        this.idx++;
+                    }
+                } else {
+                    if (this.innerIdx < this.size - 1) {
+                        this.nums[this.innerIdx] = this.nums[this.innerIdx + 1];
+                        this.innerIdx++;
+                        info.innerText = `Shifting elements left... index ${this.innerIdx-1} ← ${this.innerIdx}`;
+                    } else {
+                        this.size--;
+                        this.isShifting = false;
+                        info.innerText = `Shift complete. New size: ${this.size}. Re-checking current index ${this.idx}.`;
+                    }
+                }
+                this.render();
+            }
+        };
+
+        /**
+         * OPTIMAL ENGINE
+         */
+        const optEngine = {
+            nums: [0, 1, 2, 2, 3, 0, 4, 2],
+            val: 2,
+            reader: 0,
+            writer: 0,
+            finished: false,
+
+            init() { this.render(); },
+            reset() {
+                this.nums = [0, 1, 2, 2, 3, 0, 4, 2];
+                this.reader = 0;
+                this.writer = 0;
+                this.finished = false;
+                document.getElementById('opt-next-btn').disabled = false;
+                this.render();
+                document.getElementById('opt-step-info').innerText = "Starting Two-Pointer scan.";
+            },
+            render() {
+                const container = document.getElementById('opt-array');
+                container.innerHTML = '';
+                this.nums.forEach((v, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = `cell`;
+                    
+                    if (i < this.writer) cell.classList.add('keep');
+                    if (v === this.val) cell.classList.add('match');
+                    if (i === this.reader) cell.classList.add('active');
+
+                    cell.innerText = v;
+
+                    if (i === this.reader) {
+                        const lbl = document.createElement('div');
+                        lbl.className = 'pointer-label label-reader';
+                        lbl.innerText = 'Read';
+                        cell.appendChild(lbl);
+                    }
+                    if (i === this.writer) {
+                        const lbl = document.createElement('div');
+                        lbl.className = 'pointer-label label-writer';
+                        lbl.style.top = '58px';
+                        lbl.innerText = 'Write';
+                        cell.appendChild(lbl);
+                    }
+                    container.appendChild(cell);
+                });
+            },
+            next() {
+                const info = document.getElementById('opt-step-info');
+                if (this.reader >= this.nums.length) {
+                    info.innerText = `Completed! Valid elements are in indices [0...${this.writer-1}]. Final k = ${this.writer}`;
+                    this.finished = true;
+                    document.getElementById('opt-next-btn').disabled = true;
+                    return;
+                }
+
+                const currentVal = this.nums[this.reader];
+                if (currentVal !== this.val) {
+                    info.innerText = `Reader found ${currentVal} (Keep). Writing to index ${this.writer}.`;
+                    this.nums[this.writer] = currentVal;
+                    this.writer++;
+                } else {
+                    info.innerText = `Reader found ${currentVal} (Target). Skipping write.`;
+                }
+                this.reader++;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfEngine.init();
+            optEngine.init();
+        };
+    </script>
+</body>
+</html>

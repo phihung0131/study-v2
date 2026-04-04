@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Suppressed Exceptions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        code { font-family: 'Fira Code', monospace; }
+        .sidebar-item:hover { background-color: #1e293b; border-left: 4px solid #f472b6; }
+        .active-nav { background-color: #1e293b; border-left: 4px solid #f472b6; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        /* Exception Masking Visualization */
+        .exc-box { padding: 1rem; border-radius: 0.5rem; font-weight: bold; text-align: center; position: relative; transition: all 0.5s ease; }
+        .exc-primary { background: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); z-index: 2; }
+        .exc-secondary { background: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); z-index: 1; }
+        .masking-active .exc-primary { transform: translateY(40px) scale(0.8); opacity: 0; }
+        .masking-active .exc-secondary { transform: translateY(-20px); }
+        
+        .suppression-active .exc-secondary { transform: scale(0.6) translateY(20px); opacity: 0.7; filter: grayscale(0.5); }
+        .suppression-active .exc-primary { transform: scale(1.1); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-pink-500">Java Mentor</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Chương 4.3: Exceptions</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#masking" class="block py-3 px-6 sidebar-item active-nav">1. Exception Masking</a>
+            <a href="#definition" class="block py-3 px-6 sidebar-item">2. Suppressed là gì?</a>
+            <a href="#api" class="block py-3 px-6 sidebar-item">3. The Throwable API</a>
+            <a href="#manual" class="block py-3 px-6 sidebar-item">4. Manual Suppression</a>
+            <a href="#internals" class="block py-3 px-6 sidebar-item">5. Bytecode & Performance</a>
+            <a href="#practice" class="block py-3 px-6 sidebar-item text-orange-400 font-semibold">6. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        
+        <!-- SECTION 1 -->
+        <section id="masking" class="mb-16">
+            <h1 class="text-4xl font-bold mb-6 text-white">Vấn nạn "Exception Masking"</h1>
+            <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+                Hãy tưởng tượng: Luồng xử lý chính của em bị lỗi (ví dụ: DB sập). Trong khối <code class="text-pink-400">finally</code>, em cố gắng đóng kết nối nhưng việc đóng kết nối cũng bị lỗi. 
+                Trong Java < 7, lỗi đóng kết nối sẽ "nuốt chửng" lỗi DB ban đầu.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center glass-card p-8 rounded-2xl">
+                <div id="viz-container" class="flex flex-col space-y-4 items-center">
+                    <div id="p-exc" class="exc-box exc-primary w-48">Primary Error (DB)</div>
+                    <div id="s-exc" class="exc-box exc-secondary w-48">Secondary Error (Close)</div>
+                    <div class="mt-8 flex space-x-2">
+                        <button onclick="simulateMasking()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2 rounded">Mô phỏng Masking</button>
+                        <button onclick="simulateSuppression()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded">Mô phỏng Suppression</button>
+                        <button onclick="resetViz()" class="bg-slate-700 text-white text-xs px-4 py-2 rounded">Reset</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4 text-pink-400">Kết quả:</h3>
+                    <ul class="space-y-4 text-sm text-slate-400">
+                        <li class="flex items-start">
+                            <span class="text-rose-500 mr-2">➜</span>
+                            <span><strong>Masking:</strong> Em chỉ thấy "Secondary Error". Manh mối về vụ DB sập biến mất hoàn toàn.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">➜</span>
+                            <span><strong>Suppression:</strong> Em thấy "Primary Error", và bên trong nó có chứa thông tin về "Secondary Error".</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2 -->
+        <section id="definition" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-pink-400 border-b border-pink-900 pb-2">2. Suppressed Exception là gì?</h2>
+            <div class="space-y-4 text-slate-400 leading-relaxed">
+                <p>
+                    <strong>Suppressed Exception</strong> (Ngoại lệ bị nén) là một cơ chế cho phép một Exception "mang theo" các Exception khác xảy ra sau nó nhưng cùng trong một ngữ cảnh xử lý.
+                </p>
+                <div class="bg-slate-900 p-6 rounded-xl border border-pink-500/20">
+                    <h4 class="text-white font-bold mb-2">Quy tắc của Try-with-resources:</h4>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li>Nếu khối <code class="text-pink-300">try</code> ném lỗi, lỗi này là <strong>Primary</strong>.</li>
+                        <li>Khi tự động gọi <code class="text-pink-300">close()</code>, nếu có lỗi phát sinh, nó sẽ được đánh dấu là <strong>Suppressed</strong>.</li>
+                        <li>Nếu khối <code class="text-pink-300">try</code> <strong>KHÔNG</strong> lỗi, nhưng <code class="text-pink-300">close()</code> lỗi, thì lỗi của <code class="text-pink-300">close()</code> sẽ trở thành lỗi chính ném ra ngoài.</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3 -->
+        <section id="api" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-blue-400 border-b border-blue-900 pb-2">3. The Throwable API</h2>
+            <p class="text-slate-400 mb-6">Từ Java 7, lớp <code class="text-white">java.lang.Throwable</code> được bổ sung 2 phương thức cực kỳ quan trọng:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-slate-800 rounded-xl">
+                    <code class="text-blue-400 font-bold block mb-2">void addSuppressed(Throwable exception)</code>
+                    <p class="text-xs text-slate-400">Thêm một ngoại lệ vào danh sách "bị nén". Thường do trình biên dịch gọi tự động trong Try-with-resources.</p>
+                </div>
+                <div class="p-6 bg-slate-800 rounded-xl">
+                    <code class="text-emerald-400 font-bold block mb-2">Throwable[] getSuppressed()</code>
+                    <p class="text-xs text-slate-400">Trả về một mảng chứa tất cả các ngoại lệ đã bị nén. Nếu không có, trả về mảng rỗng.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4 -->
+        <section id="manual" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-amber-400">4. Manual Suppression (Làm thủ công)</h2>
+            <p class="text-slate-400 mb-4">Dù hiếm, nhưng đôi khi em muốn tự mình triển khai cơ chế này (ví dụ: khi không dùng TWR hoặc viết framework).</p>
+            <div class="rounded-xl overflow-hidden shadow-2xl">
+                <pre><code class="language-java">public void manualExample() throws Exception {
+    Exception primary = null;
+    try {
+        throw new Exception("Lỗi chính: DB Connection Fail");
+    } catch (Exception e) {
+        primary = e;
+        throw e;
+    } finally {
+        Exception secondary = new Exception("Lỗi phụ: Close Resource Fail");
+        if (primary != null) {
+            // "Gắn" lỗi phụ vào lỗi chính
+            primary.addSuppressed(secondary);
+        } else {
+            throw secondary;
+        }
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- SECTION 5 -->
+        <section id="internals" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-indigo-400 border-b border-indigo-900 pb-2">5. Deep Dive: Cơ chế lưu trữ & Performance</h2>
+            <div class="glass-card p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-4">Dữ liệu được lưu ở đâu?</h3>
+                <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                    Bên trong <code class="text-indigo-300">Throwable</code>, có một trường private: <br>
+                    <code class="bg-slate-900 p-1 text-pink-400">private List&lt;Throwable&gt; suppressedExceptions;</code>
+                </p>
+                <div class="bg-amber-900/20 border-l-4 border-amber-500 p-4 mb-4">
+                    <p class="text-xs text-amber-200"><strong>Sự thật thú vị:</strong> Danh sách này được khởi tạo theo kiểu <strong>Lazy (Lười biếng)</strong>. Nó chỉ chiếm bộ nhớ khi có lỗi bị nén đầu tiên được thêm vào qua <code class="text-white">addSuppressed()</code>.</p>
+                </div>
+                <h3 class="text-white font-bold mb-2">Performance:</h3>
+                <p class="text-slate-400 text-sm">
+                    Việc nén lỗi không tốn thêm chi phí tạo StackTrace cho lỗi phụ (vì lỗi phụ đã được tạo sẵn). Tuy nhiên, việc in StackTrace ra log sẽ lâu hơn một chút vì JVM phải duyệt qua cây các ngoại lệ bị nén.
+                </p>
+            </div>
+        </section>
+
+        <!-- PRACTICE -->
+        <section id="practice" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-orange-400">6. Câu hỏi "Hại não" cho Senior</h2>
+            <div class="space-y-4">
+                <div class="glass-card p-6 rounded-xl">
+                    <p class="font-bold text-white">Q1: Một Exception có thể tự nén chính nó không? (self-suppression)</p>
+                    <p class="text-slate-400 text-sm mt-2">Ví dụ: <code class="text-pink-400">e.addSuppressed(e);</code>. <br> <strong>Đáp án:</strong> Không. Java sẽ ném ra <code class="text-rose-400">IllegalArgumentException</code> để tránh vòng lặp vô tận khi in log.</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl">
+                    <p class="font-bold text-white">Q2: Nếu em truyền `null` vào `addSuppressed`, chuyện gì xảy ra?</p>
+                    <p class="text-slate-400 text-sm mt-2"><strong>Đáp án:</strong> Nó cũng ném <code class="text-rose-400">NullPointerException</code>. Java rất khắt khe với tính toàn vẹn của Exception chain.</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl">
+                    <p class="font-bold text-white">Q3: Làm sao để vô hiệu hóa hoàn toàn khả năng Suppression của một Exception?</p>
+                    <p class="text-slate-400 text-sm mt-2"><strong>Đáp án:</strong> Khi viết Custom Exception, em có thể gọi constructor của <code class="text-pink-400">Throwable</code> với tham số <code class="text-white">enableSuppression = false</code>. Khi đó, mọi lời gọi <code class="text-white">addSuppressed</code> sẽ bị lờ đi.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const container = document.getElementById('viz-container');
+        
+        function simulateMasking() {
+            resetViz();
+            setTimeout(() => {
+                container.classList.add('masking-active');
+            }, 100);
+        }
+
+        function simulateSuppression() {
+            resetViz();
+            setTimeout(() => {
+                container.classList.add('suppression-active');
+            }, 100);
+        }
+
+        function resetViz() {
+            container.classList.remove('masking-active', 'suppression-active');
+        }
+
+        // Sidebar active state logic
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 120) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active-nav');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active-nav');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

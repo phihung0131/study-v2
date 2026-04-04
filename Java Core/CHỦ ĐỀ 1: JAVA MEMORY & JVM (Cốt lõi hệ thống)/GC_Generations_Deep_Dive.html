@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: GC Generations Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; color: #1e293b; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #1e293b; color: #f8fafc; padding: 1.25rem; border-radius: 0.75rem; overflow-x: auto; font-size: 0.9rem; }
+        .generation-box { border-radius: 1rem; padding: 1.5rem; transition: all 0.3s ease; border: 2px solid transparent; }
+        .eden { background-color: #dcfce7; border-color: #86efac; }
+        .survivor { background-color: #fef9c3; border-color: #fde047; }
+        .old-gen { background-color: #fee2e2; border-color: #fca5a5; }
+        
+        /* Animation: Object Promotion */
+        .object-node {
+            width: 20px; height: 20px; border-radius: 50%; background: #3b82f6;
+            display: inline-block; position: relative;
+        }
+        @keyframes promote {
+            0% { transform: translateX(0); opacity: 1; }
+            50% { transform: translateX(100px); opacity: 0.5; }
+            100% { transform: translateX(200px); opacity: 1; background: #ef4444; }
+        }
+        .animate-promote { animation: promote 3s infinite; }
+
+        .pro-tip { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        .trade-off { border-left: 4px solid #f97316; background: #fff7ed; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <div class="inline-block px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold mb-4 uppercase tracking-widest">Advanced Memory Management</div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4">Bài 1.5: GC Generations (Chi tiết)</h1>
+            <p class="text-lg text-slate-600 italic">"Hành trình từ khi sinh ra đến khi 'hóa kiếp' của một Object."</p>
+        </header>
+
+        <!-- Section 1: The Anatomy of Heap -->
+        <section class="mb-16 bg-white p-8 rounded-3xl shadow-sm border">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <i class="fas fa-layer-group text-blue-500"></i> 1. Cấu trúc phân tầng của Heap
+            </h2>
+            <p class="mb-6">Heap không phải là một khối thống nhất. Nó được chia thành 2 vùng chính dựa trên "tuổi thọ" của đối tượng:</p>
+            
+            <div class="grid md:grid-cols-3 gap-4 mb-8">
+                <!-- Young Gen -->
+                <div class="md:col-span-1 space-y-4">
+                    <div class="generation-box eden">
+                        <h3 class="font-bold text-green-800">Eden Space</h3>
+                        <p class="text-xs text-green-700 mt-2">Nơi mọi <code>new Object()</code> chào đời. (Chiếm ~80% Young Gen)</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="generation-box survivor flex-1">
+                            <h3 class="font-bold text-yellow-800">S0</h3>
+                            <p class="text-[10px]">From Space</p>
+                        </div>
+                        <div class="generation-box survivor flex-1">
+                            <h3 class="font-bold text-yellow-800">S1</h3>
+                            <p class="text-[10px]">To Space</p>
+                        </div>
+                    </div>
+                    <p class="text-center font-bold text-sm text-slate-500">YOUNG GENERATION</p>
+                </div>
+
+                <!-- Spacer/Arrow -->
+                <div class="hidden md:flex items-center justify-center">
+                    <i class="fas fa-long-arrow-alt-right text-4xl text-slate-300"></i>
+                </div>
+
+                <!-- Old Gen -->
+                <div class="md:col-span-1">
+                    <div class="generation-box old-gen h-full flex flex-col justify-center">
+                        <h3 class="font-bold text-red-800">Old Generation (Tenured)</h3>
+                        <p class="text-xs text-red-700 mt-2">Nơi cư ngụ của các "bậc lão thành" sống sót qua nhiều đợt GC. (Thường chiếm 2/3 tổng Heap)</p>
+                    </div>
+                    <p class="text-center font-bold text-sm text-slate-500 mt-4">OLD GENERATION</p>
+                </div>
+            </div>
+
+            <div class="pro-tip p-4 rounded-xl">
+                <h4 class="font-bold text-blue-800 text-sm"><i class="fas fa-bolt mr-2"></i>Tại sao có 2 vùng Survivor (S0, S1)?</h4>
+                <p class="text-xs text-blue-700 mt-1 leading-relaxed">
+                    Đây là kỹ thuật <strong>Copying Algorithm</strong>. Tại một thời điểm, chỉ một vùng Survivor được sử dụng. Khi GC chạy, nó quét Eden + S0, đẩy các đối tượng còn sống sang S1, sau đó xóa sạch Eden + S0. Việc này giúp <strong>chống phân mảnh bộ nhớ tuyệt đối</strong> ở vùng Young Gen.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Object Lifecycle -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-slate-800 border-b pb-2">2. Vòng đời của một Object (Hành trình vạn dặm)</h2>
+            <div class="space-y-12">
+                <!-- Step 1 -->
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Chào đời (Allocation)</h4>
+                        <p class="text-sm text-slate-600">Object được tạo ra trong <strong>Eden</strong>. Nếu Eden đầy, một <strong>Minor GC</strong> sẽ được kích hoạt.</p>
+                    </div>
+                </div>
+                <!-- Step 2 -->
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Vượt qua thử thách (Survival)</h4>
+                        <p class="text-sm text-slate-600">Sau Minor GC, nếu Object vẫn còn sống, nó được chuyển sang vùng <strong>Survivor</strong> (S0 hoặc S1) và được cấp một "chứng chỉ tuổi" (Age) bằng 1.</p>
+                    </div>
+                </div>
+                <!-- Step 3 -->
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Lên lão (Promotion)</h4>
+                        <p class="text-sm text-slate-600">Mỗi lần sống sót qua Minor GC, tuổi của Object tăng lên. Khi tuổi đạt đến một ngưỡng nhất định (mặc định là **15**), nó được chuyển sang <strong>Old Generation</strong>.</p>
+                        <div class="mt-4 p-3 bg-slate-100 rounded-lg flex items-center gap-4">
+                            <span class="text-xs font-mono">Eden -> Survivor</span>
+                            <div class="object-node animate-promote"></div>
+                            <span class="text-xs font-mono">-> Old Gen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Performance Tuning Parameters -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">3. Tham số cấu hình cho Chuyên gia (Tuning)</h2>
+            <p class="mb-4 text-sm text-slate-600">Để điều chỉnh kích thước các vùng này, chúng ta sử dụng các Flag JVM sau:</p>
+            <div class="code-block space-y-2">
+                <div><span class="text-yellow-400">-Xms2g -Xmx2g</span> <span class="text-slate-400">// Tổng Heap cố định 2GB</span></div>
+                <div><span class="text-yellow-400">-XX:NewRatio=2</span> <span class="text-slate-400">// Tỷ lệ Old/Young = 2 (Young chiếm 1/3 tổng Heap)</span></div>
+                <div><span class="text-yellow-400">-XX:SurvivorRatio=8</span> <span class="text-slate-400">// Eden chiếm 8 phần, mỗi Survivor chiếm 1 phần (Eden = 80% Young)</span></div>
+                <div><span class="text-yellow-400">-XX:MaxTenuringThreshold=15</span> <span class="text-slate-400">// Ngưỡng tuổi để lên Old Gen</span></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6 mt-8">
+                <div class="trade-off p-4 rounded-xl">
+                    <h4 class="font-bold text-orange-800 text-sm">Trade-off: Young Gen Lớn</h4>
+                    <p class="text-xs text-orange-700 mt-1">Minor GC ít xảy ra hơn nhưng mỗi lần chạy sẽ lâu hơn. Phù hợp cho app tạo nhiều đối tượng tạm thời (Short-lived).</p>
+                </div>
+                <div class="trade-off p-4 rounded-xl">
+                    <h4 class="font-bold text-orange-800 text-sm">Trade-off: Old Gen Lớn</h4>
+                    <p class="text-xs text-orange-700 mt-1">Chứa được nhiều đối tượng lâu dài (Cache) nhưng khi Full GC xảy ra sẽ gây "treo" app (STW) rất lâu.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Advanced - Card Table -->
+        <section class="mb-16 bg-slate-900 text-white p-8 rounded-3xl">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-microchip text-blue-400"></i> 4. Bí mật Performance: Card Table
+            </h2>
+            <p class="text-sm text-slate-300 leading-relaxed mb-6">
+                Khi chạy **Minor GC**, làm sao GC biết có Object nào ở **Old Gen** đang trỏ tới **Young Gen** không? 
+                Chẳng lẽ phải quét toàn bộ Old Gen? (Thế thì còn gì là tối ưu!).
+            </p>
+            <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl">
+                <h4 class="font-bold text-blue-300 mb-2">Giải pháp: Card Table</h4>
+                <p class="text-xs leading-relaxed">
+                    JVM chia Old Gen thành các "Cards" (mỗi card 512 bytes). Một mảng byte (Card Table) được duy trì để đánh dấu các card này.
+                    Khi một tham chiếu từ Old Gen trỏ tới Young Gen bị thay đổi, card tương ứng được đánh dấu là <strong>Dirty</strong>.
+                    Lúc Minor GC, nó chỉ cần quét các <strong>Dirty Cards</strong> này thay vì toàn bộ Old Gen. Tốc độ tăng gấp hàng trăm lần!
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 5: Common Errors & Real Situation -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">5. Case Study: "Promotion Failure"</h2>
+            <div class="p-6 bg-red-50 border border-red-200 rounded-2xl">
+                <p class="text-sm font-semibold text-red-900 mb-2">Tình huống:</p>
+                <p class="text-sm text-slate-700 italic">
+                    "Thầy ơi, tại sao log của em báo 'Minor GC' nhưng ngay sau đó lại nhảy vào 'Full GC' luôn?"
+                </p>
+                <div class="mt-4 space-y-3">
+                    <p class="text-xs text-slate-600"><strong>Nguyên nhân:</strong> Đây là lỗi <strong>Promotion Failure</strong>. Khi Minor GC muốn đẩy các đối tượng từ Young sang Old Gen, nhưng Old Gen không còn đủ chỗ trống hoặc quá phân mảnh để chứa các đối tượng đó.</p>
+                    <p class="text-xs text-slate-600"><strong>Hệ quả:</strong> JVM bị hoảng loạn và buộc phải kích hoạt <strong>Full GC</strong> (Stop-The-World toàn bộ) để dọn dẹp sạch sẽ cả 2 vùng nhớ nhằm tìm kiếm không gian.</p>
+                    <p class="text-xs font-bold text-red-700 uppercase">Khắc phục: Tăng kích thước Heap hoặc kiểm tra xem có đang lạm dụng Cache quá mức không.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Interview Questions -->
+        <section class="mb-12 bg-indigo-50 p-8 rounded-3xl border border-indigo-100">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900">Câu hỏi kiểm tra tư duy</h2>
+            <div class="space-y-4">
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q1: Chuyện gì xảy ra nếu chúng ta set SurvivorRatio quá nhỏ (ví dụ = 1)?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: Lúc này Eden và các vùng Survivor sẽ có kích thước bằng nhau. Eden quá nhỏ sẽ khiến Minor GC xảy ra liên tục. Survivor quá lớn sẽ gây lãng phí bộ nhớ vì các đối tượng thường "chết" nhanh trong Eden chứ không kịp chuyển sang Survivor.
+                    </div>
+                </details>
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q2: Có khi nào một Object được nhảy thẳng vào Old Gen mà không qua Eden/Survivor không?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: <strong>CÓ</strong>. Nếu một Object có kích thước quá lớn (vượt ngưỡng <code>-XX:PretenureSizeThreshold</code>), JVM sẽ cấp phát nó thẳng vào Old Gen để tránh việc phải copy một khối dữ liệu khổng lồ qua lại giữa các vùng Survivor (vốn rất tốn kém CPU).
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-10 border-t border-slate-200 text-slate-400 text-xs">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.5: Mastering GC Generations</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Senior: Abstraction Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-item:hover { background-color: #2d3748; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .logic-flow-step { transition: all 0.3s ease; }
+        .active-step { border-color: #6366f1; background-color: #eef2ff; color: #4338ca; transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white sticky top-0 h-screen hidden md:block">
+        <div class="p-6">
+            <h1 class="text-xl font-bold text-indigo-400">Java Masterclass</h1>
+            <p class="text-xs text-gray-400">Thầy dạy Java - Mentor</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#intro" class="block py-3 px-6 sidebar-item border-l-4 border-transparent hover:border-indigo-500">1. Định nghĩa & Ý nghĩa</a>
+            <a href="#mechanism" class="block py-3 px-6 sidebar-item border-l-4 border-transparent hover:border-indigo-500">2. Cơ chế triển khai</a>
+            <a href="#internals" class="block py-3 px-6 sidebar-item border-l-4 border-transparent hover:border-indigo-500">3. JVM Internals</a>
+            <a href="#best-practices" class="block py-3 px-6 sidebar-item border-l-4 border-transparent hover:border-indigo-500">4. Best Practices</a>
+            <a href="#interview" class="block py-3 px-6 sidebar-item border-l-4 border-transparent hover:border-indigo-500">5. Câu hỏi hóc búa</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-12 overflow-y-auto">
+        
+        <!-- Section 1: Intro -->
+        <section id="intro" class="mb-16">
+            <h2 class="text-4xl font-extrabold mb-6 text-slate-800">2.1. Abstraction: Bản chất của sự tối giản</h2>
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6">
+                <p class="italic text-indigo-700">"Abstraction là nghệ thuật bỏ qua những chi tiết không quan trọng để tập trung vào cái cốt lõi."</p>
+            </div>
+            <p class="text-lg leading-relaxed mb-4">
+                Trong Java, Abstraction giúp ta định nghĩa **"Cái gì" (What)** một đối tượng làm, thay vì **"Làm như thế nào" (How)**. 
+                Nó che giấu sự phức tạp của mã nguồn bên dưới một interface sạch sẽ.
+            </p>
+
+            <!-- Interactive Example -->
+            <div class="mt-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200">
+                <h3 class="text-xl font-bold mb-4">Mô phỏng: Trừu tượng hóa một "Hệ thống Thanh toán"</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div id="step-client" class="logic-flow-step p-4 border-2 rounded-lg text-center cursor-pointer active-step" onclick="showStep('client')">
+                        <span class="font-bold">Client</span>
+                        <p class="text-xs">Chỉ gọi method pay()</p>
+                    </div>
+                    <div id="step-abstract" class="logic-flow-step p-4 border-2 rounded-lg text-center cursor-pointer" onclick="showStep('abstract')">
+                        <span class="font-bold">Abstraction (Interface)</span>
+                        <p class="text-xs">Hợp đồng: process()</p>
+                    </div>
+                    <div id="step-concrete" class="logic-flow-step p-4 border-2 rounded-lg text-center cursor-pointer" onclick="showStep('concrete')">
+                        <span class="font-bold">Implementation</span>
+                        <p class="text-xs">Logic: Stripe, PayPal...</p>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-900 rounded-lg text-green-400 font-mono text-sm min-h-[100px]" id="step-description">
+                    // Client code: Không cần biết bên trong dùng gì
+                    paymentService.process(1000.0);
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Mechanism -->
+        <section id="mechanism" class="mb-16">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">Cơ chế triển khai: Abstract Class vs Interface</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg shadow">
+                    <thead>
+                        <tr class="bg-slate-800 text-white text-left">
+                            <th class="py-3 px-4">Đặc điểm</th>
+                            <th class="py-3 px-4">Abstract Class</th>
+                            <th class="py-3 px-4">Interface (Java 8+)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b">
+                            <td class="py-3 px-4 font-bold">Mục đích</td>
+                            <td class="py-3 px-4">Định nghĩa một thực thể chung (is-a)</td>
+                            <td class="py-3 px-4">Định nghĩa một khả năng (can-do / contract)</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="py-3 px-4 font-bold">State (Field)</td>
+                            <td class="py-3 px-4">Có thể có instance variables (private, protected)</td>
+                            <td class="py-3 px-4">Chỉ có hằng số (public static final)</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="py-3 px-4 font-bold">Đa kế thừa</td>
+                            <td class="py-3 px-4">Không (Chỉ kế thừa 1 class)</td>
+                            <td class="py-3 px-4">Có (Có thể implement nhiều interface)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-bold">Constructor</td>
+                            <td class="py-3 px-4">Có (Dùng để khởi tạo state cho subclass)</td>
+                            <td class="py-3 px-4">Không</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Code Block -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold mb-4">Mã nguồn Production-Grade</h3>
+<pre><code class="language-java">/**
+ * Abstract Class: Lưu trữ trạng thái và logic chung
+ */
+public abstract class BaseReportGenerator {
+    protected final String reportTitle; // State
+
+    public BaseReportGenerator(String reportTitle) {
+        this.reportTitle = reportTitle;
+    }
+
+    // Template Method Pattern
+    public final void generate() {
+        printHeader();
+        fetchData();
+        formatBody();
+        printFooter();
+    }
+
+    protected abstract void fetchData(); // Trừu tượng hoàn toàn
+    protected void printHeader() {
+        System.out.println("Title: " + reportTitle);
+    }
+}
+
+/**
+ * Interface: Định nghĩa "Khả năng" xuất dữ liệu
+ */
+public interface Exportable {
+    void exportToS3(String bucketName);
+    
+    // Default method (Java 8): Tránh làm break các client cũ
+    default void logExport(String path) {
+        System.out.println("Exporting to: " + path);
+    }
+}
+</code></pre>
+            </div>
+        </section>
+
+        <!-- Section 3: JVM Internals -->
+        <section id="internals" class="mb-16">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">Under the Hood: JVM Behavior</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="p-6 glass-card bg-slate-800 text-white rounded-xl">
+                    <h3 class="text-xl font-semibold mb-4 text-indigo-300">VTable & ITable</h3>
+                    <p class="text-sm leading-relaxed text-gray-300">
+                        Khi em gọi một phương thức thông qua Interface, JVM không biết ngay mã máy ở đâu. Nó sử dụng:
+                    </p>
+                    <ul class="list-disc ml-6 mt-4 text-sm text-gray-300 space-y-2">
+                        <li><span class="text-indigo-400 font-bold">vtable (Virtual Method Table):</span> Dành cho class inheritance. Mỗi class có một vtable trỏ đến địa chỉ các method thực thi.</li>
+                        <li><span class="text-indigo-400 font-bold">itable (Interface Method Table):</span> Phức tạp hơn vì một class có thể implement nhiều interface. JVM phải tìm kiếm trong itable để mapping đúng method.</li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-red-900/30 border border-red-500 rounded text-xs">
+                        <strong>Performance Note:</strong> invokeinterface chậm hơn một chút so với invokevirtual (class) do quá trình lookup ITable phức tạp hơn. Tuy nhiên, JIT Compiler hiện đại đã tối ưu hóa điều này cực tốt qua "Inline Caching".
+                    </div>
+                </div>
+                <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-semibold mb-4">Memory Visualization</h3>
+                    <div class="relative h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-32 h-10 bg-indigo-500 text-white flex items-center justify-center rounded shadow-lg text-xs mb-2">Stack (Reference)</div>
+                            <div class="w-1 h-8 bg-gray-400"></div>
+                            <div class="w-48 h-20 bg-emerald-500 text-white flex items-center justify-center rounded shadow-lg text-xs">
+                                Heap (Object Instance)<br>
+                                [ Class Metadata Header ]<br>
+                                [ PTR to vtable/itable ]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Best Practices -->
+        <section id="best-practices" class="mb-16">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">Senior Best Practices</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-5 border-l-4 border-yellow-500 bg-white shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">1. Program to Interfaces</h4>
+                    <p class="text-sm text-gray-600">Luôn khai báo kiểu là Interface thay vì Concrete Class để linh hoạt chuyển đổi Implementation (Dependency Injection).</p>
+                </div>
+                <div class="p-5 border-l-4 border-blue-500 bg-white shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">2. Interface Segregation (SOLID)</h4>
+                    <p class="text-sm text-gray-600">Đừng tạo "Fat Interface". Hãy chia nhỏ interface thành các nhóm chức năng cụ thể.</p>
+                </div>
+                <div class="p-5 border-l-4 border-green-500 bg-white shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">3. Composition over Inheritance</h4>
+                    <p class="text-sm text-gray-600">Dùng abstract class khi các subclass thực sự chia sẻ cấu trúc (is-a). Nếu chỉ muốn mượn tính năng, hãy dùng Interface + Composition.</p>
+                </div>
+                <div class="p-5 border-l-4 border-purple-500 bg-white shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">4. Sealed Classes (Java 17+)</h4>
+                    <p class="text-sm text-gray-600">Dùng `sealed` để giới hạn các class nào được phép kế thừa, giúp tăng tính an toàn và tối ưu hóa compiler.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Interview -->
+        <section id="interview" class="mb-16">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800 text-center">Câu hỏi phỏng vấn hóc búa</h2>
+            <div class="space-y-4">
+                <details class="group bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        <span>Q1: Tại sao Java không cho phép phương thức trừu tượng (abstract) là Static?</span>
+                        <span class="group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-4 text-gray-700 text-sm leading-relaxed">
+                        Phương thức <strong>Static</strong> thuộc về class, không phải instance. Abstraction dựa trên <strong>Polymorphism</strong> (đa hình), nơi phương thức được ghi đè (Override) tại thời điểm thực thi (Runtime) dựa trên đối tượng thực tế. Việc kết hợp static (compile-time) và abstract (runtime override) là mâu thuẫn về mặt logic thiết kế của Java.
+                    </div>
+                </details>
+
+                <details class="group bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <summary class="font-bold cursor-pointer list-none flex justify-between items-center">
+                        <span>Q2: Một Abstract Class có thể có Constructor không? Tại sao?</span>
+                        <span class="group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div class="mt-4 text-gray-700 text-sm leading-relaxed">
+                        <strong>CÓ.</strong> Mặc dù ta không thể khởi tạo trực tiếp (new) một abstract class, nhưng nó vẫn cần constructor để khởi tạo các thuộc tính (fields) mà nó định nghĩa. Khi một subclass được khởi tạo, nó sẽ gọi constructor của cha thông qua <code>super()</code>.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer / Action -->
+        <footer class="mt-20 text-center border-t pt-8">
+            <p class="text-gray-500 mb-4">Hãy thử tự viết một hệ thống quản lý nhân sự sử dụng cả Interface và Abstract class để nắm vững bài học này nhé!</p>
+            <button class="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold hover:bg-indigo-700 transition shadow-lg">
+                Xác nhận đã hiểu & Tiếp tục
+            </button>
+        </footer>
+    </main>
+</div>
+
+<script>
+    function showStep(step) {
+        // Reset all steps
+        document.querySelectorAll('.logic-flow-step').forEach(el => {
+            el.classList.remove('active-step');
+        });
+        
+        const desc = document.getElementById('step-description');
+        const activeEl = document.getElementById('step-' + step);
+        activeEl.classList.add('active-step');
+
+        switch(step) {
+            case 'client':
+                desc.innerText = "// Client code: Không cần biết bên trong dùng gì\nPaymentService service = getPaymentProvider();\nservice.pay(amount);";
+                break;
+            case 'abstract':
+                desc.innerText = "// Hợp đồng (Contract)\npublic interface PaymentService {\n    void pay(double amount);\n}";
+                break;
+            case 'concrete':
+                desc.innerText = "// Triển khai chi tiết\npublic class StripePayment implements PaymentService {\n    public void pay(double amount) { /* Logic gọi API Stripe */ }\n}";
+                break;
+        }
+    }
+</script>
+
+</body>
+</html>

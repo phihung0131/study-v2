@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Custom Exceptions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        code { font-family: 'Fira Code', monospace; }
+        .sidebar-item:hover { background-color: #1e293b; border-left: 4px solid #10b981; }
+        .active-nav { background-color: #1e293b; border-left: 4px solid #10b981; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        .exception-flow-node { transition: all 0.5s ease; }
+        .pulse-emerald { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-emerald-500">Java Mentor</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Chương 4.4: Custom Exceptions</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#why" class="block py-3 px-6 sidebar-item active-nav">1. Tại sao cần Custom?</a>
+            <a href="#creation" class="block py-3 px-6 sidebar-item">2. Cách tạo chuẩn Senior</a>
+            <a href="#payload" class="block py-3 px-6 sidebar-item">3. Adding Payload (Metadata)</a>
+            <a href="#performance" class="block py-3 px-6 sidebar-item">4. Optimization: No StackTrace</a>
+            <a href="#best-practices" class="block py-3 px-6 sidebar-item">5. Best Practices</a>
+            <a href="#interview" class="block py-3 px-6 sidebar-item text-orange-400 font-semibold">6. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        
+        <!-- SECTION 1 -->
+        <section id="why" class="mb-16">
+            <h1 class="text-4xl font-bold mb-6 text-white">Tại sao phải tạo Exception riêng?</h1>
+            <p class="text-lg text-slate-400 mb-8 leading-relaxed">
+                Java cung cấp rất nhiều Exception, nhưng chúng mang tính <strong>kỹ thuật</strong> (Technical). Trong dự án thực tế, chúng ta cần những Exception mang tính <strong>nghiệp vụ</strong> (Business).
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="glass-card p-6 rounded-xl border-t-4 border-slate-500">
+                    <h3 class="font-bold text-slate-300 mb-3 text-lg italic">Cách làm nghiệp dư:</h3>
+                    <p class="text-sm text-slate-500 mb-4">Dùng RuntimeException cho mọi thứ.</p>
+                    <code class="text-rose-400 text-xs">throw new RuntimeException("Số dư không đủ");</code>
+                    <p class="mt-4 text-xs text-slate-500">Người gọi (Caller) không biết lỗi gì để xử lý riêng biệt (catch block chung chung).</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl border-t-4 border-emerald-500">
+                    <h3 class="font-bold text-emerald-400 mb-3 text-lg">Cách làm Senior:</h3>
+                    <p class="text-sm text-slate-300 mb-4">Tạo domain-specific exceptions.</p>
+                    <code class="text-emerald-400 text-xs">throw new InsufficientFundsException(amount, balance);</code>
+                    <p class="mt-4 text-xs text-slate-400">Caller có thể catch riêng lỗi này để gợi ý khách hàng nạp thêm tiền.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2 -->
+        <section id="creation" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-emerald-400 border-b border-emerald-900 pb-2">2. Cách tạo chuẩn Senior</h2>
+            <p class="text-slate-400 mb-6">Một Custom Exception tốt nên hỗ trợ đầy đủ các constructor của lớp cha để giữ nguyên tính kế thừa (StackTrace, Cause).</p>
+            
+            <div class="rounded-xl overflow-hidden shadow-2xl">
+                <pre><code class="language-java">/**
+ * Base Exception cho toàn bộ ứng dụng (Unchecked)
+ */
+public class BaseBusinessException extends RuntimeException {
+    private final String errorCode;
+
+    public BaseBusinessException(String message, String errorCode) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+
+    public BaseBusinessException(String message, String errorCode, Throwable cause) {
+        super(message, cause); // Quan trọng: Giữ lại "nguyên nhân gốc"
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorCode() { return errorCode; }
+}</code></pre>
+            </div>
+            <div class="mt-4 bg-blue-900/20 border-l-4 border-blue-500 p-4">
+                <p class="text-sm text-blue-200"><strong>Lời khuyên:</strong> Hầu hết các dự án hiện đại (Spring Boot, Microservices) ưu tiên kế thừa từ <code class="text-white">RuntimeException</code> để tránh việc "ô nhiễm" phương thức bởi từ khóa <code class="text-white">throws</code>.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 3 -->
+        <section id="payload" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-sky-400 border-b border-sky-900 pb-2">3. Exception Payload (Metadata)</h2>
+            <p class="text-slate-400 mb-6">Đừng chỉ gửi Message string. Hãy gửi dữ liệu để UI hoặc System log có thể xử lý thông minh hơn.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="glass-card p-6 rounded-xl">
+                    <h4 class="text-white font-bold mb-4">Ví dụ: OTP Invalid Exception</h4>
+                    <pre class="text-xs"><code class="language-java">public class InvalidOtpException extends BaseBusinessException {
+    private final int attemptsLeft;
+    private final LocalDateTime expiryTime;
+
+    public InvalidOtpException(int left, LocalDateTime expiry) {
+        super("Mã OTP không đúng", "ERR_OTP_001");
+        this.attemptsLeft = left;
+        this.expiryTime = expiry;
+    }
+    // Getters...
+}</code></pre>
+                </div>
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-700">
+                    <h4 class="text-emerald-400 font-bold mb-4">Lợi ích:</h4>
+                    <ul class="text-sm text-slate-400 space-y-2">
+                        <li class="flex items-center"><span class="mr-2">✅</span> Tự động hóa việc hiển thị UI (Số lần thử còn lại).</li>
+                        <li class="flex items-center"><span class="mr-2">✅</span> Phân loại lỗi theo Code để quốc tế hóa (i18n).</li>
+                        <li class="flex items-center"><span class="mr-2">✅</span> Giúp log trace-id dễ dàng hơn.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: PERFORMANCE -->
+        <section id="performance" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-rose-400 border-b border-rose-900 pb-2">4. Optimization: "Fast" Exceptions</h2>
+            <div class="p-6 bg-slate-900 rounded-xl border border-rose-900/30">
+                <p class="text-slate-300 mb-4">Như bài trước thầy đã dạy, <code class="text-rose-400">fillInStackTrace()</code> là phần nặng nhất. Nếu Exception chỉ mang tính chất <strong>báo hiệu (Signaling)</strong> và em không cần log stack trace, hãy tắt nó đi.</p>
+                
+                <div class="rounded-xl overflow-hidden mb-4">
+                    <pre><code class="language-java">public class FastBusinessException extends RuntimeException {
+    public FastBusinessException(String message) {
+        // Tham số cuối: writableStackTrace = false
+        super(message, null, true, false);
+    }
+}</code></pre>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-rose-900/10 rounded-lg">
+                    <div class="text-xs text-slate-400 italic">Exception này nhanh gần bằng việc trả về một giá trị thông thường (return).</div>
+                    <div class="text-xs font-bold text-rose-500 uppercase">High Performance Only</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: BEST PRACTICES -->
+        <section id="best-practices" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-amber-400">5. Danh sách Best Practices</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card p-4 rounded-lg flex items-start space-x-3">
+                    <div class="bg-emerald-500 text-white rounded-full p-1 text-xs">✔</div>
+                    <div>
+                        <p class="font-bold text-sm">Hậu tố "Exception"</p>
+                        <p class="text-xs text-slate-500">Luôn kết thúc tên class bằng chữ "Exception".</p>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-lg flex items-start space-x-3">
+                    <div class="bg-rose-500 text-white rounded-full p-1 text-xs">✖</div>
+                    <div>
+                        <p class="font-bold text-sm">Tránh "Exception Pollution"</p>
+                        <p class="text-xs text-slate-500">Đừng tạo quá nhiều Exception nhỏ lẻ. Hãy gom nhóm theo module.</p>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-lg flex items-start space-x-3">
+                    <div class="bg-emerald-500 text-white rounded-full p-1 text-xs">✔</div>
+                    <div>
+                        <p class="font-bold text-sm">Cung cấp Cause</p>
+                        <p class="text-xs text-slate-500">Luôn truyền lỗi gốc (cause) vào constructor nếu đang wrap lỗi.</p>
+                    </div>
+                </div>
+                <div class="glass-card p-4 rounded-lg flex items-start space-x-3">
+                    <div class="bg-emerald-500 text-white rounded-full p-1 text-xs">✔</div>
+                    <div>
+                        <p class="font-bold text-sm">Serializable</p>
+                        <p class="text-xs text-slate-500">Exceptions là Serializable. Hãy thêm serialVersionUID.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INTERVIEW QUESTIONS -->
+        <section id="interview" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-orange-400">6. Câu hỏi phỏng vấn "Hóc búa"</h2>
+            <div class="space-y-4">
+                <div class="glass-card p-6 rounded-xl hover:border-orange-500/50 transition cursor-help group">
+                    <p class="font-bold text-white">Q1: Tại sao Joshua Bloch (tác giả Effective Java) khuyên nên cung cấp các phương thức truy cập (Accessors) cho dữ liệu trong Custom Exception?</p>
+                    <p class="text-slate-400 text-sm mt-2 hidden group-hover:block"><strong>Đáp án:</strong> Để cho phép chương trình phục hồi (Programmatic recovery). Nếu Exception chỉ có string message, code xử lý lỗi sẽ phải parse string (rất tệ) để lấy dữ liệu.</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl hover:border-orange-500/50 transition cursor-help group">
+                    <p class="font-bold text-white">Q2: Khi nào thì KHÔNG nên tạo Custom Exception?</p>
+                    <p class="text-slate-400 text-sm mt-2 hidden group-hover:block"><strong>Đáp án:</strong> Khi các exception tiêu chuẩn của Java đã mô tả hoàn hảo lỗi đó (vd: `NullPointerException` hay `IllegalArgumentException`). Đừng cố "re-invent the wheel" nếu không có thêm thông tin nghiệp vụ đặc thù.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Sidebar active state logic
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 120) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active-nav');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active-nav');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

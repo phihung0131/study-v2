@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Thread Life Cycle - Senior Mentor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .state-card { transition: all 0.3s ease; border: 1px solid #334155; }
+        .state-card:hover { border-color: #38bdf8; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .active-state { border-color: #38bdf8 !important; background-color: rgba(56, 189, 248, 0.1); }
+        .code-container { border-radius: 8px; overflow: hidden; }
+        .logic-flow-canvas { background: #1e293b; border-radius: 12px; position: relative; height: 300px; }
+        .thread-particle {
+            width: 20px; height: 20px; background: #38bdf8; border-radius: 50%;
+            position: absolute; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white;
+            box-shadow: 0 0 15px #38bdf8;
+        }
+        .state-node {
+            position: absolute; padding: 10px 20px; border: 2px solid #64748b; border-radius: 20px;
+            font-weight: bold; background: #1e293b; color: #94a3b8;
+        }
+        .state-node.active { border-color: #38bdf8; color: #38bdf8; }
+        .alert-pro { border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 1rem; margin: 1rem 0; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 bg-slate-900 p-6 flex-shrink-0 border-r border-slate-800 hidden md:block">
+        <h2 class="text-sky-400 font-bold text-xl mb-8">Java Core 5.1</h2>
+        <nav class="space-y-4 text-sm">
+            <a href="#intro" class="block hover:text-sky-400">1. Giới thiệu</a>
+            <a href="#states" class="block hover:text-sky-400 font-semibold">2. 6 Trạng thái Thread</a>
+            <a href="#simulator" class="block hover:text-sky-400">3. Mô phỏng Tương tác</a>
+            <a href="#internal" class="block hover:text-sky-400">4. Internal Working</a>
+            <a href="#antipattern" class="block hover:text-sky-400">5. Lỗi thường gặp</a>
+            <a href="#interview" class="block hover:text-sky-400">6. Câu hỏi Mentor</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow p-8">
+        
+        <!-- Header Section -->
+        <header id="intro" class="max-w-4xl mx-auto mb-12">
+            <span class="text-sky-500 font-semibold tracking-widest uppercase text-xs">Phần 5: Concurrency</span>
+            <h1 class="text-4xl font-extrabold mt-2 mb-4">Mô hình Vòng đời của Thread (Thread Life Cycle)</h1>
+            <p class="text-slate-400 leading-relaxed text-lg">
+                Trong Java, một Thread không chỉ đơn thuần là "chạy" hay "không chạy". Nó trải qua một chu kỳ sống phức tạp được quản lý bởi JVM và OS Scheduler. Hiểu rõ các trạng thái này là chìa khóa để debug các vấn đề về hiệu năng và tắc nghẽn hệ thống.
+            </p>
+        </header>
+
+        <!-- Interactive Simulator -->
+        <section id="simulator" class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <span class="mr-2 italic text-sky-500">#</span> Mô phỏng chuyển đổi trạng thái
+            </h2>
+            <div class="logic-flow-canvas mb-4 p-4" id="canvas-container">
+                <!-- State Nodes -->
+                <div id="node-NEW" class="state-node" style="top: 20px; left: 50px;">NEW</div>
+                <div id="node-RUNNABLE" class="state-node" style="top: 20px; left: 350px;">RUNNABLE</div>
+                <div id="node-BLOCKED" class="state-node" style="top: 150px; left: 200px;">BLOCKED</div>
+                <div id="node-WAITING" class="state-node" style="top: 230px; left: 350px;">WAITING</div>
+                <div id="node-TERMINATED" class="state-node" style="top: 20px; left: 650px;">TERMINATED</div>
+                
+                <!-- Particle -->
+                <div id="thread-particle" class="thread-particle">T</div>
+            </div>
+            <div class="flex flex-wrap gap-4 justify-center bg-slate-800 p-4 rounded-xl">
+                <button onclick="moveThread('NEW')" class="px-4 py-2 bg-slate-700 rounded hover:bg-sky-600 transition">new Thread()</button>
+                <button onclick="moveThread('RUNNABLE')" class="px-4 py-2 bg-slate-700 rounded hover:bg-sky-600 transition">start()</button>
+                <button onclick="moveThread('BLOCKED')" class="px-4 py-2 bg-slate-700 rounded hover:bg-sky-600 transition">Waiting for Lock</button>
+                <button onclick="moveThread('WAITING')" class="px-4 py-2 bg-slate-700 rounded hover:bg-sky-600 transition">wait() / join()</button>
+                <button onclick="moveThread('TERMINATED')" class="px-4 py-2 bg-slate-700 rounded hover:bg-sky-600 transition">Finish</button>
+            </div>
+        </section>
+
+        <!-- Detailed States Section -->
+        <section id="states" class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-2xl font-bold mb-8 flex items-center underline decoration-sky-500">6 Trạng thái trong Enum Thread.State</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- NEW -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-sky-400 font-bold mb-2">1. NEW (Mới tạo)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Thread đã được khởi tạo bằng toán tử <code class="text-pink-400">new</code> nhưng phương thức <code class="text-pink-400">start()</code> chưa được gọi.</p>
+                    <div class="code-container">
+                        <pre><code class="language-java">Thread t = new Thread(() -> {});
+System.out.println(t.getState()); // NEW</code></pre>
+                    </div>
+                </div>
+
+                <!-- RUNNABLE -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-green-400 font-bold mb-2">2. RUNNABLE (Sẵn sàng/Đang chạy)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Sau <code class="text-pink-400">start()</code>. Java không phân biệt giữa "đang chạy" (Running) và "đợi CPU" (Ready).</p>
+                    <div class="alert-pro text-xs">
+                        <strong>Lưu ý Mentor:</strong> Trạng thái này có thể bị ngắt quãng bởi OS Scheduler (Time-slicing).
+                    </div>
+                </div>
+
+                <!-- BLOCKED -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-red-400 font-bold mb-2">3. BLOCKED (Bị chặn)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Đang đợi để lấy một <strong>Monitor Lock</strong> (synchronized) để vào một block hoặc phương thức.</p>
+                </div>
+
+                <!-- WAITING -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-yellow-400 font-bold mb-2">4. WAITING (Chờ vô thời hạn)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Thread đợi tín hiệu từ Thread khác qua <code class="text-pink-400">wait()</code> hoặc <code class="text-pink-400">join()</code>.</p>
+                </div>
+                
+                <!-- TIMED_WAITING -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-orange-400 font-bold mb-2">5. TIMED_WAITING (Chờ có thời hạn)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Giống WAITING nhưng tự động thức dậy sau một khoảng thời gian: <code class="text-pink-400">sleep(ms)</code>, <code class="text-pink-400">wait(ms)</code>.</p>
+                </div>
+
+                <!-- TERMINATED -->
+                <div class="state-card p-6 rounded-xl bg-slate-800">
+                    <h3 class="text-slate-500 font-bold mb-2">6. TERMINATED (Kết thúc)</h3>
+                    <p class="text-sm text-slate-400 mb-4">Thread đã hoàn thành công việc hoặc bị kết thúc do Exception không được xử lý.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Internal Working Section -->
+        <section id="internal" class="max-w-4xl mx-auto mb-16 border-t border-slate-700 pt-12">
+            <h2 class="text-2xl font-bold mb-6 text-sky-400">Deep Dive: JVM Internals & Memory</h2>
+            <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                <ul class="space-y-4 text-slate-300">
+                    <li class="flex items-start">
+                        <span class="bg-sky-500 text-white rounded-full h-6 w-6 flex items-center justify-center mr-3 flex-shrink-0 text-xs">1</span>
+                        <div>
+                            <strong class="text-white">Stack Memory:</strong> Khi một Thread ở bất kỳ trạng thái nào trừ TERMINATED, nó luôn chiếm một lượng bộ nhớ Stack (mặc định ~1MB). 1000 threads = 1GB RAM chỉ để giữ Stack!
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-sky-500 text-white rounded-full h-6 w-6 flex items-center justify-center mr-3 flex-shrink-0 text-xs">2</span>
+                        <div>
+                            <strong class="text-white">Context Switching:</strong> Khi Thread chuyển từ RUNNABLE sang BLOCKED/WAITING, CPU phải thực hiện "Context Switch" - lưu trạng thái thanh ghi và nạp Thread khác. Đây là thao tác đắt đỏ (Costly).
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-sky-500 text-white rounded-full h-6 w-6 flex items-center justify-center mr-3 flex-shrink-0 text-xs">3</span>
+                        <div>
+                            <strong class="text-white">OS Thread Mapping:</strong> Trong Java hiện đại, 1 Java Thread thường tương ứng trực tiếp với 1 Native OS Thread (1:1 model).
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Anti-pattern -->
+        <section id="antipattern" class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-pink-500">Lỗi "Chết Người" (Anti-patterns)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 bg-red-900/20 border border-red-900/50 rounded-xl">
+                    <h4 class="font-bold text-red-400 mb-2">❌ Gọi run() thay vì start()</h4>
+                    <p class="text-xs text-slate-400 mb-4">Gọi <code class="bg-black p-1">t.run()</code> sẽ chạy logic trên Thread hiện tại (Main), không tạo Thread mới. State vẫn là NEW!</p>
+                </div>
+                <div class="p-6 bg-red-900/20 border border-red-900/50 rounded-xl">
+                    <h4 class="font-bold text-red-400 mb-2">❌ Start lại Thread đã chết</h4>
+                    <p class="text-xs text-slate-400 mb-4">Một Thread khi đã TERMINATED không bao giờ có thể quay lại. Gọi <code class="bg-black p-1">start()</code> lần nữa sẽ ném <code class="text-pink-500">IllegalThreadStateException</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interview Questions -->
+        <section id="interview" class="max-w-4xl mx-auto mb-16 bg-sky-900/10 p-8 rounded-3xl border border-sky-900/30">
+            <h2 class="text-2xl font-bold mb-6 text-sky-400">Câu hỏi Mentor (Interview level)</h2>
+            <div class="space-y-6">
+                <div class="bg-slate-800 p-4 rounded-lg">
+                    <p class="font-semibold text-slate-200">Q1: Sự khác biệt bản chất giữa BLOCKED và WAITING?</p>
+                    <p class="text-sm text-slate-400 mt-2 italic">Mentor's Answer: BLOCKED là sự bị động (đợi Lock từ người khác), còn WAITING là chủ động (nhường CPU và đợi tín hiệu thông qua notify/join).</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg">
+                    <p class="font-semibold text-slate-200">Q2: Tại sao stop() bị deprecated và không nên dùng?</p>
+                    <p class="text-sm text-slate-400 mt-2 italic">Mentor's Answer: stop() giết thread ngay lập tức, khiến các Monitor Lock không được giải phóng đúng cách hoặc tài nguyên bị bỏ dở giữa chừng gây corrupt dữ liệu. Hãy dùng Flag hoặc interrupt().</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center text-slate-500 text-sm py-12">
+            © 2024 Thầy dạy Java - System Design & Core Java Master
+        </footer>
+    </main>
+
+    <script>
+        function moveThread(state) {
+            const particle = document.getElementById('thread-particle');
+            const targetNode = document.getElementById('node-' + state);
+            
+            // Remove active classes
+            document.querySelectorAll('.state-node').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.state-card').forEach(n => n.classList.remove('active-state'));
+
+            // Get target coordinates
+            const targetTop = targetNode.offsetTop + (targetNode.offsetHeight / 2) - 10;
+            const targetLeft = targetNode.offsetLeft + (targetNode.offsetWidth / 2) - 10;
+
+            // Animate particle
+            particle.style.top = targetTop + 'px';
+            particle.style.left = targetLeft + 'px';
+
+            // Update UI
+            targetNode.classList.add('active');
+            
+            // Highlight card (if exists)
+            const cards = {
+                'NEW': 0, 'RUNNABLE': 1, 'BLOCKED': 2, 'WAITING': 3, 'TERMINATED': 5
+            };
+            const allCards = document.querySelectorAll('.state-card');
+            if (cards[state] !== undefined) {
+                allCards[cards[state]].classList.add('active-state');
+            }
+        }
+
+        // Initialize position
+        window.onload = () => {
+            moveThread('NEW');
+        };
+    </script>
+</body>
+</html>

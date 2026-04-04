@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Metaspace (Java 8+) Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fcfcfd; color: #1e293b; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #0f172a; color: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; font-size: 0.875rem; }
+        .highlight-meta { color: #c084fc; font-weight: bold; }
+        .info-card { border-left: 5px solid #8b5cf6; background-color: #f5f3ff; }
+        .warning-card { border-left: 5px solid #f59e0b; background-color: #fffbeb; }
+        
+        /* Memory Diagram CSS */
+        .mem-container { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 500px; margin: 20px auto; border: 2px solid #e2e8f0; padding: 15px; border-radius: 12px; background: white; }
+        .mem-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
+        .mem-block { height: 50px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; position: relative; overflow: hidden; }
+        .heap { background: #10b981; }
+        .native { background: #6366f1; }
+        .metaspace { background: #a855f7; }
+        
+        .animation-expand { animation: expandWidth 4s infinite alternate; }
+        @keyframes expandWidth { from { width: 40%; } to { width: 95%; } }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <div class="inline-block px-4 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold mb-4">JVM INTERNALS</div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4">Bài 1.3: Metaspace (Java 8+)</h1>
+            <p class="text-lg text-slate-600">Tại sao PermGen biến mất? Và cách Java quản lý Metadata ở vùng nhớ Native.</p>
+        </header>
+
+        <!-- Section 1: The Evolution -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-history text-purple-500"></i> 1. Cuộc cách mạng: Từ PermGen đến Metaspace
+            </h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-6 bg-slate-100 rounded-2xl border border-slate-200">
+                    <h3 class="font-bold text-red-600 mb-3"><i class="fas fa-skull-crossbones mr-2"></i>Kẻ tiền nhiệm: PermGen</h3>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Nằm bên trong <strong>JVM Heap</strong>. Có kích thước cố định (mặc định rất nhỏ, khoảng 64MB-82MB). 
+                        Khi nạp nhiều class (thời đại web app bùng nổ), nó thường xuyên "vỡ trận" gây lỗi <code>java.lang.OutOfMemoryError: PermGen space</code>.
+                    </p>
+                </div>
+                <div class="p-6 bg-purple-50 rounded-2xl border border-purple-200">
+                    <h3 class="font-bold text-purple-700 mb-3"><i class="fas fa-rocket mr-2"></i>Kẻ kế nhiệm: Metaspace</h3>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Nằm ở <strong>Native Memory</strong> (RAM của hệ điều hành, không thuộc Heap). 
+                        Mặc định, Metaspace có thể tự động <strong>co giãn</strong> theo nhu cầu của ứng dụng, bị giới hạn bởi chính dung lượng RAM của máy chủ.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture Visualization -->
+        <section class="mb-16 bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-8 text-center">Mô hình bộ nhớ Java 8+</h2>
+            <div class="mem-container">
+                <div class="mem-label">Total OS Process Memory</div>
+                <div class="mem-block heap">
+                    Java Heap Area (Young + Old)
+                </div>
+                <div class="mem-label">Native Memory (Off-Heap)</div>
+                <div class="flex gap-2">
+                    <div class="mem-block metaspace flex-1 relative">
+                        Metaspace
+                        <div class="absolute inset-y-0 right-0 bg-purple-400 opacity-50 animation-expand"></div>
+                    </div>
+                    <div class="mem-block native w-1/3">Thread Stacks / Code Cache</div>
+                </div>
+            </div>
+            <p class="text-xs text-center text-slate-500 mt-4 italic">
+                * Lưu ý: Metaspace không còn bị giới hạn bởi kích thước Heap (-Xmx).
+            </p>
+        </section>
+
+        <!-- Section 3: What's Inside? -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 border-b pb-2 text-slate-800">2. Bên trong Metaspace có gì?</h2>
+            <p class="mb-6 text-slate-600">Metaspace lưu trữ tất cả thông tin mà JVM cần để biết "Class này là ai?".</p>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-blue-600 text-sm">Class Metadata</h4>
+                    <p class="text-xs mt-2">Tên class, cấu trúc phân cấp (cha/con), các interface thực thi.</p>
+                </div>
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-blue-600 text-sm">Method Data</h4>
+                    <p class="text-xs mt-2">Tên hàm, kiểu dữ liệu trả về, danh sách tham số, Bytecode của hàm.</p>
+                </div>
+                <div class="p-4 bg-white border rounded-xl shadow-sm">
+                    <h4 class="font-bold text-blue-600 text-sm">Constant Pool</h4>
+                    <p class="text-xs mt-2">Các hằng số liên quan đến class (chứ không phải String Pool nhé!).</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 info-card p-4 rounded-xl">
+                <p class="text-sm font-semibold text-purple-900">
+                    <i class="fas fa-exclamation-circle mr-2"></i>Lưu ý cực quan trọng của một Chuyên gia:
+                </p>
+                <p class="text-sm text-purple-800 mt-1">
+                    Từ Java 7, <strong>Static Variables</strong> (biến tĩnh) và <strong>String Pool</strong> đã được chuyển từ PermGen sang <strong>Java Heap</strong>. Metaspace chỉ lưu Metadata (mô tả về cấu trúc lớp).
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 4: Performance & Tuning -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">3. Cấu hình & Tối ưu (Tuning)</h2>
+            <p class="mb-4 text-sm">Dù Metaspace có thể tự co giãn, nhưng trong Production, "thả rông" là một thảm họa. Nếu một ClassLoader bị leak, nó sẽ nuốt sạch RAM của server.</p>
+            <div class="code-block">
+                <div class="text-slate-400 mb-2"># Cấu hình khuyến nghị cho JVM</div>
+                <div><span class="text-yellow-400">-XX:MetaspaceSize=</span>256m  <span class="text-slate-500">// Ngưỡng bắt đầu dọn rác (GC) cho Metaspace</span></div>
+                <div><span class="text-yellow-400">-XX:MaxMetaspaceSize=</span>512m <span class="text-slate-500">// Giới hạn cứng để tránh "nuốt" sạch RAM OS</span></div>
+            </div>
+            <div class="mt-4 p-4 warning-card rounded-xl text-sm">
+                <strong>Hệ quả:</strong> Nếu bạn đạt đến <code>MaxMetaspaceSize</code>, JVM sẽ văng lỗi <code>OutOfMemoryError: Metaspace</code>. Lúc này, hãy kiểm tra xem bạn có đang dùng các thư viện sinh bytecode động (như CGLIB, Javassist) quá đà không.
+            </div>
+        </section>
+
+        <!-- Section 5: Real World Scenario -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">4. Case Study: ClassLoader Leak</h2>
+            <div class="bg-slate-900 p-6 rounded-2xl text-slate-300">
+                <p class="text-sm italic mb-4">"Thầy ơi, tại sao app của em chạy 3 ngày là sập, dù Heap vẫn còn trống?"</p>
+                <p class="text-sm mb-4">Đây là kịch bản phổ biến trong các ứng dụng sử dụng **Hot Deployment** (như Tomcat reload context). Mỗi lần reload, một ClassLoader mới được sinh ra để nạp lại các class.</p>
+                <ul class="text-xs space-y-2 list-decimal ml-5 text-slate-400">
+                    <li>ClassLoader cũ lẽ ra phải bị GC dọn đi.</li>
+                    <li>Nhưng nếu một Thread bên ngoài (ví dụ một con Thread tĩnh) vẫn giữ tham chiếu tới một Class thuộc ClassLoader cũ.</li>
+                    <li>ClassLoader cũ KHÔNG bị dọn -> Toàn bộ metadata của nó trong <strong>Metaspace</strong> KHÔNG được giải phóng.</li>
+                    <li>Qua nhiều lần reload, Metaspace tràn -> Server die.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 6: Interview Questions -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900">Câu hỏi phỏng vấn (Deep Level)</h2>
+            <div class="space-y-4">
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q1: Tại sao việc chuyển sang Metaspace lại giúp tăng tốc độ Garbage Collection?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: Trước đây, PermGen là một phần của Heap, GC phải quét qua nó mỗi khi dọn dẹp bộ nhớ. Metaspace nằm ở Native Memory, việc cấp phát và dọn dẹp nó được tách biệt hoàn toàn. Hơn nữa, Metaspace sử dụng các "chế độ dọn dẹp" đơn giản hơn, giảm tải cho Full GC.
+                    </div>
+                </details>
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q2: Compressed Class Space là gì?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: Trên hệ điều hành 64-bit, con trỏ đối tượng có thể rất lớn. JVM sử dụng một kỹ thuật gọi là "Compressed Oops" và dành riêng một vùng trong Metaspace gọi là **Compressed Class Space** để lưu trữ các tham chiếu lớp một cách gọn nhẹ hơn, nhằm tiết kiệm bộ nhớ.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-10 border-t border-slate-200 text-slate-400 text-xs">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.3: Metaspace & The Off-Heap World</p>
+        </footer>
+    </div>
+</body>
+</html>

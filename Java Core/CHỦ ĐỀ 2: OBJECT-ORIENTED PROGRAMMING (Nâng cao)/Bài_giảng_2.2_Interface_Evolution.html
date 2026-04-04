@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Senior: Interface Evolution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        code { font-family: 'Fira Code', monospace !important; }
+        .timeline-line { width: 2px; background: #cbd5e1; position: absolute; left: 20px; top: 0; bottom: 0; }
+        .timeline-dot { width: 12px; height: 12px; background: #6366f1; border-radius: 50%; position: absolute; left: 15px; transition: all 0.3s; }
+        .evolution-card:hover .timeline-dot { transform: scale(1.5); box-shadow: 0 0 10px #6366f1; }
+        .warning-box { background-color: #fffbeb; border-left: 4px solid #f59e0b; }
+        .conflict-resolution-box { transition: all 0.5s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 text-white sticky top-0 h-screen hidden lg:block shadow-2xl">
+        <div class="p-8">
+            <h1 class="text-2xl font-bold text-indigo-400">Java Masterclass</h1>
+            <p class="text-xs text-gray-400 mt-1">Chương 2: OOP & Design</p>
+        </div>
+        <nav class="mt-4 px-4">
+            <a href="#history" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">1. Lịch sử tiến hóa</a>
+            <a href="#default-methods" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">2. Default Methods (Java 8)</a>
+            <a href="#static-private" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">3. Static & Private Methods</a>
+            <a href="#diamond-problem" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">4. Xử lý xung đột (Diamond)</a>
+            <a href="#internals" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">5. Cơ chế JVM Dispatching</a>
+            <a href="#summary" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">6. Tổng kết & Phỏng vấn</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-16 max-w-5xl mx-auto">
+        
+        <!-- Header -->
+        <header class="mb-12">
+            <h2 class="text-4xl font-black text-slate-800 mb-4 uppercase tracking-tight">2.2. Interface Evolution</h2>
+            <p class="text-lg text-gray-600 leading-relaxed">
+                Khám phá hành trình lột xác của Interface từ Java 7 trở về trước cho đến những cải tiến mạnh mẽ trong Java 8 và 9+.
+            </p>
+        </header>
+
+        <!-- Section 1: History -->
+        <section id="history" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-indigo-600 flex items-center">
+                <span class="mr-2">🕒</span> Lịch sử tiến hóa qua các phiên bản
+            </h3>
+            <div class="relative pl-12 space-y-12">
+                <div class="timeline-line"></div>
+                
+                <div class="evolution-card relative">
+                    <div class="timeline-dot"></div>
+                    <h4 class="font-bold text-lg text-slate-800">Java 7 & Cũ hơn: "Bản hợp đồng thuần túy"</h4>
+                    <p class="text-gray-600 mt-2">Chỉ chứa phương thức trừu tượng (abstract) và hằng số. Mọi lớp implement đều phải viết code cho tất cả các phương thức.</p>
+                    <div class="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded">
+                        <strong>Nỗi đau:</strong> Nếu thêm 1 method vào interface, hàng ngàn lớp triển khai sẽ bị lỗi biên dịch!
+                    </div>
+                </div>
+
+                <div class="evolution-card relative">
+                    <div class="timeline-dot" style="background: #10b981;"></div>
+                    <h4 class="font-bold text-lg text-emerald-600">Java 8: "Bước ngoặt Default & Static"</h4>
+                    <p class="text-gray-600 mt-2">Giới thiệu <code>default</code> methods để hỗ trợ Backward Compatibility (ví dụ thêm <code>stream()</code> vào <code>List</code>).</p>
+                </div>
+
+                <div class="evolution-card relative">
+                    <div class="timeline-dot" style="background: #f59e0b;"></div>
+                    <h4 class="font-bold text-lg text-amber-600">Java 9: "Private Methods - Đóng gói nội bộ"</h4>
+                    <p class="text-gray-600 mt-2">Cho phép định nghĩa <code>private</code> methods bên trong interface để tái sử dụng code giữa các default methods mà không lộ ra ngoài.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Default Methods -->
+        <section id="default-methods" class="mb-20">
+            <div class="flex items-center mb-6">
+                <h3 class="text-2xl font-bold text-indigo-600">Default Methods: "Phao cứu sinh" cho API</h3>
+            </div>
+            <p class="mb-6">Cú pháp <code>default</code> cho phép chúng ta triển khai logic ngay trong interface.</p>
+            
+            <div class="grid grid-cols-1 gap-6">
+<pre><code class="language-java">public interface SmartDevice {
+    void turnOn(); // Abstract
+
+    // Default method: Cung cấp logic mặc định
+    default void diagnostic() {
+        System.out.println("Running basic diagnostic...");
+        checkPower();
+    }
+
+    // Java 9 Private method: Trình helper nội bộ
+    private void checkPower() {
+        System.out.println("Power is stable.");
+    }
+}
+</code></pre>
+                <div class="warning-box p-5 rounded-lg shadow-sm">
+                    <h5 class="font-bold text-amber-800">Tại sao cần Default Methods?</h5>
+                    <p class="text-sm text-amber-700 mt-2">
+                        Hãy tưởng tượng Oracle muốn thêm phương thức <code>forEach</code> vào interface <code>Iterable</code>. Nếu không có <code>default</code>, hàng triệu ứng dụng Java trên thế giới sẽ không thể chạy được sau khi nâng cấp vì lỗi "Class không implement method mới".
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Diamond Problem -->
+        <section id="diamond-problem" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Xử lý xung đột: Bài toán "Kim cương"</h3>
+            <p class="mb-6">Khi một lớp implement 2 interface có cùng một phương thức <code>default</code>, Java sẽ xử lý như thế nào?</p>
+            
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+                <div class="grid grid-cols-2 gap-4 text-center mb-8">
+                    <div class="p-4 bg-indigo-100 rounded-lg border-2 border-indigo-300">
+                        <span class="font-mono font-bold">Interface A</span><br>
+                        <span class="text-xs">default void hello()</span>
+                    </div>
+                    <div class="p-4 bg-emerald-100 rounded-lg border-2 border-emerald-300">
+                        <span class="font-mono font-bold">Interface B</span><br>
+                        <span class="text-xs">default void hello()</span>
+                    </div>
+                </div>
+                
+                <div id="conflict-indicator" class="text-center py-4 px-6 bg-red-100 text-red-600 rounded-full font-bold mb-8 animate-pulse">
+                    ⚠️ LỖI BIÊN DỊCH: Duplicate default methods!
+                </div>
+
+                <div class="space-y-4">
+                    <h4 class="font-bold text-slate-700">Cách giải quyết (Rule of Thumb):</h4>
+                    <ul class="list-decimal ml-6 space-y-2 text-sm text-gray-600">
+                        <li><strong>Class luôn thắng:</strong> Nếu class cha đã implement method đó, interface bị bỏ qua.</li>
+                        <li><strong>Ghi đè thủ công:</strong> Subclass phải ghi đè (override) và chỉ định rõ muốn dùng của ai.</li>
+                    </ul>
+<pre class="mt-4"><code class="language-java">public class MyClass implements A, B {
+    @Override
+    public void hello() {
+        // Tự quyết định: gọi của A
+        A.super.hello(); 
+    }
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Internals -->
+        <section id="internals" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">JVM Internal: invokeinterface vs invokevirtual</h3>
+            <div class="bg-slate-800 text-indigo-300 p-6 rounded-xl font-mono text-sm shadow-2xl">
+                <p class="mb-4">// Khi gọi một default method:</p>
+                <p class="text-white">1. JVM kiểm tra xem Class thực tế có override không.</p>
+                <p class="text-white">2. Nếu không, nó tìm trong cây phân cấp Interface.</p>
+                <p class="text-white">3. Nó sử dụng một bảng gọi là <span class="text-yellow-400">ITable</span> để tra cứu.</p>
+                <div class="mt-6 border-t border-slate-700 pt-4">
+                    <span class="text-emerald-400">Deep Note:</span> Mặc dù <code>invokeinterface</code> từng chậm hơn <code>invokevirtual</code>, nhưng nhờ <strong>Monomorphic Inlining</strong> của JIT Compiler, hiệu năng hiện nay gần như tương đương.
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Summary -->
+        <section id="summary" class="mb-20">
+            <h3 class="text-3xl font-black mb-8 text-center uppercase tracking-widest text-slate-400">Mục lục Senior Interview</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-6 rounded-xl border border-gray-100 hover:shadow-md transition">
+                    <h5 class="font-bold text-indigo-600">Tại sao Interface không có biến instance?</h5>
+                    <p class="text-xs text-gray-500 mt-2">Vì Interface định nghĩa hành vi, không định nghĩa trạng thái. Nếu có biến instance, nó sẽ trở thành "Đa kế thừa trạng thái" - thứ mà Java kịch liệt tránh để ngăn chặn sự phức tạp của bộ nhớ.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-100 hover:shadow-md transition">
+                    <h5 class="font-bold text-indigo-600">Sự khác biệt giữa Static method trong Interface và Class?</h5>
+                    <p class="text-xs text-gray-500 mt-2">Static method trong Interface <strong>không được kế thừa</strong> bởi class implement. Em phải gọi trực tiếp qua tên Interface (InterfaceName.methodName()).</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="mt-20 py-10 border-t text-center">
+            <p class="text-slate-400 text-sm">© 2024 Thầy dạy Java - Module 2.2: Evolution of Interfaces</p>
+        </footer>
+    </main>
+</div>
+
+</body>
+</html>

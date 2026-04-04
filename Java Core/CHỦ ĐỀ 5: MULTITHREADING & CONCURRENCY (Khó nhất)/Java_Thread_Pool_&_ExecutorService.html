@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Thread Pool & ExecutorService - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .card-custom { background: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .step-active { border-left: 4px solid #38bdf8; background: rgba(56, 189, 248, 0.05); }
+        
+        /* Thread Pool Visualizer */
+        .pool-container { height: 400px; background: #020617; border-radius: 20px; position: relative; border: 2px solid #1e293b; overflow: hidden; }
+        .queue-area { width: 300px; height: 60px; border: 2px dashed #475569; position: absolute; top: 50%; left: 50px; transform: translateY(-50%); border-radius: 10px; display: flex; align-items: center; padding: 5px; gap: 5px; }
+        .worker-area { width: 200px; height: 300px; border: 2px solid #334155; position: absolute; top: 50%; right: 50px; transform: translateY(-50%); border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: space-around; padding: 10px; background: #0f172a; }
+        .worker { width: 160px; height: 40px; border-radius: 8px; border: 1px solid #475569; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; transition: 0.3s; color: #94a3b8; }
+        .worker.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .task-unit { width: 40px; height: 40px; background: #fbbf24; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 12px; animation: slideIn 0.5s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-72 bg-slate-900 p-8 flex-shrink-0 border-r border-slate-800 hidden lg:block">
+        <h2 class="text-sky-400 font-bold text-2xl mb-8">Java Core 5.4</h2>
+        <nav class="space-y-6 text-sm">
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Khái niệm</p>
+                <a href="#why" class="block text-slate-300 hover:text-sky-400 py-1">Tại sao cần Thread Pool?</a>
+                <a href="#executor" class="block text-slate-300 hover:text-sky-400 py-1">Executor Framework</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Cấu trúc</p>
+                <a href="#internals" class="block text-slate-300 hover:text-sky-400 py-1">ThreadPoolExecutor Internals</a>
+                <a href="#visualizer" class="block text-slate-300 hover:text-sky-400 py-1">Mô phỏng Luồng công việc</a>
+            </div>
+            <div>
+                <p class="text-slate-500 uppercase text-[10px] font-bold mb-3 tracking-widest">Phân loại</p>
+                <a href="#types" class="block text-slate-300 hover:text-sky-400 py-1">Các loại Pool phổ biến</a>
+                <a href="#best-practices" class="block text-slate-300 hover:text-sky-400 py-1">Best Practices</a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow p-8 lg:p-16">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Header -->
+            <header id="why" class="mb-16">
+                <span class="text-sky-500 font-bold tracking-tighter text-sm uppercase">Phần 5: Đa luồng nâng cao</span>
+                <h1 class="text-5xl font-black mt-4 mb-6 leading-tight">Thread Pool & <br><span class="text-sky-400">Executor Service</span></h1>
+                <div class="card-custom p-6 border-l-4 border-sky-500 bg-sky-500/5">
+                    <p class="text-slate-300 leading-relaxed">
+                        "Việc tạo một Thread mới giống như việc xây một ngôi nhà mới chỉ để tiếp một người khách. Thread Pool giống như một khách sạn: khách đến thì nhận phòng, xong việc thì trả phòng để người khác dùng."
+                    </p>
+                </div>
+            </header>
+
+            <!-- Section 1: The Why -->
+            <section class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">Tại sao phải dùng Pool?</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-6 bg-slate-800 rounded-xl">
+                        <div class="text-sky-400 mb-4 font-bold text-lg">Hạ thấp chi phí</div>
+                        <p class="text-xs text-slate-400">Giảm bớt tiêu hao tài nguyên CPU và RAM cho việc khởi tạo/hủy Thread liên tục.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800 rounded-xl">
+                        <div class="text-emerald-400 mb-4 font-bold text-lg">Tăng tốc độ</div>
+                        <p class="text-xs text-slate-400">Task được xử lý ngay lập tức vì Thread đã có sẵn trong pool (Warm-up).</p>
+                    </div>
+                    <div class="p-6 bg-slate-800 rounded-xl">
+                        <div class="text-pink-400 mb-4 font-bold text-lg">Kiểm soát tải</div>
+                        <p class="text-xs text-slate-400">Ngăn chặn tình trạng hệ thống bị sập do tạo quá nhiều thread vượt ngưỡng chịu tải của OS.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Visualizer -->
+            <section id="visualizer" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    Mô phỏng: Thread Pool Mechanism
+                </h2>
+                <div class="pool-container mb-6">
+                    <div class="queue-area" id="task-queue">
+                        <!-- Tasks will appear here -->
+                    </div>
+                    <div class="absolute top-[40%] left-[80px] text-[10px] text-slate-500 uppercase font-bold tracking-widest">Work Queue (BlockingQueue)</div>
+                    
+                    <div class="worker-area">
+                        <div id="w-1" class="worker">WORKER THREAD 1</div>
+                        <div id="w-2" class="worker">WORKER THREAD 2</div>
+                        <div id="w-3" class="worker">WORKER THREAD 3</div>
+                    </div>
+                    <div class="absolute top-[10%] right-[70px] text-[10px] text-slate-500 uppercase font-bold tracking-widest">Thread Pool Area</div>
+                </div>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="addTask()" class="px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-full hover:bg-sky-400 transition">Gửi một Task (Submit)</button>
+                    <button onclick="clearAll()" class="px-8 py-3 bg-slate-700 text-slate-200 font-bold rounded-full hover:bg-slate-600 transition">Reset Simulation</button>
+                </div>
+            </section>
+
+            <!-- Section 3: Internals -->
+            <section id="internals" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">Chi tiết: ThreadPoolExecutor</h2>
+                <p class="text-slate-400 mb-8">Mọi Thread Pool đều xoay quanh class <code>ThreadPoolExecutor</code> với các tham số quan trọng mà một Senior phải thuộc lòng:</p>
+                <div class="space-y-4">
+                    <div class="p-6 card-custom">
+                        <code class="text-sky-400 font-bold">corePoolSize</code>
+                        <p class="text-sm text-slate-400 mt-2">Số lượng thread tối thiểu luôn được giữ trong pool, kể cả khi chúng rảnh rỗi.</p>
+                    </div>
+                    <div class="p-6 card-custom">
+                        <code class="text-emerald-400 font-bold">maximumPoolSize</code>
+                        <p class="text-sm text-slate-400 mt-2">Số lượng thread tối đa pool có thể mở rộng khi Queue đã đầy.</p>
+                    </div>
+                    <div class="p-6 card-custom">
+                        <code class="text-pink-400 font-bold">workQueue</code>
+                        <p class="text-sm text-slate-400 mt-2">Nơi chứa các task đang chờ xử lý (Thường dùng <code>LinkedBlockingQueue</code>).</p>
+                    </div>
+                    <div class="p-6 card-custom">
+                        <code class="text-amber-400 font-bold">RejectedExecutionHandler</code>
+                        <p class="text-sm text-slate-400 mt-2">Chiến lược xử lý khi Pool quá tải (Abort, CallerRuns, Discard...).</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Code Implementation -->
+            <section class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">Triển khai thực tế</h2>
+                <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                    <div class="p-4 bg-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+                        <span>ThreadService.java</span>
+                        <span class="text-emerald-500">Best Practice</span>
+                    </div>
+                    <pre><code class="language-java">ExecutorService executor = Executors.newFixedThreadPool(10);
+
+// Gửi task không cần kết quả trả về
+executor.execute(() -> {
+    System.out.println("Processing async task: " + Thread.currentThread().getName());
+});
+
+// Gửi task có lấy kết quả (Future)
+Future&lt;String&gt; future = executor.submit(() -> {
+    Thread.sleep(2000);
+    return "Task Completed!";
+});
+
+// Luôn nhớ đóng pool khi ứng dụng tắt
+executor.shutdown();</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 5: Common Pools -->
+            <section id="types" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8">4 Loại Pool phổ biến</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="p-6 bg-slate-800/50 border border-slate-700 rounded-xl">
+                        <h4 class="text-sky-400 font-bold mb-2">1. FixedThreadPool</h4>
+                        <p class="text-xs text-slate-400">Số lượng thread cố định. Phù hợp cho server có tài nguyên xác định trước.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 border border-slate-700 rounded-xl">
+                        <h4 class="text-emerald-400 font-bold mb-2">2. CachedThreadPool</h4>
+                        <p class="text-xs text-slate-400">Tạo thread mới nếu cần, hủy thread nếu rảnh quá 60s. Phù hợp cho nhiều task ngắn hạn.</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 border border-slate-700 rounded-xl">
+                        <h4 class="text-pink-400 font-bold mb-2">3. SingleThreadExecutor</h4>
+                        <p class="text-xs text-slate-400">Chỉ 1 thread duy nhất. Đảm bảo các task chạy tuần tự (Sequential).</p>
+                    </div>
+                    <div class="p-6 bg-slate-800/50 border border-slate-700 rounded-xl">
+                        <h4 class="text-amber-400 font-bold mb-2">4. ScheduledThreadPool</h4>
+                        <p class="text-xs text-slate-400">Dùng để lập lịch chạy task sau một khoảng thời gian hoặc định kỳ.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Best Practices -->
+            <section id="best-practices" class="mb-20 pt-16 border-t border-slate-800">
+                <h2 class="text-3xl font-bold mb-8 text-sky-400 underline decoration-slate-700">Mentor's Golden Rules</h2>
+                <div class="space-y-6">
+                    <div class="flex gap-4 p-6 bg-red-900/10 border border-red-500/20 rounded-xl">
+                        <div class="text-2xl">⚠️</div>
+                        <div>
+                            <p class="font-bold text-red-400">Không dùng Executors.newCachedThreadPool() bừa bãi!</p>
+                            <p class="text-sm text-slate-400">Nó có <code>maximumPoolSize = Integer.MAX_VALUE</code>. Nếu hệ thống bị spike request, nó sẽ tạo hàng triệu thread và gây sập hệ thống (OOM).</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 p-6 bg-sky-900/10 border border-sky-500/20 rounded-xl">
+                        <div class="text-2xl">💡</div>
+                        <div>
+                            <p class="font-bold text-sky-400">Đặt tên cho Thread (Naming Policy)</p>
+                            <p class="text-sm text-slate-400">Sử dụng <code>ThreadFactory</code> để đặt tên thread (ví dụ: "inventory-worker-1"). Điều này cực kỳ quan trọng khi bạn cần phân tích Thread Dump lúc gặp lỗi.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interview Questions -->
+            <section class="mb-20 bg-slate-900 p-10 rounded-3xl border border-slate-800">
+                <h2 class="text-2xl font-bold mb-8">Câu hỏi Mentor (Interview Level)</h2>
+                <div class="space-y-6">
+                    <div class="step-active p-6 rounded-r-xl">
+                        <p class="font-bold">Q1: Sự khác biệt giữa submit() và execute()?</p>
+                        <p class="text-sm text-slate-400 mt-2">Trả lời: <code>execute</code> dùng cho các task "fire and forget". <code>submit</code> trả về một <code>Future</code> object giúp bạn lấy kết quả trả về hoặc bắt Exception xảy ra bên trong thread.</p>
+                    </div>
+                    <div class="step-active p-6 rounded-r-xl">
+                        <p class="font-bold">Q2: Làm sao để định lượng số thread tối ưu (Tuning)?</p>
+                        <p class="text-sm text-slate-400 mt-2">Trả lời: Công thức chung: <br>
+                        - CPU-Intensive task: <code>số core + 1</code>. <br>
+                        - I/O-Intensive task (DB, API): <code>số core * (1 + thời gian chờ / thời gian xử lý)</code>.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10">
+                &copy; 2024 Thầy dạy Java - Concurrent Programming Series
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        let taskCount = 0;
+        let queue = [];
+        let workersBusy = [false, false, false];
+
+        function addTask() {
+            taskCount++;
+            const container = document.getElementById('task-queue');
+            
+            if (queue.length >= 6) {
+                alert("Queue Full! Task này sẽ được xử lý bởi Rejection Policy (Discard).");
+                return;
+            }
+
+            const taskEl = document.createElement('div');
+            taskEl.className = 'task-unit';
+            taskEl.id = 'task-' + taskCount;
+            taskEl.innerText = taskCount;
+            container.appendChild(taskEl);
+            queue.push(taskEl.id);
+
+            processQueue();
+        }
+
+        async function processQueue() {
+            for (let i = 0; i < workersBusy.length; i++) {
+                if (!workersBusy[i] && queue.length > 0) {
+                    const taskId = queue.shift();
+                    const workerId = 'w-' + (i + 1);
+                    assignToWorker(taskId, workerId, i);
+                }
+            }
+        }
+
+        async function assignToWorker(taskId, workerId, index) {
+            workersBusy[index] = true;
+            const taskEl = document.getElementById(taskId);
+            const workerEl = document.getElementById(workerId);
+
+            workerEl.classList.add('active');
+            workerEl.innerText = `WORKING ON TASK ${taskEl.innerText}`;
+            
+            // Task moves into worker
+            taskEl.style.transition = "all 0.5s ease-in";
+            taskEl.style.transform = "translateX(400px)";
+            taskEl.style.opacity = "0";
+
+            // Processing time
+            await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+
+            workerEl.classList.remove('active');
+            workerEl.innerText = `WORKER THREAD ${index + 1}`;
+            taskEl.remove();
+            workersBusy[index] = false;
+            
+            processQueue();
+        }
+
+        function clearAll() {
+            document.getElementById('task-queue').innerHTML = '';
+            queue = [];
+            taskCount = 0;
+            workersBusy = [false, false, false];
+            document.querySelectorAll('.worker').forEach((w, i) => {
+                w.classList.remove('active');
+                w.innerText = `WORKER THREAD ${i + 1}`;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.3 HashSet & LinkedHashSet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-link.active { border-right: 4px solid #ef4444; background: #fef2f2; color: #b91c1c; }
+        .hash-node { transition: all 0.3s ease; }
+        .bucket { min-height: 80px; border: 2px dashed #e5e7eb; border-radius: 0.75rem; }
+        @keyframes bounce-in { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+        .animate-bounce-in { animation: bounce-in 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 hidden md:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-red-600">Thầy Dạy Java</h2>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#overview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">1. Đặc tính Set Interface</a>
+                <a href="#hashset-internal" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">2. HashSet Internals (Bí mật)</a>
+                <a href="#hash-contract" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">3. Equals & HashCode Contract</a>
+                <a href="#visualizer" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">4. Mô phỏng Hashing</a>
+                <a href="#linkedhashset" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">5. LinkedHashSet: Trật tự & Tốc độ</a>
+                <a href="#performance" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">6. Phân tích Performance</a>
+                <a href="#interview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">7. Câu hỏi Phỏng vấn</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-12 overflow-y-auto">
+            <header class="mb-12">
+                <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">BÀI HỌC 3.3</span>
+                <h1 class="text-4xl font-extrabold mt-4 mb-2">HashSet & LinkedHashSet</h1>
+                <p class="text-gray-600 text-lg">Tìm hiểu cơ chế lưu trữ không trùng lặp và sự kết hợp hoàn hảo giữa Hashing và Linked List.</p>
+            </header>
+
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    Đặc tính Set Interface
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-red-500">
+                        <h4 class="font-bold text-gray-800 mb-2">Uniqueness</h4>
+                        <p class="text-sm text-gray-600">Không cho phép phần tử trùng lặp. Nếu thêm phần tử đã tồn tại, `add()` sẽ trả về `false`.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-blue-500">
+                        <h4 class="font-bold text-gray-800 mb-2">Null Handling</h4>
+                        <p class="text-sm text-gray-600">Cho phép tối đa <strong>một</strong> phần tử `null`.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-b-4 border-green-500">
+                        <h4 class="font-bold text-gray-800 mb-2">Speed</h4>
+                        <p class="text-sm text-gray-600">Tốc độ tìm kiếm (`contains`) cực nhanh: $O(1)$.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Internals -->
+            <section id="hashset-internal" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    HashSet Internals: Cái bóng của HashMap
+                </h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                    <p class="text-sm text-blue-800 font-medium">
+                        "Bí mật lớn nhất của HashSet: Nó không tự quản lý dữ liệu. Nó thuê một `HashMap` làm việc đó."
+                    </p>
+                </div>
+                <div class="code-block mb-8">
+                    <pre><code class="language-java">// Source code internals (OpenJDK 17)
+public class HashSet&lt;E&gt; extends AbstractSet&lt;E&gt; implements Set&lt;E&gt; {
+    
+    private transient HashMap&lt;E, Object&gt; map;
+
+    // Giá trị giả (Dummy value) để lưu vào Map vì Map cần cặp Key-Value
+    private static final Object PRESENT = new Object();
+
+    public HashSet() {
+        map = new HashMap&lt;&gt;();
+    }
+
+    public boolean add(E e) {
+        // Trả về null nếu key chưa tồn tại, trả về giá trị cũ nếu đã có
+        return map.put(e, PRESENT) == null;
+    }
+}</code></pre>
+                </div>
+                <p class="text-gray-700">Khi em gọi <code>hashSet.add("Java")</code>, thực chất em đang gọi <code>hashMap.put("Java", PRESENT)</code>. Vì `Key` trong `HashMap` là duy nhất, nên `HashSet` nghiễm nhiên trở thành duy nhất.</p>
+            </section>
+
+            <!-- Section 3: The Contract -->
+            <section id="hash-contract" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                    The Mandatory Contract: equals() & hashCode()
+                </h2>
+                <div class="bg-red-900 text-white p-6 rounded-xl shadow-lg mb-6">
+                    <h4 class="font-bold text-lg mb-4">Quy tắc "Vàng" của Senior:</h4>
+                    <p class="text-sm leading-relaxed italic">
+                        "Nếu hai object bằng nhau (equals == true), chúng PHẢI có cùng hashCode. <br>
+                        Nếu hai object có cùng hashCode, chưa chắc chúng đã bằng nhau (Collision)."
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-700">Tại sao quy tắc này lại sống còn với HashSet?</p>
+                        <ol class="list-decimal ml-5 text-sm text-gray-600 space-y-2">
+                            <li><strong>Step 1:</strong> HashSet dùng `hashCode()` để tìm "thùng" (bucket) chứa dữ liệu.</li>
+                            <li><strong>Step 2:</strong> Nếu bucket đó có sẵn dữ liệu (Collision), nó dùng `equals()` để kiểm tra xem object mới có thực sự trùng với object cũ không.</li>
+                        </ol>
+                        <p class="text-xs bg-yellow-100 p-2 rounded text-yellow-800">⚠️ Nếu em override `equals` mà quên `hashCode`, Set sẽ chứa các phần tử trùng lặp "vô lý" vì chúng rơi vào các bucket khác nhau.</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <pre><code class="language-java">// Anti-pattern!
+class Student {
+    String id;
+    @Override
+    public boolean equals(Object o) { ... }
+    // QUÊN OVERRIDE hashCode() -> BUG!
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Visualizer -->
+            <section id="visualizer" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                    Mô phỏng Hashing & Buckets
+                </h2>
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <div class="flex flex-col md:flex-row gap-4 mb-8 items-end">
+                        <div class="flex-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase">Dữ liệu muốn thêm</label>
+                            <input type="text" id="input-val" class="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-red-500 outline-none" placeholder="Ví dụ: Java, Kotlin, Python...">
+                        </div>
+                        <button onclick="addToHash()" class="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition">Add to Set</button>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-4" id="buckets-grid">
+                        <!-- Buckets 0-3 -->
+                    </div>
+                    <div id="log-msg" class="mt-4 text-center text-xs font-mono text-gray-400"></div>
+                </div>
+            </section>
+
+            <!-- Section 5: LinkedHashSet -->
+            <section id="linkedhashset" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">5</span>
+                    LinkedHashSet: Order with Speed
+                </h2>
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="flex-1">
+                        <p class="text-gray-700 mb-4">
+                            `HashSet` có nhược điểm là <strong>không bảo toàn thứ tự</strong>. Nếu em cần duy trì thứ tự thêm vào (insertion order) mà vẫn muốn tốc độ của Hash, hãy dùng `LinkedHashSet`.
+                        </p>
+                        <div class="p-4 bg-green-50 rounded-lg border border-green-100">
+                            <h4 class="font-bold text-green-800 text-sm mb-2">Cấu trúc lai (Hybrid):</h4>
+                            <p class="text-xs text-green-700">
+                                Nó sử dụng <strong>Hash Table</strong> để lưu trữ (cho tốc độ) và một <strong>Doubly Linked List</strong> chạy xuyên qua các node (để giữ thứ tự).
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-gray-900 rounded-xl p-4 text-blue-400 font-mono text-xs">
+                        <div class="mb-2 text-gray-500">// LinkedHashSet internally</div>
+                        <div class="pl-4">
+                            Node head;<br>
+                            Node tail;<br>
+                            <br>
+                            static class Entry extends HashMap.Node {<br>
+                            &nbsp;&nbsp;Entry before, after;<br>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Performance -->
+            <section id="performance" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">6</span>
+                    Performance & Best Practices
+                </h2>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-left bg-white text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-6 py-4 font-bold">Tiêu chí</th>
+                                <th class="px-6 py-4 font-bold text-red-600">HashSet</th>
+                                <th class="px-6 py-4 font-bold text-green-600">LinkedHashSet</th>
+                                <th class="px-6 py-4 font-bold text-blue-600">TreeSet (Bài sau)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Time (contains)</td>
+                                <td class="px-6 py-4">$O(1)$</td>
+                                <td class="px-6 py-4">$O(1)$</td>
+                                <td class="px-6 py-4">$O(\log n)$</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Thứ tự (Order)</td>
+                                <td class="px-6 py-4">Không</td>
+                                <td class="px-6 py-4">Insertion Order</td>
+                                <td class="px-6 py-4">Sorted Order</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Memory</td>
+                                <td class="px-6 py-4">Trung bình</td>
+                                <td class="px-6 py-4">Cao (do thêm 2 pointer)</td>
+                                <td class="px-6 py-4">Trung bình</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <h4 class="font-bold text-orange-800 mb-2">Mentor Tip: Load Factor & Initial Capacity</h4>
+                    <p class="text-xs text-orange-700">
+                        Giống như ArrayList, HashSet cũng có cơ chế resize. Mặc định là khi đạt 75% capacity (Load Factor = 0.75), nó sẽ tăng gấp đôi kích thước. Nếu em biết trước mình sẽ lưu 10,000 phần tử, hãy khởi tạo <code>new HashSet<>(13334)</code> để tránh resize.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">7</span>
+                    Câu hỏi Phỏng vấn Senior
+                </h2>
+                <div class="space-y-4">
+                    <details class="group bg-white p-4 rounded-lg border border-gray-200 cursor-pointer">
+                        <summary class="font-semibold text-gray-800 flex justify-between items-center">
+                            Câu 1: Chuyện gì xảy ra nếu hai phần tử khác nhau có cùng hashCode?
+                            <span class="group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p>Đây gọi là <strong>Hash Collision</strong>. Cả hai phần tử sẽ rơi vào cùng một bucket. Trong Java 8+, nếu bucket đó vượt quá 8 phần tử, nó sẽ chuyển từ LinkedList sang <strong>Self-balancing BST (Red-Black Tree)</strong> để giữ hiệu năng tìm kiếm là $O(\log n)$ thay vì $O(n)$.</p>
+                        </div>
+                    </details>
+                    <details class="group bg-white p-4 rounded-lg border border-gray-200 cursor-pointer">
+                        <summary class="font-semibold text-gray-800 flex justify-between items-center">
+                            Câu 2: Tại sao phương thức add() của HashSet lại trả về boolean?
+                            <span class="group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p>Vì `HashSet` dựa trên `HashMap.put(K, V)`. Phương thức `put` của Map trả về <em>giá trị cũ</em> của Key. Trong HashSet, giá trị luôn là `PRESENT`. Nếu `put` trả về `null`, nghĩa là Key đó chưa từng tồn tại -> `add` thành công (true). Nếu trả về `PRESENT`, nghĩa là đã có rồi -> `add` thất bại (false).</p>
+                        </div>
+                    </details>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const bucketCount = 4;
+        const bucketGrid = document.getElementById('buckets-grid');
+        const logMsg = document.getElementById('log-msg');
+        let setContent = new Set();
+
+        // Init buckets
+        function initBuckets() {
+            bucketGrid.innerHTML = '';
+            for (let i = 0; i < bucketCount; i++) {
+                const b = document.createElement('div');
+                b.className = 'flex flex-col items-center';
+                b.innerHTML = `
+                    <div class="bucket w-full p-2 flex flex-col items-center gap-2 overflow-y-auto max-h-48" id="bucket-${i}"></div>
+                    <span class="text-[10px] font-bold text-gray-400 mt-2">BUCKET ${i}</span>
+                `;
+                bucketGrid.appendChild(b);
+            }
+        }
+
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash += str.charCodeAt(i);
+            }
+            return hash % bucketCount;
+        }
+
+        function addToHash() {
+            const input = document.getElementById('input-val');
+            const val = input.value.trim();
+            if (!val) return;
+
+            if (setContent.has(val)) {
+                logMsg.innerText = `⚠️ Fail: "${val}" đã tồn tại trong Set!`;
+                logMsg.classList.add('text-red-400');
+                return;
+            }
+
+            const bucketIdx = simpleHash(val);
+            const bucket = document.getElementById(`bucket-${bucketIdx}`);
+            
+            const node = document.createElement('div');
+            node.className = 'w-full py-1 px-2 bg-red-500 text-white text-[10px] rounded shadow-sm animate-bounce-in font-bold text-center truncate';
+            node.innerText = val;
+            
+            bucket.appendChild(node);
+            setContent.add(val);
+            logMsg.innerText = `✅ Success: "${val}" -> hashCode % 4 = Bucket ${bucketIdx}`;
+            logMsg.classList.remove('text-red-400');
+            input.value = '';
+        }
+
+        initBuckets();
+    </script>
+</body>
+</html>

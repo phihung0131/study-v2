@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: First Occurrence in String</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .char-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .char-match { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .char-mismatch { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .char-active { border-color: #3b82f6; background-color: #eff6ff; box-shadow: inset 0 0 0 2px #3b82f6; }
+        .char-lps { background-color: #f5f3ff; border-color: #8b5cf6; color: #5b21b6; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: #334155;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Find the Index of First Occurrence</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #28 | Difficulty: Easy | Two Pointers, String Matching</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📝</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Given two strings <b>needle</b> and <b>haystack</b>, return the index of the first occurrence of <b>needle</b> in <b>haystack</b>, or <b>-1</b> if <b>needle</b> is not part of <b>haystack</b>.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800"><b>Example:</b> haystack = "sadbutsad", needle = "sad" → Output: 0</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Naive Brute Force
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Slide and Check"</h3>
+                <p class="text-slate-600 mb-8">
+                    Iterate through the haystack. At each position, check if the needle matches character by character. 
+                    If a mismatch occurs, "reset" and move the needle window just one step forward in the haystack.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click Next to start the sliding window search.</div>
+                    <div class="flex flex-col items-center gap-8 mb-8">
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-2 uppercase">Haystack</span>
+                            <div class="flex gap-1" id="bf-haystack-viz"></div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-2 uppercase">Needle Window</span>
+                            <div class="flex gap-1" id="bf-needle-viz"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">strStr</span>(<span class="type">String</span> haystack, <span class="type">String</span> needle) {
+    <span class="keyword">int</span> haystackLen = haystack.length();
+    <span class="keyword">int</span> needleLen = needle.length();
+
+    <span class="comment">// Iterate until there's not enough space left for the needle</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> start = <span class="number">0</span>; start <= haystackLen - needleLen; start++) {
+        <span class="keyword">int</span> j = <span class="number">0</span>;
+        <span class="comment">// Check every character of the needle</span>
+        <span class="keyword">while</span> (j < needleLen && haystack.charAt(start + j) == needle.charAt(j)) {
+            j++;
+        }
+        <span class="comment">// If we matched the full needle length, we found the first occurrence</span>
+        <span class="keyword">if</span> (j == needleLen) {
+            <span class="keyword">return</span> start;
+        }
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n * m)</b>. In the worst case (e.g., haystack="aaaaaa", needle="aaab"), we check almost every combination.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. No extra memory structures used.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-600">The baseline solution. It works for small strings but fails to optimize for patterns within the strings.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: SUBSTRING COMPARISON -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: Java API (Substring)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Block Match"</h3>
+                <p class="text-slate-600 mb-8">
+                    Instead of manual character loops, we use Java's <code>substring</code> method to extract a block of the haystack and compare it directly to the needle. This is often cleaner to write but performs similar work under the hood.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="sub-msg" class="step-msg">Click Next to see substring block comparisons.</div>
+                    <div class="flex flex-col items-center gap-8 mb-8">
+                        <div id="sub-viz-container" class="flex gap-1"></div>
+                    </div>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="subViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="subViz.next()" id="sub-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">strStr</span>(<span class="type">String</span> haystack, <span class="type">String</span> needle) {
+    <span class="keyword">int</span> n = haystack.length();
+    <span class="keyword">int</span> m = needle.length();
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i <= n - m; i++) {
+        <span class="comment">// Compare needle with the haystack segment from i to i + m</span>
+        <span class="keyword">if</span> (haystack.substring(i, i + m).equals(needle)) {
+            <span class="keyword">return</span> i;
+        }
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n * m)</b>. Substring creation and comparison both take linear time.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(m)</b>. <code>substring()</code> creates a new string object in memory.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Note</h4>
+                        <p class="text-sm text-slate-600 italic">This approach is readable but "heavier" on memory allocation. In high-performance systems, the character-by-character Brute Force is actually slightly better.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: KMP ALGORITHM -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 3: KMP (Knuth-Morris-Pratt)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Intelligent Skip"</h3>
+                <p class="text-slate-600 mb-8">
+                    KMP avoids redundant work by observing the <b>needle itself</b>. We precompute an "LPS" (Longest Proper Prefix which is also a Suffix) array. If we mismatch at character 5, and we know characters 0-2 match 3-5, we don't need to re-check 0-2!
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="kmp-msg" class="step-msg text-emerald-900">Step 1: Building the LPS (Longest Prefix Suffix) array for the pattern.</div>
+                    
+                    <div class="flex flex-col items-center gap-4 mb-8">
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-1">Needle</span>
+                            <div class="flex gap-1" id="kmp-needle-cells"></div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold text-slate-400 mb-1 uppercase">LPS Array</span>
+                            <div class="flex gap-1" id="kmp-lps-cells"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="kmpViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="kmpViz.next()" id="kmp-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (KMP)</h3>
+                <div class="code-block mb-10 border-l-8 border-emerald-600">
+<pre>
+<span class="keyword">public int</span> <span class="type">strStr</span>(<span class="type">String</span> haystack, <span class="type">String</span> needle) {
+    <span class="keyword">if</span> (needle.isEmpty()) <span class="keyword">return</span> <span class="number">0</span>;
+    
+    <span class="comment">// 1. Build LPS (Longest Proper Prefix which is also a Suffix)</span>
+    <span class="keyword">int</span>[] lps = buildLPS(needle);
+    
+    <span class="keyword">int</span> i = <span class="number">0</span>; <span class="comment">// pointer for haystack</span>
+    <span class="keyword">int</span> j = <span class="number">0</span>; <span class="comment">// pointer for needle</span>
+    
+    <span class="keyword">while</span> (i < haystack.length()) {
+        <span class="keyword">if</span> (haystack.charAt(i) == needle.charAt(j)) {
+            i++; j++;
+            <span class="keyword">if</span> (j == needle.length()) <span class="keyword">return</span> i - j; <span class="comment">// Found match</span>
+        } <span class="keyword">else</span> {
+            <span class="keyword">if</span> (j != <span class="number">0</span>) {
+                j = lps[j - <span class="number">1</span>]; <span class="comment">// Smart skip using precomputed LPS</span>
+            } <span class="keyword">else</span> {
+                i++;
+            }
+        }
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}
+
+<span class="keyword">private int</span>[] <span class="type">buildLPS</span>(<span class="type">String</span> pattern) {
+    <span class="keyword">int</span>[] lps = <span class="keyword">new int</span>[pattern.length()];
+    <span class="keyword">int</span> len = <span class="number">0</span>;
+    <span class="keyword">int</span> i = <span class="number">1</span>;
+    <span class="keyword">while</span> (i < pattern.length()) {
+        <span class="keyword">if</span> (pattern.charAt(i) == pattern.charAt(len)) {
+            lps[i++] = ++len;
+        } <span class="keyword">else if</span> (len != <span class="number">0</span>) {
+            len = lps[len - <span class="number">1</span>];
+        } <span class="keyword">else</span> {
+            lps[i++] = <span class="number">0</span>;
+        }
+    }
+    <span class="keyword">return</span> lps;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n + m)</b>. We only ever move the haystack pointer forward.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(m)</b>. Extra array to store the LPS mapping.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-4 rounded-xl shadow-inner">
+                        <h4 class="font-bold text-blue-400 mb-2 uppercase text-xs">Interview Pro Tip</h4>
+                        <p class="text-sm text-slate-300 italic">Mentioning KMP shows high algorithmic maturity. Even if you don't implement it fully, explaining how "LPS lets us skip indices by leveraging pattern symmetry" is a massive win.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Strategy</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border text-center">Stability</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Brute Force</td>
+                            <td class="p-4 border">O(n * m)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border text-center text-red-500 font-bold uppercase text-xs">Poor</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-bold">Substring</td>
+                            <td class="p-4 border">O(n * m)</td>
+                            <td class="p-4 border text-red-500">O(m)</td>
+                            <td class="p-4 border text-center text-amber-500 font-bold uppercase text-xs">Moderate</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-800">KMP</td>
+                            <td class="p-4 border text-emerald-700 font-bold">O(n + m)</td>
+                            <td class="p-4 border text-emerald-700">O(m)</td>
+                            <td class="p-4 border text-center text-emerald-600 font-bold uppercase text-xs">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                    <span>⚡</span> Recall Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li>• <b>Sliding Window:</b> Basic approach. Shift 1 by 1.</li>
+                    <li>• <b>Pattern Matching:</b> If needle repeats (e.g. "abab"), use KMP.</li>
+                    <li>• <b>KMP Logic:</b> Mismatch at index $j$ in needle? Jump to <code>lps[j-1]</code>.</li>
+                    <li>• <b>LPS Array:</b> Tells you where the needle could "re-start" its match without going back to the beginning.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="text-emerald-500">🧩</span> Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>Needle > Haystack:</b> Impossible to match, return -1.</li>
+                    <li><b>Empty Needle:</b> By LeetCode convention, return 0.</li>
+                    <li><b>All characters same:</b> Needle="aaa", Haystack="aaaa".</li>
+                    <li><b>Mismatch at the end:</b> Needle="abc", Haystack="abx".</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const H = "sadbutsad";
+        const N = "sad";
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            h: H, n: N,
+            start: 0, j: 0,
+            state: "COMPARING",
+            init() { this.render(); },
+            reset() {
+                this.start = 0; this.j = 0; this.state = "COMPARING";
+                document.getElementById('bf-next-btn').disabled = false;
+                this.render();
+            },
+            render() {
+                const hCont = document.getElementById('bf-haystack-viz');
+                const nCont = document.getElementById('bf-needle-viz');
+                hCont.innerHTML = this.h.split('').map((char, i) => {
+                    let cls = "char-cell";
+                    if (i >= this.start && i < this.start + this.j) cls += " char-match";
+                    if (i === this.start + this.j && this.state === "COMPARING") cls += " char-active";
+                    if (i === this.start + this.j && this.state === "MISMATCH") cls += " char-mismatch";
+                    return `<div class="${cls}">${char}${i === this.start ? '<span class="pointer-label">window</span>' : ''}</div>`;
+                }).join('');
+
+                nCont.innerHTML = this.n.split('').map((char, i) => {
+                    let cls = "char-cell";
+                    if (i < this.j) cls += " char-match";
+                    if (i === this.j && this.state === "COMPARING") cls += " char-active";
+                    if (i === this.j && this.state === "MISMATCH") cls += " char-mismatch";
+                    return `<div class="${cls}">${char}</div>`;
+                }).join('');
+            },
+            next() {
+                if (this.state === "MISMATCH") {
+                    this.start++;
+                    this.j = 0;
+                    this.state = "COMPARING";
+                    document.getElementById('bf-msg').innerText = `Mismatch! Sliding haystack window to index ${this.start}.`;
+                } else if (this.start > this.h.length - this.n.length) {
+                    document.getElementById('bf-msg').innerText = "Searched all windows. Not found.";
+                    document.getElementById('bf-next-btn').disabled = true;
+                } else {
+                    if (this.h[this.start + this.j] === this.n[this.j]) {
+                        this.j++;
+                        document.getElementById('bf-msg').innerText = `Match! Comparing character at needle index ${this.j-1}.`;
+                        if (this.j === this.n.length) {
+                            document.getElementById('bf-msg').innerText = `Full match found at index ${this.start}!`;
+                            document.getElementById('bf-next-btn').disabled = true;
+                        }
+                    } else {
+                        this.state = "MISMATCH";
+                        document.getElementById('bf-msg').innerText = `Character mismatch at needle index ${this.j}.`;
+                    }
+                }
+                this.render();
+            }
+        };
+
+        // --- SUBSTRING ---
+        const subViz = {
+            h: H, n: N, idx: 0,
+            init() { this.render(); },
+            reset() {
+                this.idx = 0;
+                document.getElementById('sub-next-btn').disabled = false;
+                this.render();
+            },
+            render() {
+                const cont = document.getElementById('sub-viz-container');
+                cont.innerHTML = this.h.split('').map((char, i) => {
+                    let cls = "char-cell";
+                    if (i >= this.idx && i < this.idx + this.n.length) cls += " char-active";
+                    return `<div class="${cls}">${char}</div>`;
+                }).join('');
+            },
+            next() {
+                if (this.idx > this.h.length - this.n.length) {
+                    document.getElementById('sub-next-btn').disabled = true;
+                    return;
+                }
+                const sub = this.h.substring(this.idx, this.idx + this.n.length);
+                if (sub === this.n) {
+                    document.getElementById('sub-msg').innerText = `substring(${this.idx}, ${this.idx+this.n.length}) is "${sub}". MATCH FOUND!`;
+                    document.getElementById('sub-next-btn').disabled = true;
+                } else {
+                    document.getElementById('sub-msg').innerText = `substring(${this.idx}, ${this.idx+this.n.length}) is "${sub}". Mismatch. Sliding...`;
+                    this.idx++;
+                }
+                this.render();
+            }
+        };
+
+        // --- KMP ---
+        const KMP_N = "ababa";
+        const kmpViz = {
+            n: KMP_N, lps: [0, 0, 0, 0, 0], i: 1, len: 0,
+            init() { this.render(); },
+            reset() {
+                this.i = 1; this.len = 0; this.lps = [0,0,0,0,0];
+                document.getElementById('kmp-next-btn').disabled = false;
+                this.render();
+            },
+            render() {
+                const nC = document.getElementById('kmp-needle-cells');
+                const lC = document.getElementById('kmp-lps-cells');
+                nC.innerHTML = this.n.split('').map((c, idx) => {
+                   let cls = "char-cell";
+                   if (idx === this.i) cls += " char-active";
+                   if (idx === this.len && idx !== this.i) cls += " char-lps";
+                   return `<div class="${cls}">${c}</div>`;
+                }).join('');
+                lC.innerHTML = this.lps.map((v, idx) => {
+                   let cls = "char-cell";
+                   if (idx < this.i) cls += " bg-emerald-100 border-emerald-400";
+                   return `<div class="${cls}">${v}</div>`;
+                }).join('');
+            },
+            next() {
+                if (this.i >= this.n.length) {
+                    document.getElementById('kmp-msg').innerText = "LPS Array built. Search phase (skipping) would use these values.";
+                    document.getElementById('kmp-next-btn').disabled = true;
+                    return;
+                }
+                if (this.n[this.i] === this.n[this.len]) {
+                    this.len++;
+                    this.lps[this.i] = this.len;
+                    document.getElementById('kmp-msg').innerText = `Match! char at index ${this.i} == char at index ${this.len-1}. LPS[${this.i}] = ${this.len}`;
+                    this.i++;
+                } else {
+                    if (this.len !== 0) {
+                        this.len = this.lps[this.len - 1];
+                        document.getElementById('kmp-msg').innerText = `Mismatch. len resets to lps[len-1] = ${this.len}`;
+                    } else {
+                        this.lps[this.i] = 0;
+                        document.getElementById('kmp-msg').innerText = `Mismatch and len is 0. LPS[${this.i}] = 0`;
+                        this.i++;
+                    }
+                }
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            subViz.init();
+            kmpViz.init();
+        };
+    </script>
+</body>
+</html>

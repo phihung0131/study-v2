@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Memory Leak - The Silent Killer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fdfdfd; color: #1e293b; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #1e293b; color: #f8fafc; padding: 1.25rem; border-radius: 0.75rem; overflow-x: auto; font-size: 0.9rem; }
+        .leak-card { border-left: 5px solid #ef4444; background-color: #fef2f2; }
+        .solution-card { border-left: 5px solid #22c55e; background-color: #f0fdf4; }
+        .diagnostic-tool { transition: all 0.3s ease; }
+        .diagnostic-tool:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        /* Memory Leak Animation */
+        .leak-container { position: relative; height: 150px; background: #f1f5f9; border-radius: 1rem; overflow: hidden; }
+        .heap-fill { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, #ef4444, #f87171); animation: fillHeap 10s infinite linear; }
+        @keyframes fillHeap {
+            0% { height: 20%; }
+            100% { height: 95%; }
+        }
+        .gc-pulse { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(59, 130, 246, 0.2); opacity: 0; animation: pulseGC 2s infinite; }
+        @keyframes pulseGC {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <div class="inline-block px-4 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold mb-4 uppercase tracking-widest">JVM Security & Performance</div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4">Bài 1.7: Memory Leak trong Java</h1>
+            <p class="text-lg text-slate-600 italic">"Khi Garbage Collector trở nên bất lực."</p>
+        </header>
+
+        <!-- Section 1: Definition -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-biohazard text-red-500"></i> 1. Bản chất của Memory Leak trong Java
+            </h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <p class="leading-relaxed mb-4">
+                        Trong các ngôn ngữ như C, rò rỉ là do bạn quên gọi <code>free()</code>. Trong Java, rò rỉ xảy ra khi:
+                    </p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-2 text-sm">
+                            <i class="fas fa-caret-right mt-1 text-red-500"></i>
+                            <span>Đối tượng không còn cần thiết cho logic nghiệp vụ.</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-sm">
+                            <i class="fas fa-caret-right mt-1 text-red-500"></i>
+                            <span>Nhưng nó vẫn được tham chiếu bởi một <strong>GC Root</strong> (biến static, thread đang chạy...).</span>
+                        </li>
+                    </ul>
+                    <div class="mt-6 p-4 bg-slate-100 rounded-xl border-l-4 border-slate-500">
+                        <p class="text-xs font-bold text-slate-700 uppercase">Hệ quả:</p>
+                        <p class="text-xs italic text-slate-600">Memory usage tăng dần -> GC chạy liên tục (High CPU) -> Stop-the-world lâu -> OutOfMemoryError.</p>
+                    </div>
+                </div>
+                <div class="leak-container">
+                    <div class="heap-fill"></div>
+                    <div class="gc-pulse"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-xl drop-shadow-md">
+                        JAVA HEAP
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Common Scenarios -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-slate-800 border-b pb-2">2. "Tứ đại ác nhân" gây Memory Leak</h2>
+            
+            <!-- Scenario 1: Static Collections -->
+            <div class="mb-12">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">A. Lạm dụng Static Collections</h3>
+                <div class="leak-card p-6 rounded-2xl mb-4">
+                    <p class="text-sm font-semibold mb-2 text-red-800">Tại sao nó nguy hiểm?</p>
+                    <p class="text-sm text-slate-700">Các biến <code>static</code> tồn tại suốt vòng đời của ứng dụng. Nếu bạn thêm dữ liệu vào một Static Map/List mà không bao giờ xóa (remove), vùng nhớ đó sẽ bị chiếm giữ vĩnh viễn.</p>
+                </div>
+                <div class="code-block">
+<pre><code><span class="text-purple-400">public class</span> <span class="text-yellow-400">CacheManager</span> {
+    <span class="text-slate-500">// KẺ GÂY ÁN: List này sẽ phình to mãi mãi</span>
+    <span class="text-purple-400">private static final</span> List&lt;Object&gt; CACHE = <span class="text-purple-400">new</span> ArrayList&lt;&gt;();
+
+    <span class="text-purple-400">public static void</span> <span class="text-blue-400">addToCache</span>(Object obj) {
+        CACHE.add(obj); <span class="text-slate-500">// Quên remove hoặc không có chính sách dọn dẹp</span>
+    }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- Scenario 2: Obsolete References in Collections -->
+            <div class="mb-12">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">B. Obsolete References (Tham chiếu lỗi thời)</h3>
+                <p class="text-sm text-slate-600 mb-4">Đây là ví dụ kinh điển từ cuốn <i>Effective Java</i>. Khi ta tự quản lý bộ nhớ (ví dụ tự viết cấu trúc Stack).</p>
+                <div class="code-block">
+<pre><code><span class="text-purple-400">public Object</span> <span class="text-blue-400">pop</span>() {
+    <span class="text-purple-400">if</span> (size == <span class="text-orange-400">0</span>) <span class="text-purple-400">throw new</span> EmptyStackException();
+    Object result = elements[--size];
+    <span class="text-slate-500">// SAI LẦM: elements[size] vẫn giữ tham chiếu tới đối tượng cũ</span>
+    <span class="text-purple-400">return</span> result; 
+    
+    <span class="text-green-400">// SỬA LỖI: elements[size] = null; // Loại bỏ obsolete reference</span>
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- Scenario 3: Inner Classes -->
+            <div class="mb-12">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">C. Anonymous & Non-static Inner Classes</h3>
+                <div class="leak-card p-6 rounded-2xl mb-4">
+                    <p class="text-sm text-slate-700 font-semibold mb-2">Sự thật ngầm hiểu:</p>
+                    <p class="text-sm text-slate-700">Mọi <strong>Non-static Inner Class</strong> đều giữ một tham chiếu ngầm tới <strong>Outer Class</strong>. Nếu Inner Class được truyền ra ngoài (ví dụ gán cho một thread chạy ngầm), nó sẽ giữ cho Outer Class không bao giờ bị GC.</p>
+                </div>
+            </div>
+            
+             <!-- Scenario 4: ThreadLocal -->
+             <div class="mb-12">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">D. ThreadLocal rò rỉ</h3>
+                <p class="text-sm text-slate-600 mb-4">Thường gặp trong các ứng dụng Web dùng Thread Pool (như Tomcat). </p>
+                <div class="p-4 bg-amber-50 border-l-4 border-amber-400 text-sm text-amber-800">
+                    <strong>Cơ chế:</strong> Một Thread không chết sau khi xử lý Request mà quay lại Pool. Nếu bạn gán dữ liệu vào <code>ThreadLocal</code> mà không gọi <code>.remove()</code>, dữ liệu của Request cũ sẽ sống mãi trong Thread đó.
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Diagnostic Tools -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-slate-800">3. Làm sao để "bắt tận tay" Memory Leak?</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="diagnostic-tool p-6 bg-white border rounded-2xl text-center">
+                    <i class="fas fa-chart-line text-3xl text-blue-500 mb-4"></i>
+                    <h4 class="font-bold">VisualVM / JConsole</h4>
+                    <p class="text-xs text-slate-500 mt-2">Theo dõi biểu đồ Heap Real-time. Nếu đồ thị hình "răng cưa" đi lên dần, đó là dấu hiệu leak.</p>
+                </div>
+                <div class="diagnostic-tool p-6 bg-white border rounded-2xl text-center">
+                    <i class="fas fa-file-export text-3xl text-purple-500 mb-4"></i>
+                    <h4 class="font-bold">Heap Dump Analysis</h4>
+                    <p class="text-xs text-slate-500 mt-2">Chụp ảnh bộ nhớ tại một thời điểm (file .hprof) và dùng <strong>Eclipse MAT</strong> để phân tích kẻ giữ nhiều memory nhất.</p>
+                </div>
+                <div class="diagnostic-tool p-6 bg-white border rounded-2xl text-center">
+                    <i class="fas fa-search-plus text-3xl text-green-500 mb-4"></i>
+                    <h4 class="font-bold">JProfiler / YourKit</h4>
+                    <p class="text-xs text-slate-500 mt-2">Công cụ trả phí mạnh mẽ, cho phép xem path từ một Object ngược về GC Root.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Solutions & Best Practices -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">4. Giải pháp & Tư duy phòng ngừa</h2>
+            <div class="space-y-6">
+                <div class="solution-card p-6 rounded-2xl">
+                    <h4 class="font-bold text-green-800 flex items-center gap-2"><i class="fas fa-shield-alt"></i> Sử dụng WeakHashMap / WeakReference</h4>
+                    <p class="text-sm text-slate-700 mt-2">
+                        Nếu bạn cần làm Cache, hãy cân nhắc <code>WeakHashMap</code>. Khi key của Map không còn ai tham chiếu mạnh (Strong reference), GC sẽ tự động dọn dẹp entry đó bất kể Map có đang giữ nó hay không.
+                    </p>
+                </div>
+                <div class="solution-card p-6 rounded-2xl">
+                    <h4 class="font-bold text-green-800 flex items-center gap-2"><i class="fas fa-broom"></i> Luôn đóng resource trong block finally</h4>
+                    <p class="text-sm text-slate-700 mt-2">Sử dụng <strong>Try-with-resources</strong> (Java 7+) để đảm bảo Connections, Streams được đóng ngay lập tức.</p>
+                </div>
+                <div class="solution-card p-6 rounded-2xl">
+                    <h4 class="font-bold text-green-800 flex items-center gap-2"><i class="fas fa-user-check"></i> Unregister Listeners / Callbacks</h4>
+                    <p class="text-sm text-slate-700 mt-2">Nếu bạn thêm một Listener vào một đối tượng sống lâu (ví dụ Singleton), hãy nhớ <code>removeListener</code> khi không cần thiết nữa.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Interview Questions -->
+        <section class="mb-12 bg-slate-900 text-white p-8 rounded-3xl">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <i class="fas fa-graduation-cap text-yellow-400"></i> Interview Mastery
+            </h2>
+            <div class="space-y-6">
+                <div class="border-l-2 border-slate-700 pl-4">
+                    <p class="font-bold text-yellow-400">Q1: Sự khác biệt giữa Memory Leak trong Java và C++ là gì?</p>
+                    <p class="text-sm text-slate-400 mt-2 italic">A: Trong C++, bộ nhớ bị rò rỉ là bộ nhớ "vô chủ" (không ai quản lý). Trong Java, bộ nhớ rò rỉ là bộ nhớ "có chủ" nhưng chủ nhân không dùng tới nữa và GC thì không được phép dọn (vì vẫn còn tham chiếu).</p>
+                </div>
+                <div class="border-l-2 border-slate-700 pl-4">
+                    <p class="font-bold text-yellow-400">Q2: Bạn sẽ làm gì khi nhận được thông báo OutOfMemoryError trên Production?</p>
+                    <p class="text-sm text-slate-400 mt-2 italic">A: 1. Kiểm tra log xem lỗi ở vùng nào (Heap, Metaspace, Stack). 2. Nếu là Heap, kích hoạt <code>-XX:+HeapDumpOnOutOfMemoryError</code>. 3. Tải file dump về và dùng Eclipse MAT để tìm "Leak Suspects". 4. Kiểm tra mã nguồn xung quanh các đối tượng chiếm nhiều memory nhất.</p>
+                </div>
+                <div class="border-l-2 border-slate-700 pl-4">
+                    <p class="font-bold text-yellow-400">Q3: Tại sao việc sử dụng Static Member là nguyên nhân phổ biến nhất gây leak?</p>
+                    <p class="text-sm text-slate-400 mt-2 italic">A: Vì Static Members thuộc về Class, mà Class (trong hầu hết trường hợp) được nạp bởi AppClassLoader và sống vĩnh viễn. Chúng là các GC Roots, nên bất cứ thứ gì chúng tham chiếu tới đều sẽ không bao giờ được GC dọn dẹp.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-10 border-t border-slate-200 text-slate-400 text-xs">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.7: Killing the Silent Memory Leaks</p>
+        </footer>
+    </div>
+</body>
+</html>

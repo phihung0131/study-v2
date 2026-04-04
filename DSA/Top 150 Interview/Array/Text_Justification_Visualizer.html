@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Text Justification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .word-pill {
+            padding: 4px 12px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .word-active { border-color: #3b82f6; background-color: #eff6ff; }
+        .word-processed { border-color: #10b981; background-color: #ecfdf5; opacity: 0.6; }
+
+        .justified-line {
+            display: flex;
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            font-family: 'Fira Code', monospace;
+            white-space: pre;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            min-height: 40px;
+        }
+
+        .space-block {
+            background-color: #fef08a;
+            height: 20px;
+            display: inline-block;
+            border-bottom: 2px solid #eab308;
+            margin: 0 1px;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Text Justification</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #68 | Difficulty: Hard | String, Simulation</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📑</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Given an array of strings <b>words</b> and a width <b>maxWidth</b>, format the text such that each line has exactly <b>maxWidth</b> characters and is fully (left and right) justified.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 text-sm mb-2 uppercase">Rules for Standard Lines</h4>
+                    <ul class="text-xs text-blue-700 space-y-1 list-disc pl-4">
+                        <li>Pack as many words as possible.</li>
+                        <li>Distribute spaces as evenly as possible.</li>
+                        <li>Extra spaces go to the left slots.</li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <h4 class="font-bold text-amber-800 text-sm mb-2 uppercase">Rules for Last Line</h4>
+                    <ul class="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                        <li>Left-justified only.</li>
+                        <li>No extra space between words.</li>
+                        <li>Pad with spaces at the very end.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE SIMULATION APPROACH -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach: Greedy Line Construction
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Packing Logic"</h3>
+                <p class="text-slate-600 mb-8">
+                    We process words greedily. For each line, keep adding words until the <b>sum of word lengths + minimum spaces (1 between each)</b> exceeds <b>maxWidth</b>. Once a line is "full", apply the spacing logic based on whether it is a normal line, a single-word line, or the last line.
+                </p>
+
+                <!-- Animation Zone -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="sim-msg" class="step-msg">Click Next to start construction. (maxWidth: 16)</div>
+                    
+                    <div class="mb-8">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest text-center">Input Words</p>
+                        <div class="flex flex-wrap justify-center gap-2" id="words-container"></div>
+                    </div>
+
+                    <div class="max-w-md mx-auto">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-2 tracking-widest">Justified Output</p>
+                        <div id="output-canvas" class="border-2 border-slate-300 p-2 bg-slate-200 min-h-[150px]"></div>
+                    </div>
+
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="viz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="viz.next()" id="next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public List</span>&lt;<span class="type">String</span>&gt; <span class="type">fullJustify</span>(<span class="type">String</span>[] words, <span class="keyword">int</span> maxWidth) {
+    <span class="type">List</span>&lt;<span class="type">String</span>&gt; result = <span class="keyword">new</span> <span class="type">ArrayList</span>&lt;&gt;();
+    <span class="keyword">int</span> left = <span class="number">0</span>;
+    
+    <span class="keyword">while</span> (left < words.length) {
+        <span class="keyword">int</span> right = findRightBoundary(left, words, maxWidth);
+        result.add(justifyLine(left, right, words, maxWidth));
+        left = right + <span class="number">1</span>;
+    }
+    
+    <span class="keyword">return</span> result;
+}
+
+<span class="keyword">private int</span> <span class="type">findRightBoundary</span>(<span class="keyword">int</span> left, <span class="type">String</span>[] words, <span class="keyword">int</span> maxWidth) {
+    <span class="keyword">int</span> right = left;
+    <span class="keyword">int</span> currentLineWidth = words[left].length();
+    
+    <span class="keyword">while</span> (right + <span class="number">1</span> < words.length && (currentLineWidth + <span class="number">1</span> + words[right + <span class="number">1</span>].length()) <= maxWidth) {
+        right++;
+        currentLineWidth += <span class="number">1</span> + words[right].length();
+    }
+    <span class="keyword">return</span> right;
+}
+
+<span class="keyword">private String</span> <span class="type">justifyLine</span>(<span class="keyword">int</span> left, <span class="keyword">int</span> right, <span class="type">String</span>[] words, <span class="keyword">int</span> maxWidth) {
+    <span class="comment">// Case 1: Single word in line or Last line</span>
+    <span class="keyword">if</span> (right == left || right == words.length - <span class="number">1</span>) {
+        <span class="keyword">return</span> leftJustify(left, right, words, maxWidth);
+    }
+    
+    <span class="comment">// Case 2: Full justification with even spacing</span>
+    <span class="keyword">int</span> numWords = right - left + <span class="number">1</span>;
+    <span class="keyword">int</span> totalSpaces = maxWidth - totalWordsLength(left, right, words);
+    <span class="keyword">int</span> spacesBetween = totalSpaces / (numWords - <span class="number">1</span>);
+    <span class="keyword">int</span> extraSpaces = totalSpaces % (numWords - <span class="number">1</span>);
+    
+    <span class="type">StringBuilder</span> sb = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = left; i <= right; i++) {
+        sb.append(words[i]);
+        <span class="keyword">if</span> (i < right) {
+            <span class="keyword">int</span> count = spacesBetween + (i - left < extraSpaces ? <span class="number">1</span> : <span class="number">0</span>);
+            sb.append(<span class="string">" "</span>.repeat(count));
+        }
+    }
+    <span class="keyword">return</span> sb.toString();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                        <ul class="text-sm space-y-1 text-blue-900">
+                            <li>⏱️ <b>Time:</b> <b>O(N)</b>. We traverse words once and characters once.</li>
+                            <li>📦 <b>Space:</b> <b>O(maxWidth)</b> per line for string construction.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-100 p-5 rounded-xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-2 underline decoration-slate-300">The Spacing Trick</h4>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            To distribute <b>S</b> spaces among <b>G</b> gaps:<br>
+                            Base spaces = <b>S / G</b>.<br>
+                            Leftover spaces = <b>S % G</b>.<br>
+                            First <b>S % G</b> gaps get <b>(S / G) + 1</b> spaces. The rest get <b>S / G</b>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logic Comparison Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Spacing Scenarios</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Scenario</th>
+                            <th class="p-4 border">Justification</th>
+                            <th class="p-4 border">Extra Spaces</th>
+                            <th class="p-4 border">Code Logic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-semibold">Standard Line</td>
+                            <td class="p-4 border">Full</td>
+                            <td class="p-4 border">Distributed Left-to-Right</td>
+                            <td class="p-4 border font-mono text-xs">totalSpaces % (numWords - 1)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">Single Word Line</td>
+                            <td class="p-4 border text-blue-600">Left</td>
+                            <td class="p-4 border">All at the end</td>
+                            <td class="p-4 border font-mono text-xs">sb.append(" ".repeat(maxWidth - len))</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-semibold">Last Line</td>
+                            <td class="p-4 border text-blue-600 font-bold">Left</td>
+                            <td class="p-4 border">All at the end</td>
+                            <td class="p-4 border font-mono text-xs">Single space between words</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-blue-400 flex items-center gap-2">
+                    <span>⚡</span> Recall Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>Pattern:</b> Two-Pointer + StringBuilder.</li>
+                    <li>• <b>Step 1:</b> <code>while</code> loop to find how many words fit.</li>
+                    <li>• <b>Step 2:</b> Calculate <code>gaps = count - 1</code>.</li>
+                    <li>• <b>Step 3:</b> If <code>gaps == 0</code> or <code>lastLine</code>, pad right.</li>
+                    <li>• <b>Step 4:</b> Otherwise, use <code>/</code> and <code>%</code> to distribute spaces.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Common Pitfalls</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li>Forgetting to handle <code>numWords == 1</code> separately (causes Division by Zero).</li>
+                    <li>Not including the mandatory 1 space between words when checking <code>maxWidth</code>.</li>
+                    <li>Incorrectly justifying the very last line (it must be left-aligned).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WORDS = ["This", "is", "an", "example", "of", "text", "justification."];
+        const MAX_WIDTH = 16;
+
+        const viz = {
+            words: [...WORDS],
+            ptr: 0,
+            lines: [],
+            state: 'FINDING', // FINDING, JUSTIFYING
+            currentLineWords: [],
+            init() {
+                const container = document.getElementById('words-container');
+                container.innerHTML = this.words.map((w, i) => `<div class="word-pill" id="word-${i}">${w}</div>`).join('');
+                this.render();
+            },
+            reset() {
+                this.ptr = 0;
+                this.lines = [];
+                this.state = 'FINDING';
+                this.currentLineWords = [];
+                document.getElementById('next-btn').disabled = false;
+                document.getElementById('output-canvas').innerHTML = '';
+                this.words.forEach((_, i) => {
+                    document.getElementById(`word-${i}`).className = 'word-pill';
+                });
+                this.render("Restarted. Pointer at 0.");
+            },
+            render(msg) {
+                if (msg) document.getElementById('sim-msg').innerText = msg;
+                const canvas = document.getElementById('output-canvas');
+                
+                let html = this.lines.map(l => `<div class="justified-line">${l}</div>`).join('');
+                if (this.currentLineWords.length > 0) {
+                    html += `<div class="justified-line border-blue-400 bg-blue-50">${this.currentLineWords.join(' ')}</div>`;
+                }
+                canvas.innerHTML = html;
+
+                this.words.forEach((_, i) => {
+                    const el = document.getElementById(`word-${i}`);
+                    if (i < this.ptr - this.currentLineWords.length) el.className = 'word-pill word-processed';
+                    else if (i >= this.ptr - this.currentLineWords.length && i < this.ptr) el.className = 'word-pill word-active';
+                });
+            },
+            next() {
+                if (this.ptr >= this.words.length && this.state === 'FINDING') {
+                    document.getElementById('sim-msg').innerText = "All words processed. Text fully justified!";
+                    document.getElementById('next-btn').disabled = true;
+                    return;
+                }
+
+                if (this.state === 'FINDING') {
+                    let lineLen = 0;
+                    this.currentLineWords = [];
+                    let startIdx = this.ptr;
+                    
+                    while (this.ptr < this.words.length) {
+                        let word = this.words[this.ptr];
+                        let minSpaces = this.currentLineWords.length;
+                        if (lineLen + word.length + minSpaces <= MAX_WIDTH) {
+                            lineLen += word.length;
+                            this.currentLineWords.push(word);
+                            this.ptr++;
+                        } else {
+                            break;
+                        }
+                    }
+                    this.state = 'JUSTIFYING';
+                    this.render(`Found words for line: [${this.currentLineWords.join(', ')}]. Total length: ${lineLen}. Next: Apply justification.`);
+                } else {
+                    const isLast = this.ptr === this.words.length;
+                    const justified = this.formatLine(this.currentLineWords, isLast);
+                    this.lines.push(justified);
+                    this.currentLineWords = [];
+                    this.state = 'FINDING';
+                    this.render(isLast ? "Justified last line (Left Align)." : "Justified normal line (Even Distribution).");
+                }
+            },
+            formatLine(lineWords, isLast) {
+                if (lineWords.length === 1 || isLast) {
+                    let s = lineWords.join(' ');
+                    return s + " ".repeat(MAX_WIDTH - s.length);
+                }
+                
+                let totalChars = lineWords.reduce((acc, w) => acc + w.length, 0);
+                let totalSpaces = MAX_WIDTH - totalChars;
+                let gaps = lineWords.length - 1;
+                let spacePerGap = Math.floor(totalSpaces / gaps);
+                let extra = totalSpaces % gaps;
+                
+                let res = "";
+                for (let i = 0; i < lineWords.length; i++) {
+                    res += lineWords[i];
+                    if (i < gaps) {
+                        let count = spacePerGap + (i < extra ? 1 : 0);
+                        res += " ".repeat(count);
+                    }
+                }
+                return res;
+            }
+        };
+
+        window.onload = () => viz.init();
+    </script>
+</body>
+</html>

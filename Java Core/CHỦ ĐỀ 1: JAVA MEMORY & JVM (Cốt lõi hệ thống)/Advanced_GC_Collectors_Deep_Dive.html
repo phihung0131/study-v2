@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Advanced GC Collectors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block { font-family: 'Fira Code', monospace; background-color: #0f172a; color: #f8fafc; padding: 1.25rem; border-radius: 0.75rem; overflow-x: auto; font-size: 0.9rem; }
+        .collector-card { transition: all 0.3s ease; border-top-width: 4px; }
+        .collector-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .latency-bar { height: 8px; border-radius: 4px; background: #e2e8f0; position: relative; overflow: hidden; }
+        .latency-fill { height: 100%; position: absolute; left: 0; top: 0; transition: width 1s ease-in-out; }
+        
+        /* G1 Visualization */
+        .g1-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; max-width: 200px; }
+        .g1-region { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #cbd5e1; }
+        .r-eden { background-color: #86efac; }
+        .r-survivor { background-color: #fef08a; }
+        .r-old { background-color: #fca5a5; }
+        .r-humongous { background-color: #c084fc; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <div class="inline-block px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold mb-4 uppercase tracking-widest">JVM Tuning Mastery</div>
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4">Bài 1.6: Advanced GC Collectors</h1>
+            <p class="text-lg text-slate-600 italic">"Chọn đúng vũ khí cho trận chiến Performance."</p>
+        </header>
+
+        <!-- Section 1: Throughput vs Latency -->
+        <section class="mb-16 bg-white p-8 rounded-3xl shadow-sm border">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-slate-800">
+                <i class="fas fa-balance-scale text-indigo-500"></i> 1. Cán cân Performance: Throughput vs Latency
+            </h2>
+            <p class="mb-6 leading-relaxed">
+                Trước khi chọn GC, em phải hiểu mình đang ưu tiên cái gì. Trong thế giới GC, không có "bữa trưa miễn phí", mọi thứ đều là đánh đổi (Trade-off).
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-6 bg-blue-50 rounded-2xl">
+                    <h3 class="font-bold text-blue-800 mb-2">Throughput (Lưu lượng)</h3>
+                    <p class="text-sm text-blue-700 mb-4">Tổng thời gian CPU dùng cho ứng dụng / Tổng thời gian chạy. Ưu tiên các tác vụ xử lý dữ liệu nặng (Batch Processing).</p>
+                    <div class="latency-bar"><div class="latency-fill bg-blue-500" style="width: 90%;"></div></div>
+                    <span class="text-[10px] text-blue-500 font-bold uppercase mt-1 block">Parallel GC Target</span>
+                </div>
+                <div class="p-6 bg-rose-50 rounded-2xl">
+                    <h3 class="font-bold text-rose-800 mb-2">Latency (Độ trễ)</h3>
+                    <p class="text-sm text-rose-700 mb-4">Thời gian ứng dụng bị "đứng hình" (Stop-The-World). Ưu tiên các ứng dụng tương tác người dùng, Trading, Web APIs.</p>
+                    <div class="latency-bar"><div class="latency-fill bg-rose-500" style="width: 30%;"></div></div>
+                    <span class="text-[10px] text-rose-500 font-bold uppercase mt-1 block">ZGC / Shenandoah Target</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: The Hall of Fame -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-slate-800">2. "Biệt đội" Collectors tiêu biểu</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Parallel GC -->
+                <div class="collector-card bg-white p-6 rounded-2xl shadow-sm border-t-blue-500 border">
+                    <h3 class="font-black text-xl mb-2">Parallel GC</h3>
+                    <p class="text-xs text-slate-500 mb-4">Cờ lệnh: <code>-XX:+UseParallelGC</code></p>
+                    <ul class="text-sm space-y-2 mb-6">
+                        <li><i class="fas fa-bolt text-green-500 mr-2"></i>Sử dụng nhiều thread để dọn dẹp bộ nhớ.</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Đạt throughput cực cao.</li>
+                        <li><i class="fas fa-times text-red-500 mr-2"></i>STW có thể rất lâu nếu Heap lớn.</li>
+                    </ul>
+                    <div class="p-3 bg-slate-50 rounded-lg text-xs italic">"Vua của các tác vụ tính toán offline."</div>
+                </div>
+
+                <!-- G1 GC -->
+                <div class="collector-card bg-white p-6 rounded-2xl shadow-sm border-t-indigo-500 border">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-black text-xl mb-2">G1 GC (Garbage First)</h3>
+                        <div class="g1-grid">
+                            <div class="g1-region r-eden"></div><div class="g1-region r-old"></div><div class="g1-region r-survivor"></div><div class="g1-region r-eden"></div><div class="g1-region r-old"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4">Mặc định từ Java 9. Cờ: <code>-XX:+UseG1GC</code></p>
+                    <ul class="text-sm space-y-2 mb-6">
+                        <li><i class="fas fa-project-diagram text-blue-500 mr-2"></i>Chia Heap thành hàng ngàn vùng nhỏ (Regions).</li>
+                        <li><i class="fas fa-bullseye text-blue-500 mr-2"></i>Ưu tiên dọn dẹp vùng chứa nhiều rác nhất trước (Garbage First).</li>
+                        <li><i class="fas fa-clock text-blue-500 mr-2"></i>Cho phép đặt ngưỡng STW tối đa (ví dụ: 200ms).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Deep Dive G1 GC -->
+        <section class="mb-16 bg-slate-900 text-white p-8 rounded-3xl">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i class="fas fa-microchip text-indigo-400"></i> 3. Cơ chế nội tại G1 GC
+            </h2>
+            <div class="space-y-6">
+                <div>
+                    <h4 class="font-bold text-indigo-300">Humongous Regions</h4>
+                    <p class="text-sm text-slate-300">G1 có một loại vùng đặc biệt gọi là **Humongous**. Nếu một object chiếm trên 50% kích thước 1 region, nó sẽ được đẩy thẳng vào đây. Humongous được đối xử như một phần của Old Gen.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-300">Remembered Sets (RSet)</h4>
+                    <p class="text-sm text-slate-300">Để dọn dẹp 1 region mà không cần quét toàn bộ Heap, mỗi region có một RSet ghi lại "ai từ ngoài đang trỏ vào tôi". Đây là chìa khóa để G1 dọn dẹp song song và độc lập các vùng.</p>
+                </div>
+                <div class="p-4 bg-slate-800 rounded-xl border border-slate-700">
+                    <h4 class="font-bold text-green-400 mb-2">Tuning G1 Pro-tip:</h4>
+                    <code class="text-xs text-yellow-300">-XX:MaxGCPauseMillis=100</code>
+                    <p class="text-xs mt-2 text-slate-400">Đừng đặt giá trị này quá thấp (ví dụ 10ms). G1 sẽ cố gắng đạt được nhưng nó sẽ dọn dẹp không xuể rác, dẫn đến Full GC cực kỳ thảm khốc.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: ZGC - The Zero Pause Revolution -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">4. ZGC: Cuộc cách mạng Low-Latency</h2>
+            <p class="mb-6 text-slate-600">ZGC (Zero Garbage Collector) là "kỳ quan" của Java hiện đại (Java 11+). Nó hứa hẹn thời gian STW **không quá 1ms**, bất kể Heap của em là 8MB hay 16TB!</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-5 border-l-4 border-purple-500 bg-white shadow-sm rounded-r-xl">
+                    <h4 class="font-bold text-purple-700 mb-2">Làm sao nó làm được?</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        ZGC thực hiện hầu hết công việc (Marking, Compacting) **song song với Thread ứng dụng**. 
+                        Nó sử dụng kỹ thuật <strong>Colored Pointers</strong> (lưu metadata trực tiếp vào con trỏ 64-bit) và <strong>Load Barriers</strong> để đảm bảo ứng dụng luôn nhìn thấy dữ liệu đúng ngay cả khi GC đang dịch chuyển Object đó.
+                    </p>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-4 bg-purple-50 rounded-xl">
+                        <h5 class="font-bold text-xs uppercase text-purple-600">Khi nào dùng ZGC?</h5>
+                        <p class="text-xs mt-1">Khi hệ thống cần độ trễ cực thấp (Fintech, Real-time bidding) và bạn có dư dả CPU (vì ZGC "mượn" CPU để dọn dẹp song song).</p>
+                    </div>
+                    <div class="p-4 bg-slate-100 rounded-xl">
+                        <h5 class="font-bold text-xs uppercase text-slate-600">Cờ lệnh</h5>
+                        <code class="text-xs">-XX:+UseZGC</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: The Decision Matrix -->
+        <section class="mb-16 overflow-hidden bg-white rounded-3xl shadow-lg border">
+            <h2 class="p-6 text-xl font-bold bg-slate-50 border-b">Ma trận lựa chọn GC (Senior Decision)</h2>
+            <table class="w-full text-left">
+                <thead class="bg-slate-100 text-xs uppercase font-bold text-slate-500">
+                    <tr>
+                        <th class="p-4">Tham số</th>
+                        <th class="p-4">Parallel</th>
+                        <th class="p-4">G1</th>
+                        <th class="p-4">ZGC</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    <tr class="border-b">
+                        <td class="p-4 font-semibold">Ưu tiên</td>
+                        <td class="p-4">Throughput</td>
+                        <td class="p-4">Balance (Default)</td>
+                        <td class="p-4">Ultra Low Latency</td>
+                    </tr>
+                    <tr class="border-b bg-slate-50">
+                        <td class="p-4 font-semibold">STW Pause</td>
+                        <td class="p-4">Dài (Tỉ lệ với data)</td>
+                        <td class="p-4">Có thể dự đoán (Fixed)</td>
+                        <td class="p-4">&lt; 1ms (Tĩnh)</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="p-4 font-semibold">Heap Size</td>
+                        <td class="p-4">&lt; 4GB</td>
+                        <td class="p-4">4GB - 32GB+</td>
+                        <td class="p-4">8MB - 16TB</td>
+                    </tr>
+                    <tr>
+                        <td class="p-4 font-semibold">CPU Overhead</td>
+                        <td class="p-4">Thấp nhất</td>
+                        <td class="p-4">Trung bình</td>
+                        <td class="p-4">Cao</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 6: Real World Case Study -->
+        <section class="mb-16 p-8 bg-amber-50 rounded-3xl border border-amber-200">
+            <h2 class="text-2xl font-bold mb-4 text-amber-900"><i class="fas fa-user-md mr-2"></i>Bệnh án: "Ứng dụng bị Lag mỗi 10 phút"</h2>
+            <div class="space-y-4 text-sm text-amber-800">
+                <p><strong>Triệu chứng:</strong> Một API xử lý ảnh báo độ trễ tăng vọt lên 5 giây mỗi 10 phút, trong khi bình thường chỉ 100ms.</p>
+                <p><strong>Chẩn đoán:</strong> App sử dụng <code>-Xmx16g</code> với <code>Parallel GC</code>. Sau 10 phút, Old Gen đầy, kích hoạt <strong>Full GC</strong>. Vì Heap lớn, Parallel GC mất 5 giây để quét và dồn bộ nhớ (STW).</p>
+                <p><strong>Đơn thuốc:</strong> Chuyển sang <code>G1 GC</code> với cấu hình <code>-XX:MaxGCPauseMillis=200</code>. G1 chia nhỏ việc dọn dẹp thành nhiều đợt 200ms xen kẽ, giúp ứng dụng không còn cú lag 5 giây nào nữa.</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Interview Q&A -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-900">Câu hỏi phỏng vấn (Master Level)</h2>
+            <div class="space-y-4">
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q1: "G1 GC" có bao giờ xảy ra Full GC không?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: <strong>CÓ</strong>. Nếu tốc độ tạo Object của ứng dụng nhanh hơn tốc độ dọn rác của G1 (gọi là <i>Allocation Failure</i>), hoặc nếu Old Gen quá phân mảnh đến mức không thể chứa nổi một Humongous Object, G1 sẽ rơi vào trạng thái <strong>Full GC</strong> đơn luồng cực kỳ chậm. Đây là tình huống cần tránh bằng cách Tuning kích thước Region.
+                    </div>
+                </details>
+                <details class="bg-white p-5 rounded-2xl shadow-sm border cursor-pointer">
+                    <summary class="font-bold text-slate-800">Q2: Tại sao Java 9 lại chọn G1 làm mặc định thay vì Parallel?</summary>
+                    <div class="mt-4 text-sm text-slate-600 pl-4 border-l-2 border-indigo-200">
+                        A: Vì xu hướng phần cứng hiện đại có RAM ngày càng lớn và yêu cầu của người dùng về độ trễ (Latency) ngày càng khắt khe. G1 mang lại sự cân bằng tốt hơn giữa Throughput và Latency, đồng thời tránh được các cú "treo máy" dài hàng giây vốn thường xuyên xảy ra ở Parallel GC trên Heap lớn.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-10 border-t border-slate-200 text-slate-400 text-xs">
+            <p>© 2024 Thầy Dạy Java - Lesson 1.6: The War of Garbage Collectors</p>
+        </footer>
+    </div>
+</body>
+</html>

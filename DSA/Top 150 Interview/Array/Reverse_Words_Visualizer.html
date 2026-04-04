@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Reverse Words in a String</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .char-cell {
+            width: 32px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .char-space { background-color: #f1f5f9; color: #94a3b8; }
+        .char-active { border-color: #3b82f6; background-color: #eff6ff; box-shadow: inset 0 0 0 2px #3b82f6; }
+        .char-word { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .char-target { border-color: #ef4444; background-color: #fee2e2; }
+
+        .pointer-label {
+            position: absolute;
+            bottom: -25px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: #334155;
+            color: white;
+            padding: 1px 4px;
+            border-radius: 3px;
+            z-index: 10;
+        }
+
+        .step-msg {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .result-box {
+            min-height: 50px;
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+            color: #475569;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Reverse Words in a String</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #151 | Difficulty: Medium | String Manipulation</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>📝</span> Problem Statement
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Given an input string <b>s</b>, reverse the order of the <b>words</b>. 
+                A word is defined as a sequence of non-space characters. The words in <b>s</b> will be separated by at least one space.
+            </p>
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4 text-sm">
+                <p class="text-amber-800 font-bold mb-1 underline">Constraints to Handle:</p>
+                <ul class="list-disc pl-5 text-amber-700 space-y-1">
+                    <li>Input may have leading or trailing spaces.</li>
+                    <li>There may be multiple spaces between words.</li>
+                    <li>The output should have only a single space separating the words and no extra spaces.</li>
+                </ul>
+            </div>
+            <p class="text-slate-500 italic">Example: "  hello world  " → "world hello"</p>
+        </section>
+
+        <!-- APPROACH 1: BUILT-IN API -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Built-in Methods (Standard)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Library Way"</h3>
+                <p class="text-slate-600 mb-8">
+                    Modern programming languages have powerful string manipulation tools. We can <b>trim</b> the edges, <b>split</b> by any amount of whitespace using regex, <b>reverse</b> the resulting array, and <b>join</b> them back together.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="api-msg" class="step-msg">Click Next to see the API pipeline in action.</div>
+                    <div class="flex flex-wrap justify-center gap-1 mb-8" id="api-viz"></div>
+                    <div class="result-box" id="api-result">Result will appear here...</div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="apiViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="apiViz.next()" id="api-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public String</span> <span class="type">reverseWords</span>(<span class="type">String</span> s) {
+    <span class="comment">// 1. Remove leading/trailing spaces and split by one or more spaces</span>
+    <span class="type">String</span>[] words = s.trim().split(<span class="string">"\\s+"</span>);
+    
+    <span class="comment">// 2. Reverse the array of words</span>
+    <span class="type">Collections</span>.reverse(<span class="type">Arrays</span>.asList(words));
+    
+    <span class="comment">// 3. Join them with a single space</span>
+    <span class="keyword">return</span> <span class="type">String</span>.join(<span class="string">" "</span>, words);
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Split and join both take linear time.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. Storing the array of split words takes extra space.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Trade-off</h4>
+                        <p class="text-sm text-slate-600 italic">Very clean and readable. However, splitting creates many intermediate String objects, which might be inefficient for extremely large inputs or memory-constrained environments.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: REVERSE SCAN (OPTIMAL) -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 2: Two-Pointer Reverse Scan
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-blue-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Collect from the End"</h3>
+                <p class="text-slate-600 mb-8">
+                    Since the last word of the input should be the first word of the output, we can scan the string <b>backwards</b>. We find the end of a word, then search for its beginning, and append that segment to our result.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="scan-msg" class="step-msg">Click Next to parse words from right to left.</div>
+                    <div class="flex flex-wrap justify-center gap-1 mb-10 h-16" id="scan-viz"></div>
+                    <div class="result-box" id="scan-result">StringBuilder: [Empty]</div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="scanViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="scanViz.next()" id="scan-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public String</span> <span class="type">reverseWords</span>(<span class="type">String</span> s) {
+    <span class="type">StringBuilder</span> resultBuilder = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+    <span class="keyword">int</span> rightPointer = s.length() - <span class="number">1</span>;
+
+    <span class="keyword">while</span> (rightPointer >= <span class="number">0</span>) {
+        <span class="comment">// 1. Skip trailing spaces</span>
+        <span class="keyword">while</span> (rightPointer >= <span class="number">0</span> && s.charAt(rightPointer) == <span class="string">' '</span>) {
+            rightPointer--;
+        }
+        <span class="keyword">if</span> (rightPointer < <span class="number">0</span>) <span class="keyword">break</span>;
+
+        <span class="comment">// 2. Find the start of the word</span>
+        <span class="keyword">int</span> leftPointer = rightPointer;
+        <span class="keyword">while</span> (leftPointer >= <span class="number">0</span> && s.charAt(leftPointer) != <span class="string">' '</span>) {
+            leftPointer--;
+        }
+
+        <span class="comment">// 3. Append word and a space if not the first word added</span>
+        <span class="keyword">if</span> (resultBuilder.length() > <span class="number">0</span>) resultBuilder.append(<span class="string">" "</span>);
+        resultBuilder.append(s.substring(leftPointer + <span class="number">1</span>, rightPointer + <span class="number">1</span>));
+
+        <span class="comment">// 4. Move rightPointer to check for next word</span>
+        rightPointer = leftPointer;
+    }
+    <span class="keyword">return</span> resultBuilder.toString();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Each character is visited at most twice.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. StringBuilder stores the result.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-700 font-medium">Interview Gold. This avoids creating an intermediate array and demonstrates mastery of pointer-based string traversal.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: THE "IN-PLACE" DOUBLE REVERSAL -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 3: Double Reversal (Clever Trick)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Mirror Logic"</h3>
+                <p class="text-slate-600 mb-8">
+                    This is a three-step technique often used to avoid extra space in languages with mutable strings (like C++). In Java, we use a char array:
+                    <br>1. <b>Reverse the whole string:</b> "the sky blue" → "eulb yks eht"
+                    <br>2. <b>Reverse each word:</b> "eulb" → "blue", "yks" → "sky"...
+                    <br>3. <b>Clean up spaces:</b> Remove duplicates and padding.
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="double-msg" class="step-msg">Step 1: Reverse the entire string character by character.</div>
+                    <div class="flex flex-wrap justify-center gap-1 mb-8" id="double-viz"></div>
+                    <div class="flex justify-center gap-4 mt-8">
+                        <button onclick="doubleViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="doubleViz.next()" id="double-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public String</span> <span class="type">reverseWords</span>(<span class="type">String</span> s) {
+    <span class="keyword">char</span>[] charArray = s.toCharArray();
+    <span class="keyword">int</span> n = charArray.length;
+    
+    <span class="comment">// 1. Reverse the entire array</span>
+    reverse(charArray, <span class="number">0</span>, n - <span class="number">1</span>);
+    
+    <span class="comment">// 2. Reverse each individual word</span>
+    reverseEachWord(charArray, n);
+    
+    <span class="comment">// 3. Clean up spaces (Implementation omitted for brevity)</span>
+    <span class="keyword">return</span> cleanSpaces(charArray, n);
+}
+
+<span class="keyword">private void</span> <span class="type">reverse</span>(<span class="keyword">char</span>[] a, <span class="keyword">int</span> i, <span class="keyword">int</span> j) {
+    <span class="keyword">while</span> (i < j) {
+        <span class="keyword">char</span> t = a[i]; a[i++] = a[j]; a[j--] = t;
+    }
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Efficiency</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Linear time to reverse and clean.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. (Java strings are immutable, so we must use O(n) space anyway).</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm italic">
+                        The beauty of this approach is that if strings were <b>mutable</b>, this would be an <b>O(1) space</b> solution. It's a classic algorithmic pattern.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10 text-center">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Strategy</th>
+                            <th class="p-4 border text-center">Time</th>
+                            <th class="p-4 border text-center">Space</th>
+                            <th class="p-4 border text-center">Interviewer Preference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-semibold">Built-in API</td>
+                            <td class="p-4 border text-center">O(n)</td>
+                            <td class="p-4 border text-center">O(n)</td>
+                            <td class="p-4 border text-center text-red-500 font-bold uppercase text-xs">Beginner</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">Two-Pointer Scan</td>
+                            <td class="p-4 border text-center text-blue-600 font-bold">O(n)</td>
+                            <td class="p-4 border text-center">O(n)</td>
+                            <td class="p-4 border text-center text-blue-600 font-bold uppercase text-xs">Standard</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-800">Double Reversal</td>
+                            <td class="p-4 border text-center text-emerald-700 font-bold">O(n)</td>
+                            <td class="p-4 border text-center text-emerald-700 font-bold">O(n)</td>
+                            <td class="p-4 border text-center text-emerald-600 font-bold uppercase text-xs">Advanced</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Cheat Sheet -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                    <span>⚡</span> Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li>• <b>Pattern:</b> Reverse Scan (collect words from back to front).</li>
+                    <li>• <b>Regex:</b> <code>"\\s+"</code> matches one or more whitespace characters.</li>
+                    <li>• <b>Space Trick:</b> If allowed to use O(1) space, always mention the "Double Reversal" technique.</li>
+                    <li>• <b>Edge Case:</b> All spaces string or leading/trailing spaces.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="text-emerald-500">🧩</span> Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>" a "</b> → Single letter surrounded by spaces.</li>
+                    <li><b>"    "</b> → Empty word array (Handle split cautiously).</li>
+                    <li><b>"a   b"</b> → Multiple internal spaces (Tricky pointers).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SAMPLE_STRING = "sky is blue";
+
+        function createChars(containerId, str, activeIdx = -1, label = "") {
+            const container = document.getElementById(containerId);
+            container.innerHTML = str.split('').map((char, i) => {
+                let cls = "char-cell";
+                if (char === ' ') cls += " char-space";
+                if (i === activeIdx) cls += " char-active";
+                return `<div class="${cls}">${char === ' ' ? '␣' : char}${i === activeIdx ? `<span class="pointer-label">${label}</span>` : ''}</div>`;
+            }).join('');
+        }
+
+        // --- API VIZ ---
+        const apiViz = {
+            s: "  sky is blue  ",
+            step: 0,
+            init() { createChars('api-viz', this.s); },
+            reset() { this.step = 0; this.init(); document.getElementById('api-result').innerText = "..."; document.getElementById('api-next-btn').disabled = false; },
+            next() {
+                this.step++;
+                const msg = document.getElementById('api-msg');
+                const res = document.getElementById('api-result');
+                if (this.step === 1) {
+                    msg.innerText = "Trim leading/trailing spaces.";
+                    createChars('api-viz', "sky is blue");
+                } else if (this.step === 2) {
+                    msg.innerText = "Split into Word Array: ['sky', 'is', 'blue']";
+                    res.innerText = "Array: ['sky', 'is', 'blue']";
+                } else if (this.step === 3) {
+                    msg.innerText = "Reverse the Array: ['blue', 'is', 'sky']";
+                    res.innerText = "Array: ['blue', 'is', 'sky']";
+                } else if (this.step === 4) {
+                    msg.innerText = "Join with spaces: 'blue is sky'";
+                    res.innerText = "'blue is sky'";
+                    document.getElementById('api-next-btn').disabled = true;
+                }
+            }
+        };
+
+        // --- SCAN VIZ ---
+        const scanViz = {
+            s: "sky is blue",
+            r: 10,
+            l: 10,
+            result: [],
+            state: "SKIP", // SKIP, WORD, ADD
+            init() { createChars('scan-viz', this.s, this.r, "R"); },
+            reset() { this.r = 10; this.l = 10; this.result = []; this.state = "SKIP"; this.init(); document.getElementById('scan-result').innerText = "[Empty]"; document.getElementById('scan-next-btn').disabled = false; },
+            next() {
+                const msg = document.getElementById('scan-msg');
+                const res = document.getElementById('scan-result');
+
+                if (this.state === "SKIP") {
+                    if (this.r >= 0 && this.s[this.r] === ' ') {
+                        this.r--;
+                        msg.innerText = "Scanning backwards: Skipping space.";
+                    } else {
+                        this.l = this.r;
+                        this.state = "WORD";
+                        msg.innerText = "Found word end! Now finding its start...";
+                    }
+                } else if (this.state === "WORD") {
+                    if (this.l >= 0 && this.s[this.l] !== ' ') {
+                        this.l--;
+                        msg.innerText = "Scanning backwards: Moving left pointer.";
+                    } else {
+                        const word = this.s.substring(this.l + 1, this.r + 1);
+                        this.result.push(word);
+                        msg.innerText = `Word identified: "${word}". Appending to StringBuilder.`;
+                        this.state = "SKIP";
+                        this.r = this.l;
+                    }
+                }
+                
+                if (this.r < 0 && this.state !== "WORD") {
+                    msg.innerText = "Iteration finished!";
+                    document.getElementById('scan-next-btn').disabled = true;
+                }
+
+                createChars('scan-viz', this.s, this.state === "WORD" ? this.l : this.r, this.state === "WORD" ? "L" : "R");
+                res.innerText = "SB: " + this.result.join(' ');
+            }
+        };
+
+        // --- DOUBLE REVERSAL VIZ ---
+        const doubleViz = {
+            chars: "sky is blue".split(''),
+            step: 0,
+            init() { createChars('double-viz', this.chars.join('')); },
+            reset() { this.chars = "sky is blue".split(''); this.step = 0; this.init(); document.getElementById('double-next-btn').disabled = false; },
+            next() {
+                this.step++;
+                const msg = document.getElementById('double-msg');
+                if (this.step === 1) {
+                    this.chars.reverse();
+                    msg.innerText = "Step 1: Entire string reversed → 'eulb si yks'";
+                } else if (this.step === 2) {
+                    msg.innerText = "Step 2: Reverse individual word 'eulb' → 'blue'";
+                    this.chars = "blue si yks".split('');
+                } else if (this.step === 3) {
+                    msg.innerText = "Step 2: Reverse individual word 'si' → 'is'";
+                    this.chars = "blue is yks".split('');
+                } else if (this.step === 4) {
+                    msg.innerText = "Step 2: Reverse individual word 'yks' → 'sky'";
+                    this.chars = "blue is sky".split('');
+                    document.getElementById('double-next-btn').disabled = true;
+                }
+                this.init();
+            }
+        };
+
+        window.onload = () => {
+            apiViz.init();
+            scanViz.init();
+            doubleViz.init();
+        };
+    </script>
+</body>
+</html>

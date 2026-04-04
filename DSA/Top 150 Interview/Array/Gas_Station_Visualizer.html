@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Gas Station (Circuit Problem)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .station-node {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        .node-active { border-color: #3b82f6; background-color: #eff6ff; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transform: scale(1.1); }
+        .node-start { border-color: #10b981; background-color: #ecfdf5; }
+        .node-failed { border-color: #ef4444; background-color: #fef2f2; }
+
+        .connector {
+            height: 4px;
+            background: #e2e8f0;
+            flex-grow: 1;
+            margin: 0 -5px;
+            position: relative;
+            top: 35px;
+            z-index: 1;
+        }
+        .connector-active { background: #3b82f6; }
+
+        .stat-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: -2px; }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Gas Station</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #134 | Difficulty: Medium | Greedy Algorithm</p>
+        </header>
+
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>⛽</span> Problem Context
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                There are <b>n</b> gas stations along a circular route, where the amount of gas at the <b>i-th</b> station is <b>gas[i]</b>.
+                You have a car with an unlimited gas tank and it costs <b>cost[i]</b> of gas to travel from the <b>i-th</b> station to its next <b>(i+1)-th</b> station.
+            </p>
+            <p class="text-slate-700 font-semibold mb-4">Goal: Find the starting gas station's index if you can travel around the circuit once in the clockwise direction, otherwise return -1.</p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-sm text-blue-800 italic"><b>Key Observation:</b> If the total sum of gas is less than the total cost, a solution is mathematically impossible.</p>
+            </div>
+        </section>
+
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Try Every Start (Brute Force)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition</h3>
+                <p class="text-slate-600 mb-8">
+                    We attempt to start at every index <b>i</b> from 0 to <b>n-1</b>. For each start, we simulate the journey. If our tank ever drops below zero, that starting point is invalid.
+                </p>
+
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click Next to simulate starting at different stations.</div>
+                    <div class="flex items-center justify-between mb-16" id="bf-track">
+                        </div>
+                    <div class="flex justify-center gap-8 mb-4">
+                        <div class="text-center"><span class="text-xs font-bold text-slate-400">TANK</span><div id="bf-tank" class="text-2xl font-bold text-blue-600">0</div></div>
+                    </div>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-8">
+<pre>
+<span class="keyword">public int</span> <span class="type">canCompleteCircuit</span>(<span class="keyword">int</span>[] gas, <span class="keyword">int</span>[] cost) {
+    <span class="keyword">int</span> n = gas.length;
+    <span class="keyword">for</span> (<span class="keyword">int</span> start = <span class="number">0</span>; start < n; start++) {
+        <span class="keyword">int</span> tank = <span class="number">0</span>;
+        <span class="keyword">boolean</span> possible = <span class="keyword">true</span>;
+        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+            <span class="keyword">int</span> currentStation = (start + i) % n;
+            tank += gas[currentStation] - cost[currentStation];
+            <span class="keyword">if</span> (tank < <span class="number">0</span>) {
+                possible = <span class="keyword">false</span>;
+                <span class="keyword">break</span>;
+            }
+        }
+        <span class="keyword">if</span> (possible) <span class="keyword">return</span> start;
+    }
+    <span class="keyword">return</span> -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n²)</b>. We check up to <b>n</b> stations for each of the <b>n</b> possible starts.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 class="font-bold text-slate-800 mb-2">Verdict</h4>
+                        <p class="text-sm text-slate-600">Inefficient. It repeats calculations and doesn't utilize the greedy property of the circuit.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: Greedy Pruning (Optimal)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-emerald-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "The Pruning Logic"</h3>
+                <p class="text-slate-600 mb-8">
+                    <b>If station A cannot reach station B, then any station between A and B also cannot reach station B.</b>
+                    <br><br>
+                    Why? Because if we reached an intermediate station from A, we would have at least 0 gas (or more) in the tank. If starting with extra gas didn't help us reach B, starting with 0 gas at the intermediate station definitely won't help.
+                </p>
+
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="opt-msg" class="step-msg">Click Next to see how we skip impossible start indices.</div>
+                    <div class="flex items-center justify-between mb-16" id="opt-track"></div>
+                    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-6">
+                        <div class="text-center p-2 bg-white rounded border"><span class="text-xs font-bold text-slate-400">CURR TANK</span><div id="opt-tank" class="text-xl font-bold text-emerald-600">0</div></div>
+                        <div class="text-center p-2 bg-white rounded border"><span class="text-xs font-bold text-slate-400">TOTAL NET</span><div id="opt-total" class="text-xl font-bold text-slate-600">0</div></div>
+                    </div>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="optViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="optViz.next()" id="opt-next-btn" class="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-2 border-emerald-900">
+<pre>
+<span class="keyword">public int</span> <span class="type">canCompleteCircuit</span>(<span class="keyword">int</span>[] gas, <span class="keyword">int</span>[] cost) {
+    <span class="keyword">int</span> totalNetGas = <span class="number">0</span>;
+    <span class="keyword">int</span> currentTank = <span class="number">0</span>;
+    <span class="keyword">int</span> startStation = <span class="number">0</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < gas.length; i++) {
+        <span class="keyword">int</span> netAtStation = gas[i] - cost[i];
+        totalNetGas += netAtStation;
+        currentTank += netAtStation;
+
+        <span class="comment">// If currentTank drops below 0, station 'i' cannot be the start,</span>
+        <span class="comment">// and no station between 'startStation' and 'i' can be the start.</span>
+        <span class="keyword">if</span> (currentTank < <span class="number">0</span>) {
+            startStation = i + <span class="number">1</span>;
+            currentTank = <span class="number">0</span>;
+        }
+    }
+
+    <span class="comment">// If total gas is less than total cost, circuit is impossible</span>
+    <span class="keyword">return</span> (totalNetGas >= <span class="number">0</span>) ? startStation : -<span class="number">1</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Single pass through the arrays.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. Constant extra variables.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-4 rounded-xl shadow-inner">
+                        <h4 class="font-bold text-blue-400 mb-2 uppercase text-xs">Aha! Moment</h4>
+                        <p class="text-sm text-slate-300 italic">If you run out of gas at station 'i', don't just try starting at 'start + 1'. Jump all the way to 'i + 1'. This greedy pruning reduces the search space significantly.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Logic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-bold">Brute Force</td>
+                            <td class="p-4 border text-red-600 font-mono">O(n²)</td>
+                            <td class="p-4 border">O(1)</td>
+                            <td class="p-4 border text-slate-500">Restart from start + 1</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-bold text-emerald-700">Greedy (Optimal)</td>
+                            <td class="p-4 border text-emerald-600 font-bold font-mono">O(n)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 border text-emerald-700 font-semibold">Jump over failures</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-slate-100 p-8 rounded-3xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+                    <span>⚡</span> Recall Cheat Sheet
+                </h2>
+                <ul class="space-y-4 text-slate-400 text-sm">
+                    <li>• <b>Pattern:</b> Greedy Pruning.</li>
+                    <li>• <b>Pruning Rule:</b> If you fail to reach station $j$ from station $i$, then any station $k$ between $i$ and $j$ will also fail to reach $j$.</li>
+                    <li>• <b>Total Sum Property:</b> If $\sum gas \geq \sum cost$, a solution <b>must</b> exist.</li>
+                    <li>• <b>Greedy Choice:</b> Just find the first station that can finish the rest of the array without going negative.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-8 rounded-3xl border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">🧩 Edge Cases</h3>
+                <ul class="list-disc pl-5 space-y-2 text-slate-600 text-sm">
+                    <li><b>Single Station:</b> gas=[2], cost=[1]. Start at 0, net is 1. Success.</li>
+                    <li><b>Impossible Circuit:</b> Total gas < Total cost. Immediate -1.</li>
+                    <li><b>Start at end:</b> The algorithm naturally wraps around via the total sum check.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SAMPLE_GAS = [1, 2, 3, 4, 5];
+        const SAMPLE_COST = [3, 4, 5, 1, 2];
+
+        function createCircuit(containerId, dataGas, dataCost) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = dataGas.map((g, i) => `
+                <div class="station-node" id="${containerId}-node-${i}">
+                    <span class="stat-label">G:${g}</span>
+                    <span class="text-sm">${i}</span>
+                    <span class="stat-label">C:${dataCost[i]}</span>
+                </div>
+                ${i < dataGas.length - 1 ? `<div class="connector" id="${containerId}-conn-${i}"></div>` : ''}
+            `).join('');
+        }
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            gas: [...SAMPLE_GAS],
+            cost: [...SAMPLE_COST],
+            start: 0,
+            curr: 0,
+            tank: 0,
+            stepsTaken: 0,
+            init() { createCircuit('bf-track', this.gas, this.cost); this.reset(); },
+            reset() { this.start = 0; this.curr = 0; this.tank = 0; this.stepsTaken = 0; this.render(); document.getElementById('bf-next-btn').disabled = false; },
+            render() {
+                const nodes = document.querySelectorAll('#bf-track .station-node');
+                nodes.forEach((n, i) => {
+                    n.className = 'station-node';
+                    if (i === this.start) n.classList.add('node-start');
+                    if (i === this.curr && this.stepsTaken > 0) n.classList.add('node-active');
+                });
+                document.getElementById('bf-tank').innerText = this.tank;
+            },
+            next() {
+                const n = this.gas.length;
+                if (this.start >= n) return;
+
+                let net = this.gas[this.curr] - this.cost[this.curr];
+                this.tank += net;
+                this.stepsTaken++;
+                
+                document.getElementById('bf-msg').innerText = `Start ${this.start}, at Station ${this.curr}: Gas +${this.gas[this.curr]}, Cost -${this.cost[this.curr]}. Tank: ${this.tank}`;
+
+                if (this.tank < 0) {
+                    document.getElementById('bf-msg').innerText += ` -> FAILED. Restarting from ${this.start + 1}`;
+                    this.start++;
+                    this.curr = this.start;
+                    this.tank = 0;
+                    this.stepsTaken = 0;
+                } else if (this.stepsTaken === n) {
+                    document.getElementById('bf-msg').innerText = `Success! Started at ${this.start} and completed the circuit.`;
+                    document.getElementById('bf-next-btn').disabled = true;
+                } else {
+                    this.curr = (this.curr + 1) % n;
+                }
+                this.render();
+            }
+        };
+
+        // --- OPTIMAL ---
+        const optViz = {
+            gas: [...SAMPLE_GAS],
+            cost: [...SAMPLE_COST],
+            i: 0,
+            start: 0,
+            tank: 0,
+            totalNet: 0,
+            init() { createCircuit('opt-track', this.gas, this.cost); this.reset(); },
+            reset() { this.i = 0; this.start = 0; this.tank = 0; this.totalNet = 0; this.render(); document.getElementById('opt-next-btn').disabled = false; },
+            render() {
+                const nodes = document.querySelectorAll('#opt-track .station-node');
+                nodes.forEach((n, idx) => {
+                    n.className = 'station-node';
+                    if (idx === this.start) n.classList.add('node-start');
+                    if (idx === this.i) n.classList.add('node-active');
+                    if (idx < this.start) n.classList.add('node-failed');
+                });
+                document.getElementById('opt-tank').innerText = this.tank;
+                document.getElementById('opt-total').innerText = this.totalNet;
+            },
+            next() {
+                const n = this.gas.length;
+                if (this.i >= n) {
+                    const result = this.totalNet >= 0 ? this.start : -1;
+                    document.getElementById('opt-msg').innerText = `Scan complete. Total net gas: ${this.totalNet}. Result start: ${result}`;
+                    document.getElementById('opt-next-btn').disabled = true;
+                    return;
+                }
+
+                let net = this.gas[this.i] - this.cost[this.i];
+                this.totalNet += net;
+                this.tank += net;
+
+                if (this.tank < 0) {
+                    document.getElementById('opt-msg').innerText = `At ${this.i}, tank went negative (${this.tank}). Pruning start points from ${this.start} to ${this.i}. New start potential: ${this.i + 1}`;
+                    this.start = this.i + 1;
+                    this.tank = 0;
+                } else {
+                    document.getElementById('opt-msg').innerText = `Checking station ${this.i}. Tank stays positive: ${this.tank}. Continuing scan...`;
+                }
+                
+                this.i++;
+                this.render();
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            optViz.init();
+        };
+    </script>
+</body>
+</html>

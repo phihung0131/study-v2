@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.2 LinkedList Internals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-link.active { border-right: 4px solid #10b981; background: #ecfdf5; color: #047857; }
+        .node-box { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .pointer-line { stroke: #10b981; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 hidden md:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-emerald-600">Java Mentor</h2>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#overview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">1. Đặc điểm & Phân cấp</a>
+                <a href="#internals" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">2. Cấu trúc Node Đôi</a>
+                <a href="#simulation" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">3. Mô phỏng Liên kết</a>
+                <a href="#performance" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">4. ArrayList vs LinkedList</a>
+                <a href="#memory" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">5. Memory Overhead</a>
+                <a href="#bestpractices" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">6. Khi nào nên dùng?</a>
+                <a href="#interview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">7. Câu hỏi Phỏng vấn</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-12 overflow-y-auto">
+            <header class="mb-12">
+                <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded">BÀI HỌC 3.2</span>
+                <h1 class="text-4xl font-extrabold mt-4 mb-2">LinkedList: The Chain of Nodes</h1>
+                <p class="text-gray-600 text-lg">Khám phá sức mạnh của Doubly Linked List và lý do tại sao nó lại là một Deque tuyệt vời.</p>
+            </header>
+
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    Đặc điểm & Phân cấp (Hierarchy)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-lg mb-3">LinkedList là gì?</h3>
+                        <p class="text-gray-700 leading-relaxed">
+                            LinkedList trong Java là một triển khai của <strong>Doubly Linked List</strong> (Danh sách liên kết đôi). Mỗi phần tử là một "Node" riêng biệt nằm rải rác trong bộ nhớ Heap.
+                        </p>
+                        <div class="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                            <p class="text-sm text-emerald-800 font-medium">✨ Điểm đặc biệt: Nó vừa là một <strong>List</strong>, vừa là một <strong>Deque</strong> (Double Ended Queue).</p>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-900 text-white p-6 rounded-xl shadow-lg">
+                        <h3 class="font-bold text-lg mb-3">Hierarchy Visualization</h3>
+                        <div class="flex flex-col items-center space-y-2">
+                            <div class="flex space-x-4">
+                                <div class="border border-emerald-300 px-3 py-1 rounded text-xs">List (Interface)</div>
+                                <div class="border border-emerald-300 px-3 py-1 rounded text-xs">Deque (Interface)</div>
+                            </div>
+                            <div class="text-xs">↘ ↙</div>
+                            <div class="bg-emerald-700 px-6 py-2 rounded-lg font-bold shadow ring-4 ring-emerald-500/30">LinkedList</div>
+                        </div>
+                        <p class="text-[10px] mt-4 text-emerald-200 italic">Nhờ implement Deque, LinkedList có thể dùng làm Stack (LIFO) hoặc Queue (FIFO).</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Internals -->
+            <section id="internals" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    Cấu trúc Node Đôi (Internals)
+                </h2>
+                <p class="text-gray-700 mb-6">Mọi thứ trong LinkedList xoay quanh một class nội tĩnh (static inner class) tên là <code>Node</code>.</p>
+                
+                <div class="code-block mb-8">
+                    <pre><code class="language-java">// Source code internals (Java 17)
+public class LinkedList&lt;E&gt; extends AbstractSequentialList&lt;E&gt; implements List&lt;E&gt;, Deque&lt;E&gt; {
+    
+    transient int size = 0;
+    transient Node&lt;E&gt; first; // Con trỏ tới Node đầu tiên
+    transient Node&lt;E&gt; last;  // Con trỏ tới Node cuối cùng
+
+    private static class Node&lt;E&gt; {
+        E item;        // Dữ liệu thực tế
+        Node&lt;E&gt; next;  // Con trỏ tới Node tiếp theo
+        Node&lt;E&gt; prev;  // Con trỏ tới Node phía trước
+
+        Node(Node&lt;E&gt; prev, E element, Node&lt;E&gt; next) {
+            this.item = element;
+            this.next = next;
+            this.prev = prev;
+        }
+    }
+}</code></pre>
+                </div>
+                <div class="bg-amber-50 border-l-4 border-amber-400 p-4">
+                    <p class="text-sm text-amber-800">
+                        <strong>Tư duy Senior:</strong> Vì là liên kết đôi, việc thêm/xóa ở cả hai đầu (Head/Tail) chỉ tốn <strong>O(1)</strong> vì ta luôn giữ tham chiếu tới `first` và `last`.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 3: Interactive Simulation -->
+            <section id="simulation" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                    Mô phỏng Hoạt động của Pointers
+                </h2>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h4 class="font-bold text-gray-800">LinkedList Visualizer</h4>
+                            <p class="text-xs text-gray-500">Xem cách các Node trỏ vào nhau khi thao tác.</p>
+                        </div>
+                        <div class="space-x-2">
+                            <button onclick="addNode()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 shadow-sm transition">Add Node</button>
+                            <button onclick="removeFirst()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 transition border border-red-100">Remove First</button>
+                        </div>
+                    </div>
+
+                    <!-- SVG Container for pointers -->
+                    <div class="relative min-h-[150px] bg-gray-50 rounded-xl overflow-hidden p-8 flex items-center justify-start space-x-12" id="canvas-container">
+                        <div id="nodes-list" class="flex items-center space-x-16">
+                            <!-- Nodes go here -->
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-center space-x-8 text-xs font-mono text-gray-500">
+                        <div class="flex items-center"><span class="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span> Next Pointer</div>
+                        <div class="flex items-center"><span class="w-3 h-3 bg-blue-400 rounded-full mr-2"></span> Prev Pointer</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Performance Table -->
+            <section id="performance" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                    ArrayList vs. LinkedList: Trận chiến Hiệu năng
+                </h2>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-left bg-white text-sm">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 font-bold text-gray-700 uppercase tracking-wider">Thao tác</th>
+                                <th class="px-6 py-4 font-bold text-blue-600">ArrayList</th>
+                                <th class="px-6 py-4 font-bold text-emerald-600">LinkedList</th>
+                                <th class="px-6 py-4 font-bold text-gray-700">Người thắng</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Get (by index)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold italic">O(1)</td>
+                                <td class="px-6 py-4 text-red-500 font-bold italic">O(n)</td>
+                                <td class="px-6 py-4"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ArrayList</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Add to Head</td>
+                                <td class="px-6 py-4 text-red-500 font-bold italic">O(n)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold italic">O(1)</td>
+                                <td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-bold">LinkedList</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Add to Tail</td>
+                                <td class="px-6 py-4 text-green-600 font-bold italic">O(1) amortized</td>
+                                <td class="px-6 py-4 text-green-600 font-bold italic">O(1)</td>
+                                <td class="px-6 py-4"><span class="text-gray-500 italic">Hòa (Tùy context)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Memory Usage</td>
+                                <td class="px-6 py-4 text-gray-700">Thấp</td>
+                                <td class="px-6 py-4 text-red-600 font-bold">Rất Cao</td>
+                                <td class="px-6 py-4"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold">ArrayList</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 5: Memory Overhead -->
+            <section id="memory" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">5</span>
+                    Cạm bẫy Bộ nhớ (Memory Overhead)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 class="font-bold mb-4 flex items-center"><svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"></path></svg> Tại sao LinkedList lại tốn memory?</h4>
+                        <p class="text-sm text-gray-600 leading-relaxed">
+                            Trong một JVM 64-bit:
+                        </p>
+                        <ul class="mt-4 space-y-3 text-sm">
+                            <li class="bg-gray-50 p-2 rounded"><strong>ArrayList:</strong> Chỉ tốn 4-8 bytes cho mỗi reference trong mảng.</li>
+                            <li class="bg-red-50 p-2 rounded"><strong>LinkedList Node:</strong> 
+                                <br>• Object Header: 12-16 bytes
+                                <br>• Item Ref: 4-8 bytes
+                                <br>• Next Ref: 4-8 bytes
+                                <br>• Prev Ref: 4-8 bytes
+                                <br><strong>Tổng cộng:</strong> ~40 bytes cho mỗi phần tử!
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <div class="p-6 bg-blue-50 border border-blue-100 rounded-xl">
+                            <h4 class="font-bold text-blue-800 mb-2">Spatial Locality (Tính cục bộ không gian)</h4>
+                            <p class="text-sm text-blue-700">
+                                ArrayList nằm liên tục trong bộ nhớ, tận dụng được **CPU Cache**. LinkedList nằm rải rác, khiến CPU phải nhảy liên tục (Cache Miss), dẫn đến tốc độ duyệt (iteration) thực tế của LinkedList thường chậm hơn ArrayList rất nhiều.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Best Practices -->
+            <section id="bestpractices" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">6</span>
+                    Best Practices: Khi nào nên dùng?
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border-2 border-emerald-100 p-6 rounded-2xl bg-white">
+                        <h4 class="font-bold text-emerald-800 mb-4 flex items-center">✅ Use LinkedList when:</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg> Bạn cần một Queue hoặc Stack (dùng <code>push/pop</code>, <code>offer/poll</code>).</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg> Bạn thêm/xóa phần tử ở đầu danh sách cực kỳ thường xuyên.</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg> Bạn đang dùng <code>ListIterator</code> để duyệt và sửa đổi danh sách tại vị trí hiện tại.</li>
+                        </ul>
+                    </div>
+                    <div class="border-2 border-red-100 p-6 rounded-2xl bg-white">
+                        <h4 class="font-bold text-red-800 mb-4 flex items-center">❌ Avoid LinkedList when:</h4>
+                        <ul class="space-y-3 text-sm text-gray-600">
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg> Bạn cần truy cập ngẫu nhiên <code>list.get(index)</code>.</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg> Bộ nhớ hạn chế (vì overhead của Node quá lớn).</li>
+                            <li class="flex items-center"><svg class="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg> Ưu tiên hiệu năng duyệt nhanh (ArrayList nhanh hơn do Cache Locality).</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">7</span>
+                    Thử thách Mentor (Interview Questions)
+                </h2>
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q1: LinkedList tìm kiếm phần tử theo index như thế nào để tối ưu?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Java không duyệt từ đầu đến cuối một cách mù quáng. Nó kiểm tra nếu <code>index < (size >> 1)</code> (tức là index nằm ở nửa đầu), nó sẽ duyệt từ <code>first</code>. Ngược lại, nó sẽ duyệt ngược từ <code>last</code>. Tuy tối ưu gấp đôi nhưng độ phức tạp vẫn là <strong>O(n/2) ≈ O(n)</strong>.
+                        </p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q2: Tại sao LinkedList lại implement RandomAccess?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Đánh bẫy rồi! LinkedList **KHÔNG** implement <code>RandomAccess</code>. Chỉ có <code>ArrayList</code> và <code>Vector</code> mới implement interface đánh dấu này. Đây là cách để các thuật toán (như <code>Collections.binarySearch</code>) biết rằng việc truy cập theo index là nhanh hay chậm để chọn chiến thuật phù hợp.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Hidden SVG Markers -->
+    <svg width="0" height="0">
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+            </marker>
+        </defs>
+    </svg>
+
+    <script>
+        let nodes = ['A', 'B'];
+        const listContainer = document.getElementById('nodes-list');
+
+        function renderNodes() {
+            listContainer.innerHTML = '';
+            nodes.forEach((val, idx) => {
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'animate-fade relative flex flex-col items-center';
+                
+                nodeDiv.innerHTML = `
+                    <div class="w-16 h-16 bg-white border-2 border-emerald-500 rounded-lg shadow-md flex flex-col overflow-hidden">
+                        <div class="flex-1 flex items-center justify-center font-bold text-emerald-700">${val}</div>
+                        <div class="h-4 bg-gray-100 border-t border-emerald-200 flex">
+                            <div class="flex-1 border-r border-emerald-200 flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                            </div>
+                            <div class="flex-1 flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] mt-1 font-mono text-gray-400">Node ${idx}</span>
+                    ${idx < nodes.length - 1 ? `
+                        <div class="absolute -right-12 top-6 w-12 h-0.5 bg-emerald-500">
+                            <div class="absolute -right-1 -top-1 border-l-4 border-l-emerald-500 border-y-4 border-y-transparent"></div>
+                        </div>
+                        <div class="absolute -right-12 top-8 w-12 h-0.5 bg-blue-400">
+                            <div class="absolute -left-1 -top-1 border-r-4 border-r-blue-400 border-y-4 border-y-transparent"></div>
+                        </div>
+                    ` : ''}
+                `;
+                listContainer.appendChild(nodeDiv);
+            });
+        }
+
+        function addNode() {
+            if (nodes.length >= 5) return;
+            const nextChar = String.fromCharCode(65 + nodes.length);
+            nodes.push(nextChar);
+            renderNodes();
+        }
+
+        function removeFirst() {
+            if (nodes.length === 0) return;
+            nodes.shift();
+            renderNodes();
+        }
+
+        // Initial render
+        renderNodes();
+    </script>
+</body>
+</html>

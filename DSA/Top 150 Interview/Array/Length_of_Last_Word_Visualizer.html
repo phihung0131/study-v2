@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Length of Last Word</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .char-box {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .char-space { background-color: #f1f5f9; color: #94a3b8; border-style: dashed; }
+        .char-active { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-5px); }
+        .char-counted { border-color: #10b981; background-color: #ecfdf5; color: #059669; }
+        
+        .pointer-label {
+            position: absolute;
+            bottom: -28px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: #334155;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .word-pill {
+            padding: 8px 16px;
+            background: #e2e8f0;
+            border-radius: 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .word-pill.highlight { background: #3b82f6; color: white; transform: scale(1.1); }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black tracking-tight text-slate-900 mb-4">Length of Last Word</h1>
+            <p class="text-xl text-slate-500 font-medium italic">LeetCode #58 | Difficulty: Easy | String Manipulation</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>📝</span> Problem Statement
+            </h2>
+            <p class="text-lg leading-relaxed text-slate-700 mb-6">
+                Given a string <b>s</b> consisting of words and spaces, return the length of the <b>last word</b> in the string. 
+                A word is a maximal substring consisting of non-space characters only.
+            </p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p class="text-blue-800"><b>Example:</b> Input s = "Hello World  " → Output: 5 ("World")</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BUILT-IN SPLIT -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-slate-800 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 1</span>
+                <span class="opacity-50">|</span>
+                <span>BUILT-IN STRING API</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Split Strategy"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    Java's <code>String.split()</code> method automatically identifies word boundaries. By splitting the string by spaces, we get an array of all words. We simply need to access the last element in that array.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="split-msg" class="step-msg">Click Next to see the string being split into words.</div>
+                    
+                    <div class="mb-10">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest text-center">Input String</p>
+                        <div class="flex justify-center gap-2" id="split-raw-string"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest text-center">Resulting Word Array</p>
+                        <div class="flex justify-center flex-wrap gap-4" id="split-array-viz"></div>
+                    </div>
+
+                    <div class="flex justify-center gap-6 mt-10">
+                        <button onclick="splitViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="splitViz.next()" id="split-next-btn" class="px-12 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10">
+<pre>
+<span class="keyword">public int</span> <span class="type">lengthOfLastWord</span>(<span class="type">String</span> s) {
+    <span class="comment">// 1. Split string by spaces into an array</span>
+    <span class="comment">// Regex " +" handles one or more spaces</span>
+    <span class="type">String</span>[] words = s.split(<span class="string">" +"</span>);
+    
+    <span class="comment">// 2. If no words exist, return 0</span>
+    <span class="keyword">if</span> (words.length == <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>;
+    
+    <span class="comment">// 3. Get the last word and return its length</span>
+    <span class="keyword">return</span> words[words.length - <span class="number">1</span>].length();
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-slate-700"><b>Time:</b> <b>O(N)</b>. We must traverse the entire string to identify splits.</p>
+                        <p class="text-slate-700 mt-2"><b>Space:</b> <b>O(N)</b>. We create a new array containing copies of the words.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Pros & Cons</h4>
+                        <p class="text-green-600 font-bold">Pros: Highly readable, simple logic.</p>
+                        <p class="text-red-600 font-bold">Cons: Inefficient memory usage due to new array/string objects.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: REVERSE SCAN (OPTIMAL) -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-emerald-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide shadow-lg">
+                <span>APPROACH 2</span>
+                <span class="opacity-50">|</span>
+                <span>OPTIMAL REVERSE SCAN</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-emerald-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Backwards Leap"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    Why process the whole string if we only care about the end? We can iterate <b>backwards</b>:
+                    <br>1. Skip all trailing spaces.
+                    <br>2. Once we hit a character, start counting until we find the next space or the start of the string.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-emerald-50 p-8 rounded-3xl mb-10 border border-emerald-100">
+                    <div id="scan-msg" class="step-msg text-emerald-900">Click Next to start scanning backwards.</div>
+                    
+                    <div class="flex justify-center gap-2 mb-16 overflow-x-auto h-24" id="scan-viz"></div>
+                    
+                    <div class="flex justify-center items-center gap-6 mb-8">
+                        <div class="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm text-center min-w-[140px]">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Last Word Length</p>
+                            <p id="scan-length" class="text-4xl font-black text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="scanViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="scanViz.next()" id="scan-next-btn" class="px-12 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-l-8 border-emerald-600">
+<pre>
+<span class="keyword">public int</span> <span class="type">lengthOfLastWord</span>(<span class="type">String</span> s) {
+    <span class="keyword">int</span> lastWordLength = <span class="number">0</span>;
+    <span class="keyword">int</span> currentIndex = s.length() - <span class="number">1</span>;
+
+    <span class="comment">// 1. Skip trailing spaces</span>
+    <span class="keyword">while</span> (currentIndex >= <span class="number">0</span> && s.charAt(currentIndex) == <span class="string">' '</span>) {
+        currentIndex--;
+    }
+
+    <span class="comment">// 2. Count characters of the last word</span>
+    <span class="keyword">while</span> (currentIndex >= <span class="number">0</span> && s.charAt(currentIndex) != <span class="string">' '</span>) {
+        lastWordLength++;
+        currentIndex--;
+    }
+
+    <span class="keyword">return</span> lastWordLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-3 uppercase text-sm tracking-widest">Efficiency</h4>
+                        <p class="text-emerald-900"><b>Time:</b> <b>O(N)</b>. Worst case we scan the whole string once.</p>
+                        <p class="text-emerald-900 mt-2"><b>Space:</b> <b>O(1)</b>. No extra data structures or copies.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-6 rounded-2xl">
+                        <h4 class="font-bold text-emerald-400 mb-3 uppercase text-sm tracking-widest">Why it's better?</h4>
+                        <p class="text-slate-300 text-sm">We only look at the necessary characters. If a string is 1 million characters long with a 5-letter word at the end, we only perform ~10 operations, whereas <code>split()</code> would process the whole thing.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Performance Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time Complexity</th>
+                            <th class="p-4 border">Space Complexity</th>
+                            <th class="p-4 border">Early Exit?</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 border font-semibold">Built-in Split</td>
+                            <td class="p-4 border font-bold">O(N)</td>
+                            <td class="p-4 border font-bold text-red-600">O(N)</td>
+                            <td class="p-4 border text-red-500 font-bold">❌ No</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-semibold text-emerald-800">Reverse Scan</td>
+                            <td class="p-4 border font-bold text-emerald-700">O(N)</td>
+                            <td class="p-4 border font-bold text-emerald-700">O(1)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">✅ Yes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <h2 class="text-3xl font-bold mb-8 text-emerald-400">⚡ Memory Hooks & Tips</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Interview Key Phrases</h4>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">1.</span>
+                            <span><b>"Two-Loop Logic":</b> One while loop to skip spaces, one while loop to count.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">2.</span>
+                            <span><b>"In-place processing":</b> Emphasize avoiding string copies to show seniority.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Common Pitfalls</h4>
+                    <ul class="space-y-4 text-slate-300">
+                        <li>• Forgetting <code>currentIndex >= 0</code> check inside the while loops.</li>
+                        <li>• Handling strings that contain <b>only</b> spaces.</li>
+                        <li>• Not accounting for single-word strings without any spaces.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_STRING = "Fly me to the moon  ";
+
+        // --- SPLIT VISUALIZER ---
+        const splitViz = {
+            raw: TEST_STRING,
+            words: ["Fly", "me", "to", "the", "moon"],
+            step: 0,
+            init() { this.render(); },
+            reset() {
+                this.step = 0;
+                document.getElementById('split-next-btn').disabled = false;
+                this.render("Reset. Initial string with trailing spaces.");
+            },
+            render(msg) {
+                const rawContainer = document.getElementById('split-raw-string');
+                const arrayContainer = document.getElementById('split-array-viz');
+                const msgEl = document.getElementById('split-msg');
+                
+                if (msg) msgEl.innerText = msg;
+
+                rawContainer.innerHTML = this.raw.split('').map(char => `
+                    <div class="char-box ${char === ' ' ? 'char-space' : ''}">${char === ' ' ? '␣' : char}</div>
+                `).join('');
+
+                arrayContainer.innerHTML = this.words.map((word, i) => {
+                    let cls = "word-pill";
+                    if (this.step === 2 && i === this.words.length - 1) cls += " highlight";
+                    return `<div class="${cls}">${this.step >= 1 ? word : '?'}</div>`;
+                }).join('');
+            },
+            next() {
+                if (this.step === 0) {
+                    this.step = 1;
+                    this.render("Step 1: Splitting by spaces into words array...");
+                } else if (this.step === 1) {
+                    this.step = 2;
+                    this.render("Step 2: Accessing last index. Last Word: 'moon'");
+                } else {
+                    document.getElementById('split-next-btn').disabled = true;
+                    this.render("Final Length: 4");
+                }
+            }
+        };
+
+        // --- SCAN VISUALIZER ---
+        const scanViz = {
+            s: TEST_STRING,
+            idx: TEST_STRING.length - 1,
+            length: 0,
+            state: 'SKIP_SPACE', // SKIP_SPACE, COUNTING, DONE
+            init() { this.render(); },
+            reset() {
+                this.idx = TEST_STRING.length - 1;
+                this.length = 0;
+                this.state = 'SKIP_SPACE';
+                document.getElementById('scan-next-btn').disabled = false;
+                this.render("Reset. Pointers at the end of the string.");
+            },
+            render(msg) {
+                const container = document.getElementById('scan-viz');
+                const msgEl = document.getElementById('scan-msg');
+                if (msg) msgEl.innerText = msg;
+
+                container.innerHTML = this.s.split('').map((char, i) => {
+                    let cls = "char-box";
+                    if (char === ' ') cls += " char-space";
+                    if (i === this.idx) cls += " char-active";
+                    if (this.state === 'COUNTING' && i > this.idx && this.s[i] !== ' ') cls += " char-counted";
+                    if (this.state === 'DONE' && this.s[i] !== ' ' && i > this.idx) cls += " char-counted";
+
+                    return `<div class="${cls}">
+                        ${char === ' ' ? '␣' : char}
+                        ${i === this.idx ? '<span class="pointer-label">ptr</span>' : ''}
+                    </div>`;
+                }).join('');
+
+                document.getElementById('scan-length').innerText = this.length;
+            },
+            next() {
+                if (this.state === 'SKIP_SPACE') {
+                    if (this.idx >= 0 && this.s[this.idx] === ' ') {
+                        this.render(`Current char is space. Skipping...`);
+                        this.idx--;
+                    } else {
+                        this.state = 'COUNTING';
+                        this.render(`Found character '${this.s[this.idx]}'. Starting count.`);
+                    }
+                } else if (this.state === 'COUNTING') {
+                    if (this.idx >= 0 && this.s[this.idx] !== ' ') {
+                        this.length++;
+                        this.render(`Counting '${this.s[this.idx]}'. Length: ${this.length}`);
+                        this.idx--;
+                    } else {
+                        this.state = 'DONE';
+                        this.render(`Found boundary. The last word is finished.`);
+                        document.getElementById('scan-next-btn').disabled = true;
+                    }
+                }
+            }
+        };
+
+        window.onload = () => {
+            splitViz.init();
+            scanViz.init();
+        };
+    </script>
+</body>
+</html>

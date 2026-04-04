@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Try-with-resources</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        code { font-family: 'Fira Code', monospace; }
+        .sidebar-item:hover { background-color: #1e293b; border-left: 4px solid #38bdf8; }
+        .active-nav { background-color: #1e293b; border-left: 4px solid #38bdf8; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        /* Resource Lifecycle Animation */
+        .resource-node { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; position: relative; transition: all 0.5s ease; }
+        .status-open { background: #059669; box-shadow: 0 0 20px #05966966; }
+        .status-closed { background: #e11d48; box-shadow: 0 0 20px #e11d4866; transform: scale(0.8); opacity: 0.5; }
+        .connector { height: 4px; background: #334155; flex-grow: 1; position: relative; }
+        .connector-active { background: #38bdf8; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 border-r border-slate-800 sticky top-0 h-screen overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-bold text-sky-400">Java Mentor</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Chương 4.2: Resources</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#problem" class="block py-3 px-6 sidebar-item active-nav">1. The Problem: try-finally</a>
+            <a href="#autocloseable" class="block py-3 px-6 sidebar-item">2. AutoCloseable Contract</a>
+            <a href="#syntax" class="block py-3 px-6 sidebar-item">3. Syntax & Benefits</a>
+            <a href="#internals" class="block py-3 px-6 sidebar-item">4. Under the Hood (Compiler)</a>
+            <a href="#suppressed" class="block py-3 px-6 sidebar-item">5. Suppressed Exceptions</a>
+            <a href="#java9" class="block py-3 px-6 sidebar-item">6. Java 9 Improvements</a>
+            <a href="#practice" class="block py-3 px-6 sidebar-item text-orange-400 font-semibold">7. Thinking Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        
+        <!-- SECTION 1 -->
+        <section id="problem" class="mb-16">
+            <h1 class="text-4xl font-bold mb-6 text-white">Vấn đề của cách làm cũ (Try-Finally)</h1>
+            <p class="text-lg text-slate-400 mb-6 leading-relaxed">
+                Trước Java 7, để đóng một Resource (File, DB Connection, Socket...), chúng ta phải dùng <code class="text-sky-400">finally</code>. Cách này có 2 nhược điểm chết người:
+            </p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="glass-card p-6 rounded-xl border-l-4 border-rose-500">
+                    <h3 class="font-bold text-rose-400 mb-3 text-lg">1. Boilerplate Code (Rườm rà)</h3>
+                    <p class="text-sm text-slate-400">Bạn phải check null, bắt lồng try-catch trong finally. Nếu có 3 resources, code sẽ trở thành một "đống rác" thực sự.</p>
+                </div>
+                <div class="glass-card p-6 rounded-xl border-l-4 border-amber-500">
+                    <h3 class="font-bold text-amber-400 mb-3 text-lg">2. Exception Masking (Nuốt lỗi)</h3>
+                    <p class="text-sm text-slate-400">Nếu cả <code class="text-slate-200">try</code> và <code class="text-slate-200">finally</code> đều ném lỗi, lỗi trong <code class="text-slate-200">finally</code> sẽ ghi đè lỗi gốc, khiến việc debug trở nên bất khả thi.</p>
+                </div>
+            </div>
+
+            <div class="mt-8 rounded-xl overflow-hidden">
+                <pre><code class="language-java">// ❌ THE OLD UGLY WAY
+InputStream is = null;
+try {
+    is = new FileInputStream("data.txt");
+    // Do something
+} catch (IOException e) {
+    throw e;
+} finally {
+    if (is != null) {
+        try {
+            is.close(); // Nếu dòng này throw exception, exception gốc ở trên sẽ BIẾN MẤT!
+        } catch (IOException ex) { /* Swallow or log */ }
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- SECTION 2 -->
+        <section id="autocloseable" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-emerald-400 border-b border-emerald-900 pb-2">Hợp đồng AutoCloseable</h2>
+            <p class="text-slate-400 mb-6">Để một Class có thể sử dụng trong Try-with-resources, nó <strong>bắt buộc</strong> phải implement interface <code class="text-sky-400">java.lang.AutoCloseable</code>.</p>
+            
+            <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
+                <pre><code class="language-java">public interface AutoCloseable {
+    /**
+     * Được gọi tự động khi kết thúc block try.
+     * @throws Exception nếu có lỗi xảy ra khi đóng.
+     */
+    void close() throws Exception;
+}</code></pre>
+                <div class="mt-4 flex items-center space-x-2 text-sm text-amber-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Lưu ý: <strong>Closeable</strong> (từ Java 5) kế thừa AutoCloseable nhưng giới hạn throw <code class="text-white">IOException</code> và yêu cầu tính Idempotent (gọi nhiều lần không sao).</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- INTERACTIVE ANIMATION -->
+        <section class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-white text-center">Mô phỏng Lifecycle Resource</h2>
+            <div class="glass-card p-10 rounded-2xl flex flex-col items-center">
+                <div class="flex items-center w-full max-w-2xl">
+                    <div id="res-1" class="resource-node status-open">File 1</div>
+                    <div id="conn-1" class="connector"></div>
+                    <div id="res-2" class="resource-node status-open">File 2</div>
+                    <div id="conn-2" class="connector"></div>
+                    <div class="resource-node bg-slate-800">Done</div>
+                </div>
+                <div class="mt-10 flex space-x-4">
+                    <button onclick="runLifecycle()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-full font-bold transition">Chạy Try-with-resources</button>
+                    <button onclick="resetLifecycle()" class="border border-slate-700 text-slate-400 px-6 py-2 rounded-full hover:bg-slate-800 transition">Reset</button>
+                </div>
+                <p id="lifecycle-status" class="mt-4 text-sky-400 font-mono h-6"></p>
+            </div>
+        </section>
+
+        <!-- SECTION 4: INTERNALS -->
+        <section id="internals" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-blue-400 border-b border-blue-900 pb-2">Under the Hood: Compiler làm gì?</h2>
+            <p class="text-slate-400 mb-6 italic">Try-with-resources thực chất là một "Syntactic Sugar". Khi biên dịch ra Bytecode, Java Compiler sẽ tự động tạo ra một cấu trúc try-catch-finally cực kỳ phức tạp để đảm bảo an toàn.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase text-slate-500 tracking-wider">Mã bạn viết</h4>
+                    <pre class="rounded-lg h-full"><code class="language-java">try (MyRes res = new MyRes()) {
+    res.doWork();
+}</code></pre>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase text-slate-500 tracking-wider">Mã sau khi Decompile (Xấp xỉ)</h4>
+                    <pre class="rounded-lg h-full"><code class="language-java">MyRes res = new MyRes();
+Throwable primaryExc = null;
+try {
+    res.doWork();
+} catch (Throwable t) {
+    primaryExc = t;
+    throw t;
+} finally {
+    if (res != null) {
+        if (primaryExc != null) {
+            try {
+                res.close();
+            } catch (Throwable suppressed) {
+                // Đây là phép màu!
+                primaryExc.addSuppressed(suppressed);
+            }
+        } else {
+            res.close();
+        }
+    }
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: SUPPRESSED -->
+        <section id="suppressed" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-purple-400 border-b border-purple-900 pb-2">Suppressed Exceptions</h2>
+            <div class="p-6 bg-purple-900/10 border border-purple-500/20 rounded-xl">
+                <p class="text-slate-300 leading-relaxed">
+                    Đây là giải pháp cho vấn đề "nuốt lỗi". 
+                    Nếu cả <code class="text-white bg-slate-800 px-1">doWork()</code> ném lỗi A và <code class="text-white bg-slate-800 px-1">close()</code> ném lỗi B:
+                </p>
+                <ul class="mt-4 space-y-3">
+                    <li class="flex items-start">
+                        <span class="bg-purple-600 text-[10px] px-2 py-0.5 rounded mt-1 mr-2 font-bold">FLOW</span>
+                        <span class="text-slate-400 text-sm">Lỗi A (Primary) sẽ được ném ra ngoài.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-purple-600 text-[10px] px-2 py-0.5 rounded mt-1 mr-2 font-bold">FLOW</span>
+                        <span class="text-slate-400 text-sm">Lỗi B sẽ được "gắn kèm" vào lỗi A dưới dạng <strong>Suppressed Exception</strong>.</span>
+                    </li>
+                </ul>
+                <div class="mt-6">
+                    <h4 class="font-bold text-white mb-2">Cách lấy ra:</h4>
+                    <pre><code class="language-java">try {
+    // try-with-resources logic
+} catch (Exception e) {
+    Throwable[] suppressed = e.getSuppressed(); // Lấy mảng các lỗi bị nén lại
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: JAVA 9 -->
+        <section id="java9" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-orange-400 border-b border-orange-900 pb-2">Cải tiến trong Java 9+</h2>
+            <p class="text-slate-400 mb-6">Kể từ Java 9, nếu một biến là <strong>effectively final</strong> (biến không thay đổi giá trị sau khi gán), bạn có thể đưa trực tiếp nó vào khối try mà không cần khai báo mới.</p>
+            <pre><code class="language-java">final Scanner scanner = new Scanner(System.in);
+// Java 7, 8: Cần Scanner s2 = scanner; ở đây
+try (scanner) { // ✅ Hợp lệ từ Java 9
+    // ...
+} // scanner sẽ tự động được đóng ở đây</code></pre>
+        </section>
+
+        <!-- PRACTICE -->
+        <section id="practice" class="mb-16">
+            <h2 class="text-3xl font-semibold mb-4 text-rose-500">Thử thách Senior</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-6 rounded-xl">
+                    <p class="font-bold text-white mb-4">Case 1: Thứ tự đóng Resource</p>
+                    <p class="text-sm text-slate-400">Nếu khai báo <code class="text-sky-400">try (R1 r1 = new R1(); R2 r2 = new R2())</code>, thì cái nào đóng trước?</p>
+                    <div class="mt-4 p-3 bg-slate-800 rounded text-xs text-emerald-400 font-mono">
+                        Đáp án: Ngược lại với thứ tự khai báo (R2 đóng trước R1). Điều này cực kỳ quan trọng vì R2 có thể phụ thuộc vào R1.
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-xl">
+                    <p class="font-bold text-white mb-4">Case 2: "Nuốt lỗi" thủ công</p>
+                    <p class="text-sm text-slate-400">Có cách nào để try-with-resources vẫn "nuốt" mất exception không?</p>
+                    <div class="mt-4 p-3 bg-slate-800 rounded text-xs text-amber-400 font-mono">
+                        Có: Nếu em catch Exception và throw một Exception hoàn toàn mới mà quên không gán cause hoặc không gọi addSuppressed.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function runLifecycle() {
+            const status = document.getElementById('lifecycle-status');
+            const res1 = document.getElementById('res-1');
+            const res2 = document.getElementById('res-2');
+            const conn1 = document.getElementById('conn-1');
+            const conn2 = document.getElementById('conn-2');
+
+            status.innerText = "S1: Open Resource 1 & 2...";
+            
+            setTimeout(() => {
+                status.innerText = "S2: Working inside try block...";
+                conn1.classList.add('connector-active');
+                conn2.classList.add('connector-active');
+            }, 1000);
+
+            setTimeout(() => {
+                status.innerText = "S3: Closing Resource 2 (Last In First Out)...";
+                res2.classList.remove('status-open');
+                res2.classList.add('status-closed');
+            }, 2500);
+
+            setTimeout(() => {
+                status.innerText = "S4: Closing Resource 1...";
+                res1.classList.remove('status-open');
+                res1.classList.add('status-closed');
+            }, 3500);
+
+            setTimeout(() => {
+                status.innerText = "S5: All resources cleaned up!";
+            }, 4500);
+        }
+
+        function resetLifecycle() {
+            location.reload();
+        }
+
+        // Active scroll tracking
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active-nav');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active-nav');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

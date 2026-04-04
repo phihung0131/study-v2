@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Senior: Polymorphism & V-Table</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .vtable-row { transition: all 0.2s; }
+        .vtable-row:hover { background-color: #f1f5f9; transform: translateX(5px); }
+        .binding-card { perspective: 1000px; }
+        .highlight-text { color: #6366f1; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-900 text-white sticky top-0 h-screen hidden lg:block">
+        <div class="p-8">
+            <h1 class="text-2xl font-bold text-indigo-400">Java Masterclass</h1>
+            <p class="text-xs text-gray-400 mt-1">Chương 2: OOP Internals</p>
+        </div>
+        <nav class="mt-4 px-4">
+            <a href="#definition" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">1. Đa hình là gì?</a>
+            <a href="#binding" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">2. Static vs Dynamic Binding</a>
+            <a href="#vtable" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">3. Cơ chế V-Table (VMT)</a>
+            <a href="#hiding" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">4. Method Hiding & Shadowing</a>
+            <a href="#qa" class="block py-3 px-4 rounded-lg hover:bg-slate-800 transition">5. Câu hỏi Senior</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 md:p-16 max-w-5xl mx-auto">
+        
+        <!-- Section 1: Definition -->
+        <section id="definition" class="mb-20">
+            <h2 class="text-4xl font-black text-slate-800 mb-6 uppercase tracking-tight">2.3. Polymorphism</h2>
+            <div class="p-6 bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
+                <p class="text-lg leading-relaxed text-slate-600">
+                    <span class="highlight-text">Polymorphism (Đa hình)</span> là khả năng một đối tượng có thể thực hiện một hành động theo nhiều cách khác nhau. 
+                    Trong Java, điều này cho phép một biến tham chiếu kiểu lớp cha trỏ đến đối tượng của lớp con.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-5 bg-indigo-50 border-t-4 border-indigo-500 rounded-lg">
+                    <h4 class="font-bold text-indigo-800 mb-2">Compile-time Polymorphism</h4>
+                    <p class="text-sm text-indigo-700">Thực hiện qua <strong>Method Overloading</strong>. Quyết định gọi hàm nào dựa trên tham số truyền vào lúc biên dịch.</p>
+                </div>
+                <div class="p-5 bg-emerald-50 border-t-4 border-emerald-500 rounded-lg">
+                    <h4 class="font-bold text-emerald-800 mb-2">Runtime Polymorphism</h4>
+                    <p class="text-sm text-emerald-700">Thực hiện qua <strong>Method Overriding</strong>. Quyết định gọi hàm nào dựa trên kiểu đối tượng thực tế tại Runtime.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Binding -->
+        <section id="binding" class="mb-20">
+            <h3 class="text-2xl font-bold mb-8 text-slate-800 flex items-center">
+                <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                Static vs Dynamic Binding
+            </h3>
+            
+            <div class="space-y-8">
+                <div class="bg-slate-900 rounded-xl p-6 shadow-2xl">
+                    <h4 class="text-indigo-400 font-mono mb-4">// Phân tích Binding qua Code</h4>
+<pre><code class="language-java">public class BindingDemo {
+    public static void main(String[] args) {
+        Animal myDog = new Dog();
+
+        // 1. Static Binding (Compile-time)
+        // JVM nhìn vào kiểu khai báo (Animal)
+        System.out.println(myDog.species); 
+
+        // 2. Dynamic Binding (Runtime)
+        // JVM nhìn vào đối tượng thực tế (Dog)
+        myDog.makeSound(); 
+    }
+}
+</code></pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="p-6 border border-slate-200 rounded-xl bg-white">
+                        <h5 class="font-bold text-slate-800 mb-3">Static Binding (Early Binding)</h5>
+                        <ul class="text-sm text-slate-600 space-y-2">
+                            <li>⚡ Xảy ra khi biên dịch (Compile-time).</li>
+                            <li>🛠️ Áp dụng cho: <code>static</code>, <code>private</code>, <code>final</code> methods và <strong>toàn bộ variables</strong>.</li>
+                            <li>🚀 Hiệu năng cực cao vì địa chỉ hàm đã xác định sẵn.</li>
+                        </ul>
+                    </div>
+                    <div class="p-6 border border-slate-200 rounded-xl bg-white">
+                        <h5 class="font-bold text-slate-800 mb-3">Dynamic Binding (Late Binding)</h5>
+                        <ul class="text-sm text-slate-600 space-y-2">
+                            <li>🔄 Xảy ra khi thực thi (Runtime).</li>
+                            <li>🛠️ Áp dụng cho các virtual methods (Overriding).</li>
+                            <li>🔎 Cần cơ chế tra cứu (Lookup) địa chỉ hàm.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: V-Table -->
+        <section id="vtable" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Cơ chế V-Table (Virtual Method Table)</h3>
+            <p class="mb-8 text-slate-600">Làm sao JVM biết <code>myDog.makeSound()</code> phải chạy code của lớp <code>Dog</code> chứ không phải <code>Animal</code>? Câu trả lời là <strong>V-Table</strong>.</p>
+            
+            <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg">
+                <div class="p-6 bg-slate-800 text-white">
+                    <h4 class="font-bold">Mô phỏng V-Table trong Bộ nhớ</h4>
+                </div>
+                <div class="p-8">
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <!-- Class Structure -->
+                        <div class="w-full md:w-1/2 space-y-4">
+                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <h5 class="font-bold text-blue-800">Class Animal</h5>
+                                <div class="text-xs font-mono mt-2 space-y-1">
+                                    <div class="vtable-row p-2 border-b border-blue-100 flex justify-between">
+                                        <span>[0] eat()</span>
+                                        <span class="text-blue-500">@Animal_Eat_Addr</span>
+                                    </div>
+                                    <div class="vtable-row p-2 flex justify-between">
+                                        <span>[1] makeSound()</span>
+                                        <span class="text-blue-500">@Animal_Sound_Addr</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center text-slate-400">⬇️ Inheritance ⬇️</div>
+                            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                <h5 class="font-bold text-emerald-800">Class Dog extends Animal</h5>
+                                <div class="text-xs font-mono mt-2 space-y-1">
+                                    <div class="vtable-row p-2 border-b border-emerald-100 flex justify-between">
+                                        <span>[0] eat()</span>
+                                        <span class="text-blue-500">@Animal_Eat_Addr</span>
+                                    </div>
+                                    <div class="vtable-row p-2 flex justify-between bg-yellow-100">
+                                        <span>[1] makeSound()</span>
+                                        <span class="text-emerald-600">@Dog_Sound_Addr (Overridden)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Explanation -->
+                        <div class="w-full md:w-1/2">
+                            <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                <h5 class="font-bold mb-4">Quy trình thực thi:</h5>
+                                <ol class="text-sm space-y-4 text-slate-600">
+                                    <li class="flex items-start">
+                                        <span class="bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 text-[10px]">1</span>
+                                        JVM tải class <code>Dog</code>, tạo một V-Table chứa danh sách địa chỉ các method.
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 text-[10px]">2</span>
+                                        Nếu <code>Dog</code> override <code>makeSound()</code>, địa chỉ trong slot [1] sẽ được cập nhật trỏ tới code của <code>Dog</code>.
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 text-[10px]">3</span>
+                                        Khi gọi <code>myDog.makeSound()</code>, JVM tìm đến V-Table của đối tượng thực tế (Dog) và lấy địa chỉ ở slot tương ứng.
+                                    </li>
+                                </ol>
+                                <div class="mt-6 p-4 bg-indigo-900 text-indigo-100 rounded text-xs italic">
+                                    "V-Table giúp việc tra cứu method đạt độ phức tạp O(1), cực kỳ nhanh!"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Hiding -->
+        <section id="hiding" class="mb-20">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Method Hiding & Variable Shadowing</h3>
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r-xl mb-8">
+                <p class="text-amber-900 font-bold mb-2">Cảnh báo lỗi phổ biến:</p>
+                <p class="text-sm text-amber-800">Đa hình <strong>chỉ áp dụng cho Instance Methods</strong>. Nó không áp dụng cho Variables và Static Methods.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<pre><code class="language-java">class Parent {
+    String name = "Parent";
+    static void display() { System.out.println("Parent Static"); }
+}
+
+class Child extends Parent {
+    String name = "Child"; // Variable Shadowing
+    static void display() { System.out.println("Child Static"); } // Method Hiding
+}
+
+// Test
+Parent p = new Child();
+System.out.println(p.name); // Output: Parent
+p.display();               // Output: Parent Static
+</code></pre>
+                <div class="p-6 bg-white border border-slate-200 rounded-xl">
+                    <h5 class="font-bold text-slate-800 mb-4">Tại sao kết quả lại là "Parent"?</h5>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Vì <strong>Variables</strong> và <strong>Static Methods</strong> sử dụng <span class="font-bold text-indigo-600">Static Binding</span>. 
+                        Compiler quyết định dựa trên kiểu của biến tham chiếu (Parent p), không quan tâm đối tượng thực sự là gì. 
+                        <br><br>
+                        Đây là lý do tại sao ta không bao giờ nên định nghĩa lại biến hoặc static method trùng tên trong lớp con.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Q&A -->
+        <section id="qa" class="mb-20">
+            <h2 class="text-3xl font-bold mb-8 text-center text-slate-800 uppercase tracking-widest">Góc Senior Interview</h2>
+            <div class="space-y-4">
+                <div class="p-6 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors shadow-sm">
+                    <h5 class="font-bold text-slate-800 mb-2">Q: Có thể gọi một method của subclass từ tham chiếu của superclass mà không cần Downcasting không?</h5>
+                    <p class="text-sm text-slate-600">A: Không. Compiler kiểm tra tính hợp lệ dựa trên kiểu tham chiếu. Nếu method đó không được khai báo trong superclass, compiler sẽ báo lỗi ngay cả khi đối tượng thực tế có method đó. Ta phải dùng Downcasting (ép kiểu xuống).</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors shadow-sm">
+                    <h5 class="font-bold text-slate-800 mb-2">Q: Covariant Return Type là gì? Nó liên quan gì đến Đa hình?</h5>
+                    <p class="text-sm text-slate-600">A: Cho phép lớp con ghi đè một method và trả về một kiểu dữ liệu là subclass của kiểu dữ liệu ở lớp cha. Điều này giúp code linh hoạt hơn mà vẫn đảm bảo tính đa hình.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="mt-20 py-10 border-t border-slate-200 text-center text-slate-400 text-sm">
+            Học lập trình là học cách tư duy hệ thống. Hẹn gặp lại em ở bài tiếp theo!
+        </footer>
+    </main>
+</div>
+
+</body>
+</html>

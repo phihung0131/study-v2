@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java 21 Virtual Threads - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        .sidebar { height: 100vh; overflow-y: auto; border-right: 1px solid #1e293b; background: #0f172a; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .card-pro { background: #1e293b; border: 1px solid #334155; border-radius: 12px; transition: 0.3s; }
+        .card-pro:hover { border-color: #a855f7; box-shadow: 0 0 20px rgba(168, 85, 247, 0.1); }
+        .badge-new { background: #a855f7; color: white; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: bold; }
+        
+        /* Architecture Visualizer */
+        .arch-container { height: 400px; background: #000; border-radius: 16px; position: relative; border: 1px solid #1e293b; }
+        .os-thread { width: 140px; height: 60px; border: 2px solid #64748b; border-radius: 8px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 12px; background: #0f172a; z-index: 5; }
+        .virtual-thread { width: 30px; height: 30px; background: #a855f7; border-radius: 4px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 0 10px #a855f7; opacity: 0.8; }
+        .carrier-label { position: absolute; font-size: 10px; color: #94a3b8; font-weight: bold; text-transform: uppercase; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 p-6 flex-shrink-0 hidden md:block">
+        <h2 class="text-purple-400 font-bold text-xl mb-8 flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Loom Expert
+        </h2>
+        <nav class="space-y-4 text-sm">
+            <a href="#problem" class="block text-slate-400 hover:text-purple-400 transition">1. Giới hạn của OS Threads</a>
+            <a href="#concept" class="block text-slate-400 hover:text-purple-400 transition">2. Virtual Thread là gì?</a>
+            <a href="#simulator" class="block text-slate-400 hover:text-purple-400 transition font-semibold text-purple-400">3. Mô phỏng M:N Mapping</a>
+            <a href="#api" class="block text-slate-400 hover:text-purple-400 transition">4. Cách sử dụng API mới</a>
+            <a href="#pinning" class="block text-slate-400 hover:text-purple-400 transition">5. Vấn đề "Thread Pinning"</a>
+            <a href="#best-practices" class="block text-slate-400 hover:text-purple-400 transition">6. Chiến lược Production</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow">
+        <div class="max-w-4xl mx-auto py-12 px-6">
+            
+            <!-- Header -->
+            <header id="problem" class="mb-16">
+                <div class="flex items-center space-x-2 text-purple-500 mb-2">
+                    <span class="badge-new">JAVA 21 LTS</span>
+                    <span class="text-xs font-bold tracking-widest uppercase">Project Loom</span>
+                </div>
+                <h1 class="text-5xl font-black mb-6 leading-tight">Virtual Threads: <br><span class="text-purple-400">Cuộc Cách Mạng Về Quy Mô</span></h1>
+                <p class="text-slate-400 text-lg leading-relaxed">
+                    Trong Java truyền thống, 1 Java Thread = 1 OS Thread. OS Thread rất đắt (1MB stack). Với Virtual Threads, bạn có thể tạo <strong>1.000.000 luồng</strong> trên một chiếc Laptop bình thường.
+                </p>
+            </header>
+
+            <!-- Section 1: The Problem -->
+            <section class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-purple-500 mr-3">01.</span> Bức tường "Thread-per-request"
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="card-pro p-6 border-l-4 border-red-500/50">
+                        <h4 class="font-bold mb-4">Hạn chế của Platform Threads</h4>
+                        <ul class="space-y-3 text-sm text-slate-300">
+                            <li><strong>Memory:</strong> Mỗi thread tốn ~1MB RAM. 1000 threads = 1GB RAM chỉ để giữ luồng.</li>
+                            <li><strong>Context Switch:</strong> Việc chuyển đổi giữa các OS Thread tốn hàng ngàn chu kỳ CPU.</li>
+                            <li><strong>Scalability:</strong> Server thường sập khi vượt quá vài ngàn luồng.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-900 rounded-xl p-6 border border-slate-800 flex flex-col justify-center">
+                        <p class="text-sm italic text-slate-500 mb-4 text-center">Mô hình cũ: Chặn (Blocking) là kẻ thù của hiệu năng.</p>
+                        <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-red-500 w-1/4 animate-pulse"></div>
+                        </div>
+                        <p class="text-[10px] text-center mt-2 uppercase tracking-widest text-red-400">OS Resource Limit Reached</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Simulator -->
+            <section id="simulator" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-purple-400">
+                    Mô phỏng: M:N Scheduling (Continuations)
+                </h2>
+                <div class="arch-container mb-8 overflow-hidden" id="sim-box">
+                    <!-- OS Carrier Threads -->
+                    <div class="os-thread" style="bottom: 40px; left: 100px;" id="carrier-1">Carrier Thread 1</div>
+                    <div class="os-thread" style="bottom: 40px; right: 100px;" id="carrier-2">Carrier Thread 2</div>
+                    <div class="carrier-label" style="bottom: 20px; left: 130px;">CPU Core A</div>
+                    <div class="carrier-label" style="bottom: 20px; right: 130px;">CPU Core B</div>
+
+                    <!-- Main Memory / Heap -->
+                    <div class="absolute top-10 left-10 right-10 h-32 border-2 border-dashed border-slate-700 rounded-xl flex flex-wrap p-4 gap-2 content-start" id="heap-area">
+                        <!-- Virtual threads will "live" here when suspended -->
+                    </div>
+                    <div class="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] text-slate-500 font-bold uppercase">JVM Heap (Storing Continuations)</div>
+                </div>
+                
+                <div class="flex gap-4 justify-center">
+                    <button onclick="spawnVirtualThreads(20)" class="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-500 transition">Tạo 20 Virtual Threads</button>
+                    <button onclick="simulateIO()" class="px-6 py-2 bg-slate-800 text-slate-300 font-bold rounded-lg hover:bg-slate-700 transition">Mô phỏng I/O Blocking</button>
+                </div>
+                <p class="text-xs text-slate-500 mt-4 text-center">Hãy xem: Khi Virtual Thread gặp lệnh I/O (Blocking), nó "nhả" OS Thread ra và quay về Heap, giúp OS Thread rảnh tay làm việc khác.</p>
+            </section>
+
+            <!-- Section 3: API -->
+            <section id="api" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-purple-500 mr-3">02.</span> Lập trình với Virtual Threads
+                </h2>
+                <p class="text-slate-400 mb-6 text-sm">Java 21 giữ nguyên sự đơn giản của mã nguồn đồng bộ (Synchronous) nhưng mang lại sức mạnh bất đồng bộ (Asynchronous).</p>
+                <div class="bg-slate-950 rounded-xl p-6 border border-slate-800 mb-8">
+                    <pre><code class="language-java">// Cách 1: Tạo trực tiếp
+Thread vt = Thread.ofVirtual().name("my-vt").start(() -> {
+    System.out.println("Running on: " + Thread.currentThread());
+});
+
+// Cách 2: Sử dụng ExecutorService (Khuyên dùng)
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    executor.submit(() -> {
+        // Task xử lý I/O nặng
+        fetchDataFromDB();
+    });
+} // Tự động đóng và đợi task hoàn thành</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 4: Thread Pinning -->
+            <section id="pinning" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 text-red-400">Cảnh báo: Hiện tượng Thread Pinning</h2>
+                <div class="p-6 bg-red-900/10 border border-red-900/50 rounded-xl">
+                    <p class="text-sm text-slate-300 mb-4">Mặc dù Virtual Threads rất mạnh, nhưng có 2 trường hợp nó sẽ "khóa chặt" (Pin) vào Carrier Thread, khiến hệ thống mất khả năng scale:</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] mr-3 mt-1 uppercase font-bold">Pin Case 1</span>
+                            <div>
+                                <strong class="text-white">Sử dụng <code>synchronized</code>:</strong> Nếu bạn gọi blocking I/O bên trong block synchronized, Virtual Thread không thể nhả Carrier Thread.
+                                <br><span class="text-emerald-400 text-xs">-> Giải pháp: Dùng ReentrantLock thay thế.</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] mr-3 mt-1 uppercase font-bold">Pin Case 2</span>
+                            <div>
+                                <strong class="text-white">Native Methods:</strong> Khi thread đang thực thi code C/C++ (JNI).
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Best Practices -->
+            <section id="best-practices" class="mb-20">
+                <h2 class="text-2xl font-bold mb-8">Senior Best Practices</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card-pro p-6">
+                        <h4 class="font-bold text-purple-400 mb-2">❌ Đừng Pool Virtual Threads</h4>
+                        <p class="text-xs text-slate-400">Virtual Threads cực kỳ rẻ. Việc pooling chúng chỉ làm tăng độ phức tạp và tốn memory vô ích. Hãy cứ <code>new</code> mỗi khi có task!</p>
+                    </div>
+                    <div class="card-pro p-6">
+                        <h4 class="font-bold text-purple-400 mb-2">✅ Dùng cho I/O Bound</h4>
+                        <p class="text-xs text-slate-400">Phù hợp cho Database, API call, File system. <strong>Không</strong> dùng cho CPU-intensive (mã hóa, render video) vì Virtual Thread không giúp CPU nhanh hơn.</p>
+                    </div>
+                    <div class="card-pro p-6">
+                        <h4 class="font-bold text-purple-400 mb-2">✅ Giới hạn tài nguyên bằng Semaphores</h4>
+                        <p class="text-xs text-slate-400">Vì bạn có thể tạo hàng triệu thread, hãy cẩn thận kẻo làm sập Database. Dùng <code>Semaphore</code> để giới hạn số thread cùng lúc truy cập DB.</p>
+                    </div>
+                    <div class="card-pro p-6">
+                        <h4 class="font-bold text-purple-400 mb-2">✅ ThreadLocal an toàn</h4>
+                        <p class="text-xs text-slate-400">Virtual Threads hỗ trợ ThreadLocal, nhưng hãy cẩn thận với lượng dữ liệu lớn vì số lượng thread có thể lên tới hàng triệu.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interview Questions -->
+            <section class="mb-20 bg-purple-900/10 p-10 rounded-3xl border border-purple-500/20">
+                <h2 class="text-2xl font-bold mb-6 text-purple-400">Câu hỏi Mentor (Senior Interview)</h2>
+                <div class="space-y-6 text-slate-300">
+                    <div class="bg-slate-800/50 p-5 rounded-xl">
+                        <p class="font-bold mb-2">Q: Virtual Thread khác gì với Reactive Programming (WebFlux)?</p>
+                        <p class="text-sm text-slate-400">A: Cả hai đều giải quyết bài toán throughput. Tuy nhiên, Reactive bắt bạn phải thay đổi toàn bộ tư duy lập trình (Mono/Flux, callback hell). Virtual Thread cho phép bạn viết code Imperative (tuần tự) quen thuộc nhưng vẫn đạt được hiệu năng tương đương Reactive.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10">
+                &copy; 2024 Thầy dạy Java - Java 21 Modern Features
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        const heap = document.getElementById('heap-area');
+        const c1 = document.getElementById('carrier-1');
+        const c2 = document.getElementById('carrier-2');
+        let vts = [];
+
+        function spawnVirtualThreads(count) {
+            for(let i=0; i<count; i++) {
+                const vt = document.createElement('div');
+                vt.className = 'virtual-thread';
+                vt.innerText = 'VT';
+                vt.id = 'vt-' + Math.random().toString(36).substr(2, 5);
+                heap.appendChild(vt);
+                vts.push(vt);
+            }
+            animateScheduling();
+        }
+
+        async function animateScheduling() {
+            if(vts.length === 0) return;
+            
+            // Randomly pick a few to run
+            const active1 = vts[Math.floor(Math.random() * vts.length)];
+            const active2 = vts[Math.floor(Math.random() * vts.length)];
+
+            if(active1) mount(active1, c1);
+            if(active2) mount(active2, c2);
+
+            setTimeout(animateScheduling, 2000);
+        }
+
+        function mount(vt, carrier) {
+            const rect = carrier.getBoundingClientRect();
+            const parentRect = document.getElementById('sim-box').getBoundingClientRect();
+            
+            vt.style.transition = "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)";
+            vt.style.position = 'absolute';
+            vt.style.left = (rect.left - parentRect.left + 55) + 'px';
+            vt.style.top = (rect.top - parentRect.top - 40) + 'px';
+            vt.style.transform = "scale(1.2)";
+            vt.style.zIndex = "10";
+
+            setTimeout(() => {
+                unmount(vt);
+            }, 1500);
+        }
+
+        function unmount(vt) {
+            vt.style.position = 'relative';
+            vt.style.left = '0';
+            vt.style.top = '0';
+            vt.style.transform = "scale(1)";
+            heap.appendChild(vt);
+        }
+
+        function simulateIO() {
+            const allVt = document.querySelectorAll('.virtual-thread');
+            allVt.forEach(vt => {
+                vt.style.backgroundColor = '#64748b'; // Gray for waiting
+                vt.style.boxShadow = 'none';
+            });
+            setTimeout(() => {
+                allVt.forEach(vt => {
+                    vt.style.backgroundColor = '#a855f7';
+                    vt.style.boxShadow = '0 0 10px #a855f7';
+                });
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candy Problem Visualizer - LeetCode #135</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        
+        .code-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+
+        .child-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .rating-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .candy-badge {
+            background: #fbbf24;
+            color: #78350f;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .node-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); }
+        .node-check { border-color: #10b981; background-color: #ecfdf5; }
+        .node-alert { border-color: #ef4444; background-color: #fef2f2; }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            min-width: 120px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Candy Problem</h1>
+            <p class="text-slate-500 font-medium italic">LeetCode #135 | Difficulty: Hard | Greedy, Array</p>
+        </header>
+
+        <!-- Problem Statement -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <span>🍬</span> Problem Rules
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                There are <b>n</b> children standing in a line. Each child is assigned a rating value given in the integer array <b>ratings</b>. 
+                You are giving candies to these children subjected to the following requirements:
+            </p>
+            <ul class="list-disc pl-8 space-y-2 text-slate-700 mb-6">
+                <li>Each child must have at least <b>one</b> candy.</li>
+                <li>Children with a higher rating than their neighbors must get <b>more</b> candies than their neighbors.</li>
+            </ul>
+            <p class="text-slate-700 font-semibold">Goal: Return the minimum number of candies you need to have to distribute the candies.</p>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 1: Iterative Correction (Brute Force)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-slate-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Keep Fixing until Perfect"</h3>
+                <p class="text-slate-600 mb-8">
+                    Start by giving every child <b>1</b> candy. Then, keep scanning the line from left to right. 
+                    If you find a child whose rating is higher than a neighbor but they don't have more candies, 
+                    <b>increase</b> their candy count. Repeat this until no more changes are needed.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Initializing: All children get 1 candy.</div>
+                    <div class="flex flex-wrap justify-center gap-6 mb-12 h-32" id="bf-viz"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="bfViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-8 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-container mb-8 code-font">
+<pre>
+<span class="keyword">public int</span> <span class="type">candy</span>(<span class="keyword">int</span>[] ratings) {
+    <span class="keyword">int</span> n = ratings.length;
+    <span class="keyword">int</span>[] candies = <span class="keyword">new int</span>[n];
+    <span class="type">Arrays</span>.fill(candies, <span class="number">1</span>);
+
+    <span class="keyword">boolean</span> hasChanged = <span class="keyword">true</span>;
+    <span class="keyword">while</span> (hasChanged) {
+        hasChanged = <span class="keyword">false</span>;
+        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+            <span class="comment">// Check left neighbor</span>
+            <span class="keyword">if</span> (i > <span class="number">0</span> && ratings[i] > ratings[i-1] && candies[i] <= candies[i-1]) {
+                candies[i] = candies[i-1] + <span class="number">1</span>;
+                hasChanged = <span class="keyword">true</span>;
+            }
+            <span class="comment">// Check right neighbor</span>
+            <span class="keyword">if</span> (i < n - <span class="number">1</span> && ratings[i] > ratings[i+1] && candies[i] <= candies[i+1]) {
+                candies[i] = candies[i+1] + <span class="number">1</span>;
+                hasChanged = <span class="keyword">true</span>;
+            }
+        }
+    }
+    
+    <span class="keyword">int</span> totalCandies = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> c : candies) totalCandies += c;
+    <span class="keyword">return</span> totalCandies;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <h4 class="font-bold text-red-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n²)</b>. In the worst case (ratings [5,4,3,2,1]), we might need <b>n</b> full passes.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. To store the candies array.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Why it's slow?</h4>
+                        <p>When you update a child's candy count, it might cause their <i>other</i> neighbor relationship to break, forcing another loop pass. This "ripple effect" is inefficient.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: TWO-PASS GREEDY -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase">
+                Approach 2: Two-Pass Greedy (Optimal)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border-2 border-blue-100">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Divide and Conquer Neighbors"</h3>
+                <p class="text-slate-600 mb-8">
+                    Instead of checking both neighbors simultaneously, we handle one side at a time:
+                    <br>1. <b>Left-to-Right Pass:</b> Ensure child <b>i</b> has more candies than <b>i-1</b> if their rating is higher.
+                    <br>2. <b>Right-to-Left Pass:</b> Ensure child <b>i</b> has more candies than <b>i+1</b> if their rating is higher.
+                    <br>By taking the <b>max</b> of these two conditions, both rules will be satisfied in just two passes.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200">
+                    <div id="tp-msg" class="step-msg">Ready to perform two independent greedy passes.</div>
+                    <div class="flex flex-wrap justify-center gap-6 mb-12 h-32" id="tp-viz"></div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button onclick="tpViz.reset()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-bold transition">Reset</button>
+                        <button onclick="tpViz.next()" id="tp-next-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition shadow-lg">Next Step</button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (The Best Interview Answer)</h3>
+                <div class="code-container mb-8 code-font border-2 border-blue-800">
+<pre>
+<span class="keyword">public int</span> <span class="type">candy</span>(<span class="keyword">int</span>[] ratings) {
+    <span class="keyword">int</span> n = ratings.length;
+    <span class="keyword">int</span>[] leftToRight = <span class="keyword">new int</span>[n];
+    <span class="keyword">int</span>[] rightToLeft = <span class="keyword">new int</span>[n];
+    
+    <span class="type">Arrays</span>.fill(leftToRight, <span class="number">1</span>);
+    <span class="type">Arrays</span>.fill(rightToLeft, <span class="number">1</span>);
+
+    <span class="comment">// Pass 1: Satisfaction from the left</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < n; i++) {
+        <span class="keyword">if</span> (ratings[i] > ratings[i - <span class="number">1</span>]) {
+            leftToRight[i] = leftToRight[i - <span class="number">1</span>] + <span class="number">1</span>;
+        }
+    }
+
+    <span class="comment">// Pass 2: Satisfaction from the right</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = n - <span class="number">2</span>; i >= <span class="number">0</span>; i--) {
+        <span class="keyword">if</span> (ratings[i] > ratings[i + <span class="number">1</span>]) {
+            rightToLeft[i] = rightToLeft[i + <span class="number">1</span>] + <span class="number">1</span>;
+        }
+    }
+
+    <span class="keyword">int</span> total = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < n; i++) {
+        <span class="comment">// We must satisfy BOTH constraints</span>
+        total += <span class="type">Math</span>.max(leftToRight[i], rightToLeft[i]);
+    }
+    <span class="keyword">return</span> total;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Three linear traversals.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(n)</b>. Storing two auxiliary arrays.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-sm">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Key Insight</h4>
+                        <p>By splitting the bidirectional constraint into two unidirectional ones, we turn a global problem into two simple local ones. The <b>max()</b> function acts as our "merge" logic.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: SINGLE-PASS PEAK/VALLEY -->
+        <section class="mb-20">
+            <div class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-t-xl font-bold text-sm tracking-widest uppercase text-xs">
+                Approach 3: Single-Pass Peak/Valley ($O(1)$ Space)
+            </div>
+            <div class="bg-white p-8 rounded-b-2xl rounded-tr-2xl shadow-lg border border-emerald-200">
+                <h3 class="text-xl font-bold mb-4">Intuition: "Slope Mathematics"</h3>
+                <p class="text-slate-600 mb-8">
+                    Imagine the ratings as hills. An <b>up-slope</b> of length 3 needs 1+2+3 candies. A <b>down-slope</b> of length 2 needs 2+1 candies. 
+                    The only tricky part is the <b>Peak</b>: its candy count must be the <b>maximum</b> of the up-slope and down-slope lengths.
+                </p>
+
+                <div class="bg-slate-900 text-white p-6 rounded-xl mb-8">
+                    <p class="text-sm opacity-80 mb-4 uppercase font-bold tracking-widest">Logic Breakdown</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                            <p class="text-xs text-blue-400 font-bold mb-1">UP SLOPE</p>
+                            <p class="text-sm">Count elements increasing. Add to total.</p>
+                        </div>
+                        <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                            <p class="text-xs text-red-400 font-bold mb-1">DOWN SLOPE</p>
+                            <p class="text-sm">Count elements decreasing. Add to total.</p>
+                        </div>
+                        <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                            <p class="text-xs text-emerald-400 font-bold mb-1">PEAK ADJUST</p>
+                            <p class="text-sm">If down-slope > up-slope, peak must grow.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Java Implementation (Space Optimized)</h3>
+                <div class="code-container mb-8 code-font">
+<pre>
+<span class="keyword">public int</span> <span class="type">candy</span>(<span class="keyword">int</span>[] ratings) {
+    <span class="keyword">if</span> (ratings.length <= <span class="number">1</span>) <span class="keyword">return</span> ratings.length;
+    
+    <span class="keyword">int</span> candies = <span class="number">1</span>;
+    <span class="keyword">int</span> up = <span class="number">0</span>;
+    <span class="keyword">int</span> down = <span class="number">0</span>;
+    <span class="keyword">int</span> oldUp = <span class="number">0</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i < ratings.length; i++) {
+        <span class="keyword">if</span> (ratings[i] > ratings[i - <span class="number">1</span>]) {
+            up++; down = <span class="number">0</span>;
+            candies += <span class="number">1</span> + up;
+            oldUp = up;
+        } <span class="keyword">else if</span> (ratings[i] == ratings[i - <span class="number">1</span>]) {
+            up = <span class="number">0</span>; down = <span class="number">0</span>; oldUp = <span class="number">0</span>;
+            candies += <span class="number">1</span>;
+        } <span class="keyword">else</span> {
+            down++; up = <span class="number">0</span>;
+            candies += down;
+            <span class="comment">// If down-slope exceeds previous up-slope, 
+            // the peak needs an extra candy</span>
+            <span class="keyword">if</span> (down > oldUp) candies++;
+        }
+    }
+    <span class="keyword">return</span> candies;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        <h4 class="font-bold text-emerald-800 mb-2 underline">Complexity</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b>. Single pass.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b>. No auxiliary arrays.</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                        <h4 class="font-bold text-slate-800 mb-2 underline">Usage Note</h4>
+                        <p>This approach is mathematically beautiful but much harder to implement correctly in a high-pressure interview. Always start with the <b>Two-Pass</b> method first!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <h2 class="text-2xl font-bold mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time</th>
+                            <th class="p-4 border">Space</th>
+                            <th class="p-4 border">Difficulty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p-4 border font-semibold">Brute Force</td>
+                            <td class="p-4 border text-red-600">O(n²)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border text-blue-600">Easy</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="p-4 border font-bold text-blue-700">Two-Pass Greedy</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(n)</td>
+                            <td class="p-4 border">O(n)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">Recommended</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">Slope Method</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(n)</td>
+                            <td class="p-4 border text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 border text-red-600 font-bold">Hard</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-10 rounded-[2rem] shadow-2xl">
+            <h2 class="text-3xl font-bold mb-8 text-blue-400 flex items-center gap-2">
+                <span>⚡</span> Algorithm Cheat Sheet
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Core Strategy</h4>
+                    <p class="text-slate-400 mb-4">
+                        When faced with "neighbor constraints," try splitting the problem into <b>One-Directional</b> requirements.
+                    </p>
+                    <ul class="space-y-3 text-slate-400">
+                        <li class="flex gap-2"><b>1.</b> If <code>rat[i] > rat[i-1]</code>, then <code>can[i] = can[i-1] + 1</code>.</li>
+                        <li class="flex gap-2"><b>2.</b> If <code>rat[i] > rat[i+1]</code>, then <code>can[i] = can[i+1] + 1</code>.</li>
+                        <li class="flex gap-2"><b>3.</b> Final answer is <code>max(1, 2)</code>.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Visual Memory Hook</h4>
+                    <p class="text-slate-400 leading-relaxed">
+                        Think of a <b>V-shape</b> ratings graph. The bottom of the V gets 1 candy. As you go up either side, the candies increase linearly. The point where two slopes meet takes the maximum of both.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEST_RATINGS = [1, 2, 8, 8, 2, 1];
+
+        // --- BRUTE FORCE VIZ ---
+        const bfViz = {
+            ratings: [...TEST_RATINGS],
+            candies: [1, 1, 1, 1, 1, 1],
+            idx: 0,
+            hasChanged: false,
+            init() { this.render(); },
+            reset() {
+                this.candies = [1, 1, 1, 1, 1, 1];
+                this.idx = 0;
+                this.hasChanged = false;
+                document.getElementById('bf-next-btn').disabled = false;
+                this.render("Reset. Everyone starts with 1.");
+            },
+            render(msg) {
+                const container = document.getElementById('bf-viz');
+                const msgEl = document.getElementById('bf-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = this.ratings.map((r, i) => `
+                    <div class="child-node">
+                        <div class="candy-badge">${this.candies[i]}</div>
+                        <div class="rating-box ${i === this.idx ? 'node-active' : ''}">${r}</div>
+                        <div class="text-[10px] font-bold text-slate-400">#${i}</div>
+                    </div>
+                `).join('');
+            },
+            next() {
+                const i = this.idx;
+                let changedThisStep = false;
+                let msg = `Checking Child #${i} (Rating ${this.ratings[i]})... `;
+
+                // Logic check
+                if (i > 0 && this.ratings[i] > this.ratings[i-1] && this.candies[i] <= this.candies[i-1]) {
+                    this.candies[i] = this.candies[i-1] + 1;
+                    changedThisStep = true;
+                    this.hasChanged = true;
+                }
+                if (i < this.ratings.length - 1 && this.ratings[i] > this.ratings[i+1] && this.candies[i] <= this.candies[i+1]) {
+                    this.candies[i] = this.candies[i+1] + 1;
+                    changedThisStep = true;
+                    this.hasChanged = true;
+                }
+
+                if (changedThisStep) {
+                    msg += "Relationship broken! Added candies.";
+                    const nodes = document.querySelectorAll('#bf-viz .rating-box');
+                    nodes[i].classList.add('node-alert');
+                } else {
+                    msg += "Relationships OK.";
+                    const nodes = document.querySelectorAll('#bf-viz .rating-box');
+                    nodes[i].classList.add('node-check');
+                }
+
+                this.idx++;
+                if (this.idx >= this.ratings.length) {
+                    if (this.hasChanged) {
+                        this.idx = 0;
+                        this.hasChanged = false;
+                        msg += " Pass finished, but changes were made. Starting another pass.";
+                    } else {
+                        msg += " Stable state reached! Total: " + this.candies.reduce((a,b)=>a+b, 0);
+                        document.getElementById('bf-next-btn').disabled = true;
+                    }
+                }
+                this.render(msg);
+            }
+        };
+
+        // --- TWO PASS VIZ ---
+        const tpViz = {
+            ratings: [...TEST_RATINGS],
+            left: [1, 1, 1, 1, 1, 1],
+            right: [1, 1, 1, 1, 1, 1],
+            pass: 1, // 1: left, 2: right, 3: merge
+            idx: 0,
+            init() { this.render(); },
+            reset() {
+                this.left = [1, 1, 1, 1, 1, 1];
+                this.right = [1, 1, 1, 1, 1, 1];
+                this.pass = 1;
+                this.idx = 1;
+                document.getElementById('tp-next-btn').disabled = false;
+                this.render("Reset. Let's start the Left-to-Right pass.");
+            },
+            render(msg) {
+                const container = document.getElementById('tp-viz');
+                const msgEl = document.getElementById('tp-msg');
+                if (msg) msgEl.innerText = msg;
+                
+                container.innerHTML = this.ratings.map((r, i) => {
+                    let candyText = this.pass === 1 ? `L:${this.left[i]}` : (this.pass === 2 ? `R:${this.right[i]}` : `M:${Math.max(this.left[i], this.right[i])}`);
+                    return `
+                    <div class="child-node">
+                        <div class="candy-badge" style="background: ${this.pass===1?'#dbeafe':(this.pass===2?'#fee2e2':'#fef08a')}">${candyText}</div>
+                        <div class="rating-box ${i === this.idx ? 'node-active' : ''}">${r}</div>
+                    </div>
+                `}).join('');
+            },
+            next() {
+                const n = this.ratings.length;
+                let msg = "";
+
+                if (this.pass === 1) {
+                    if (this.ratings[this.idx] > this.ratings[this.idx - 1]) {
+                        this.left[this.idx] = this.left[this.idx - 1] + 1;
+                        msg = `Index ${this.idx} > ${this.idx-1}. Candy: ${this.left[this.idx]}`;
+                    } else {
+                        msg = `Index ${this.idx} <= ${this.idx-1}. Reset to 1.`;
+                    }
+                    this.idx++;
+                    if (this.idx === n) {
+                        this.pass = 2;
+                        this.idx = n - 2;
+                        msg = "Left Pass Done. Starting Right Pass...";
+                    }
+                } else if (this.pass === 2) {
+                    if (this.ratings[this.idx] > this.ratings[this.idx + 1]) {
+                        this.right[this.idx] = this.right[this.idx + 1] + 1;
+                        msg = `Index ${this.idx} > ${this.idx+1}. Candy: ${this.right[this.idx]}`;
+                    } else {
+                        msg = `Index ${this.idx} <= ${this.idx+1}. Reset to 1.`;
+                    }
+                    this.idx--;
+                    if (this.idx < 0) {
+                        this.pass = 3;
+                        this.idx = -1;
+                        msg = "Both passes done! Total = " + this.ratings.reduce((acc, _, i) => acc + Math.max(this.left[i], this.right[i]), 0);
+                        document.getElementById('tp-next-btn').disabled = true;
+                    }
+                }
+                this.render(msg);
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            tpViz.init();
+        };
+    </script>
+</body>
+</html>

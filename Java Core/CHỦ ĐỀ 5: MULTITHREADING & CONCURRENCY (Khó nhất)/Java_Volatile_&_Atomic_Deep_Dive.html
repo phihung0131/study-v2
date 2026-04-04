@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Volatile & Atomic - Mentor Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        code { font-family: 'Fira Code', monospace; }
+        .sidebar { height: 100vh; overflow-y: auto; scrollbar-width: thin; border-right: 1px solid #1e293b; background: #0f172a; }
+        .content-area { height: 100vh; overflow-y: auto; scroll-behavior: smooth; }
+        .card-pro { background: #1e293b; border: 1px solid #334155; border-radius: 12px; transition: 0.3s; }
+        .card-pro:hover { border-color: #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.1); }
+        .warning-box { border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.05); padding: 1.25rem; }
+        .info-box { border-left: 4px solid #38bdf8; background: rgba(56, 189, 248, 0.05); padding: 1.25rem; }
+        
+        /* Memory Simulator Styles */
+        .mem-container { height: 350px; background: #000; border-radius: 16px; position: relative; border: 1px solid #1e293b; overflow: hidden; }
+        .cpu-core { width: 120px; height: 80px; border: 2px solid #64748b; border-radius: 8px; position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; background: #0f172a; }
+        .cache-box { width: 60px; height: 30px; background: #334155; border: 1px solid #475569; margin-top: 5px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #94a3b8; }
+        .main-memory { width: 250px; height: 60px; border: 2px solid #38bdf8; border-radius: 8px; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #38bdf8; }
+        .data-particle { width: 12px; height: 12px; background: #38bdf8; border-radius: 50%; position: absolute; z-index: 10; display: none; box-shadow: 0 0 10px #38bdf8; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 p-6 flex-shrink-0 hidden md:block">
+        <h2 class="text-sky-400 font-bold text-xl mb-8 flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Java Expert
+        </h2>
+        <nav class="space-y-4 text-sm">
+            <a href="#visibility" class="block text-slate-400 hover:text-sky-400 transition">1. Volatile & Visibility</a>
+            <a href="#atomicity" class="block text-slate-400 hover:text-sky-400 transition">2. Volatile != Atomicity</a>
+            <a href="#atomic-classes" class="block text-slate-400 hover:text-sky-400 transition">3. Atomic Classes</a>
+            <a href="#cas-mechanism" class="block text-slate-400 hover:text-sky-400 transition font-semibold text-sky-400">4. CAS: Compare & Swap</a>
+            <a href="#performance" class="block text-slate-400 hover:text-sky-400 transition">5. So sánh Performance</a>
+            <a href="#lab" class="block text-slate-400 hover:text-sky-400 transition">6. Bài tập Senior</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area flex-grow">
+        <div class="max-w-4xl mx-auto py-12 px-6">
+            
+            <!-- Header -->
+            <header id="top" class="mb-16">
+                <div class="flex items-center space-x-2 text-sky-500 mb-2">
+                    <span class="text-xs font-bold tracking-widest uppercase">Chapter 5.3</span>
+                    <span class="h-px w-8 bg-sky-500"></span>
+                </div>
+                <h1 class="text-4xl font-black mb-6">Volatile & Atomic: <br><span class="text-sky-400 underline decoration-slate-800">Cơ chế Non-blocking trong Java</span></h1>
+                <p class="text-slate-400 text-lg leading-relaxed">
+                    Tại sao đôi khi <code>synchronized</code> lại là "overkill"? Làm sao để các Thread giao tiếp với nhau mà không cần chờ đợi? Hãy cùng khám phá tầng sâu của Java Memory Model (JMM).
+                </p>
+            </header>
+
+            <!-- Section 1: Volatile -->
+            <section id="visibility" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-sky-500 mr-3">01.</span> Volatile: Phá vỡ rào cản Cache
+                </h2>
+                <div class="info-box mb-6">
+                    <p class="text-sm"><strong>Bài toán Visibility:</strong> Mỗi CPU Core có một vùng L1/L2 Cache riêng. Khi Thread 1 sửa biến <code>running = false</code>, giá trị này có thể chỉ nằm ở Cache của Core 1. Thread 2 (chạy ở Core 2) vẫn thấy <code>running = true</code> và lặp vô tận.</p>
+                </div>
+
+                <!-- Simulation -->
+                <div class="mem-container mb-6" id="sim-box">
+                    <div class="cpu-core" style="top: 20px; left: 50px;">
+                        <span>Core 1 (Thread 1)</span>
+                        <div class="cache-box" id="cache-1">true</div>
+                    </div>
+                    <div class="cpu-core" style="top: 20px; right: 50px;">
+                        <span>Core 2 (Thread 2)</span>
+                        <div class="cache-box" id="cache-2">true</div>
+                    </div>
+                    <div class="main-memory" id="main-mem">Main Memory (RAM): true</div>
+                    <div id="particle" class="data-particle"></div>
+                </div>
+                <div class="flex gap-4 justify-center mb-8">
+                    <button onclick="runSim(false)" class="px-4 py-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-xs font-bold border border-slate-700">Chế độ Thường (Mất đồng bộ)</button>
+                    <button onclick="runSim(true)" class="px-4 py-2 bg-sky-600 rounded-lg hover:bg-sky-500 text-xs font-bold shadow-lg shadow-sky-500/20">Chế độ Volatile (Đồng bộ ngay)</button>
+                </div>
+
+                <div class="card-pro p-6">
+                    <h4 class="font-bold mb-4 text-sky-400">Từ khóa 'volatile' làm được gì?</h4>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-start"><span class="text-sky-500 mr-2">✔</span> <strong>Visibility:</strong> Mọi thao tác ghi vào biến volatile sẽ được flush xuống Main Memory ngay lập tức. Mọi thao tác đọc sẽ đọc trực tiếp từ Main Memory.</li>
+                        <li class="flex items-start"><span class="text-sky-500 mr-2">✔</span> <strong>No Reordering:</strong> Ngăn chặn trình biên dịch và CPU sắp xếp lại thứ tự các lệnh (Instruction Reordering).</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 2: Volatile != Atomicity -->
+            <section id="atomicity" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-red-500 mr-3">02.</span> Cảnh báo: Volatile không phải là Atomic
+                </h2>
+                <div class="warning-box mb-6">
+                    <p class="font-bold text-red-400 mb-1">Sai lầm kinh điển của Senior!</p>
+                    <p class="text-sm">Nhiều người nghĩ <code>public volatile int count = 0;</code> và thực hiện <code>count++</code> là an toàn. **KHÔNG!**</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div class="card-pro p-6">
+                        <p class="text-xs font-bold text-slate-500 mb-4 uppercase">Thao tác count++ (3 bước):</p>
+                        <ol class="text-sm list-decimal ml-4 space-y-2 text-slate-300">
+                            <li>Đọc <code>count</code> (đảm bảo visibility).</li>
+                            <li>Tăng <code>count + 1</code>.</li>
+                            <li>Ghi lại <code>count</code>.</li>
+                        </ol>
+                        <p class="text-xs mt-4 text-pink-400 italic">Nếu 2 thread cùng ở bước 2, chúng sẽ cùng ghi một giá trị cũ ở bước 3!</p>
+                    </div>
+                    <div class="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
+                        <pre><code class="language-java">// SAI TRONG ĐA LUỒNG
+volatile int count = 0;
+
+public void inc() {
+    count++; // Vẫn bị Race Condition!
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Atomic Classes -->
+            <section id="atomic-classes" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="text-emerald-500 mr-3">03.</span> Atomic Classes: Giải pháp Non-blocking
+                </h2>
+                <p class="text-slate-400 mb-8 text-sm">Gói <code>java.util.concurrent.atomic</code> cung cấp các class như <code>AtomicInteger</code>, <code>AtomicLong</code>, <code>AtomicReference</code>... Chúng đảm bảo các thao tác là **Atomic** mà không cần dùng <code>synchronized</code>.</p>
+                
+                <div class="bg-slate-950 rounded-xl p-6 border border-slate-800 mb-8">
+                    <pre><code class="language-java">import java.util.concurrent.atomic.AtomicInteger;
+
+public class Counter {
+    private AtomicInteger count = new AtomicInteger(0);
+
+    public void increment() {
+        count.incrementAndGet(); // Hoàn toàn atomic!
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 4: CAS Mechanism -->
+            <section id="cas-mechanism" class="mb-20">
+                <h2 class="text-2xl font-bold mb-6 text-sky-400">Deep Dive: Cơ chế CAS (Compare-And-Swap)</h2>
+                <div class="info-box mb-8">
+                    <p class="text-sm">Bí mật đằng sau Atomic Classes không phải là Lock, mà là lệnh CPU **CAS**. Nó hoạt động theo nguyên tắc: "Tôi nghĩ giá trị hiện tại là V, nếu đúng là V thì hãy đổi nó thành N. Nếu không phải V (nghĩa là ai đó đã sửa rồi), tôi sẽ thử lại từ đầu."</p>
+                </div>
+                
+                <!-- CAS Flow Diagram -->
+                <div class="flex flex-col items-center space-y-4 mb-8">
+                    <div class="px-6 py-3 border-2 border-slate-700 rounded-lg text-sm">Đọc giá trị hiện tại (Expected: 5)</div>
+                    <div class="h-8 w-px bg-slate-700"></div>
+                    <div class="px-6 py-4 border-2 border-sky-500 bg-sky-500/10 rounded-lg text-center">
+                        <p class="font-bold">CPU CAS Command</p>
+                        <p class="text-[10px] mt-1 italic">Compare(current, expected)</p>
+                    </div>
+                    <div class="flex w-full justify-around">
+                        <div class="flex flex-col items-center">
+                            <div class="h-8 w-px bg-emerald-500"></div>
+                            <div class="px-4 py-2 bg-emerald-900/20 border border-emerald-500 text-emerald-400 rounded text-xs">Bằng nhau? -> Ghi giá trị mới (6)</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="h-8 w-px bg-red-500"></div>
+                            <div class="px-4 py-2 bg-red-900/20 border border-red-500 text-red-400 rounded text-xs">Khác nhau? -> Loop lại từ đầu (Retry)</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 italic text-center">Đây là lý do tại sao nó được gọi là **Optimistic Locking** (Khóa lạc quan).</p>
+            </section>
+
+            <!-- Section 5: Performance Comparison -->
+            <section id="performance" class="mb-20 pt-12 border-t border-slate-800">
+                <h2 class="text-2xl font-bold mb-8">So sánh: Khi nào dùng gì?</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-700">
+                                <th class="py-4 px-4 font-bold text-sky-400">Công cụ</th>
+                                <th class="py-4 px-4 font-bold text-sky-400">Đặc tính</th>
+                                <th class="py-4 px-4 font-bold text-sky-400">Chi phí (Overhead)</th>
+                                <th class="py-4 px-4 font-bold text-sky-400">Tình huống tốt nhất</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-400">
+                            <tr class="border-b border-slate-800">
+                                <td class="py-4 px-4 font-mono">synchronized</td>
+                                <td class="py-4 px-4 text-xs">Blocking, Lock-based</td>
+                                <td class="py-4 px-4 text-red-400">Cao (Context Switch)</td>
+                                <td class="py-4 px-4">Logic phức tạp, nhiều biến liên quan</td>
+                            </tr>
+                            <tr class="border-b border-slate-800">
+                                <td class="py-4 px-4 font-mono">volatile</td>
+                                <td class="py-4 px-4 text-xs">Visibility Only</td>
+                                <td class="py-4 px-4 text-emerald-400">Rất thấp</td>
+                                <td class="py-4 px-4">Flag dừng thread (stop flag)</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 font-mono">AtomicInteger</td>
+                                <td class="py-4 px-4 text-xs">CAS, Lock-free</td>
+                                <td class="py-4 px-4 text-yellow-400">Trung bình (Retry loop)</td>
+                                <td class="py-4 px-4">Counter, ID generator, tranh chấp nhẹ</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Final Exercise -->
+            <section id="lab" class="mb-20 bg-sky-900/10 p-10 rounded-3xl border border-sky-500/20">
+                <h2 class="text-2xl font-bold mb-6 text-sky-400">Thực hành cùng Mentor</h2>
+                <div class="space-y-6 text-slate-300">
+                    <p class="font-bold">Đề bài:</p>
+                    <p class="text-sm">Bạn đang xây dựng một hệ thống giới hạn lượt truy cập (Rate Limiter). Bạn cần một biến <code>count</code> để đếm số request trong 1 giây. Có 100 threads cùng gọi hàm này.</p>
+                    <div class="bg-slate-900 p-4 rounded-lg">
+                        <p class="text-xs font-bold text-amber-500 mb-2">Câu hỏi:</p>
+                        <p class="text-sm">1. Nếu dùng <code>volatile int</code>, kết quả có chính xác không?</p>
+                        <p class="text-sm">2. Nếu dùng <code>AtomicInteger</code>, khi nào hiệu năng của nó sẽ tệ hơn <code>synchronized</code>?</p>
+                    </div>
+                    <div class="mt-4 p-4 border border-slate-700 rounded-lg text-xs leading-relaxed">
+                        <p class="text-slate-500"><strong>Mentor Gợi ý:</strong> Khi sự tranh chấp (contention) cực kỳ cao, hàng ngàn thread cùng CAS vào 1 địa chỉ, vòng lặp 'retry' của Atomic sẽ ngốn rất nhiều CPU. Lúc này, <code>LongAdder</code> (một bản nâng cao của Atomic trong Java 8) sẽ là cứu cánh!</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-slate-600 text-xs py-10">
+                &copy; 2024 Thầy dạy Java - Phân tích kiến trúc JVM Internals
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        const particle = document.getElementById('particle');
+        const cache1 = document.getElementById('cache-1');
+        const cache2 = document.getElementById('cache-2');
+        const mainMem = document.getElementById('main-mem');
+
+        function runSim(isVolatile) {
+            particle.style.display = 'block';
+            particle.style.top = '60px';
+            particle.style.left = '100px';
+            
+            // Thread 1 updates to false
+            setTimeout(() => {
+                cache1.innerText = 'false';
+                cache1.style.color = '#fb7185';
+                
+                if (isVolatile) {
+                    // Move to main memory
+                    particle.style.transition = 'all 0.5s ease-in';
+                    particle.style.top = '270px';
+                    particle.style.left = '50%';
+                    
+                    setTimeout(() => {
+                        mainMem.innerText = 'Main Memory (RAM): false';
+                        mainMem.style.color = '#fb7185';
+                        
+                        // Sync to Cache 2
+                        particle.style.transition = 'all 0.5s ease-out';
+                        particle.style.top = '60px';
+                        particle.style.left = 'calc(100% - 120px)';
+                        
+                        setTimeout(() => {
+                            cache2.innerText = 'false';
+                            cache2.style.color = '#fb7185';
+                            particle.style.display = 'none';
+                        }, 500);
+                    }, 500);
+                } else {
+                    // Normal mode: stays in cache 1
+                    setTimeout(() => {
+                        particle.style.display = 'none';
+                        alert("Lỗi Visibility! Core 2 vẫn thấy giá trị là TRUE vì Core 1 chưa đồng bộ xuống RAM.");
+                    }, 1000);
+                }
+            }, 500);
+        }
+
+        function resetSim() {
+            cache1.innerText = 'true'; cache1.style.color = '';
+            cache2.innerText = 'true'; cache2.style.color = '';
+            mainMem.innerText = 'Main Memory (RAM): true'; mainMem.style.color = '';
+            particle.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

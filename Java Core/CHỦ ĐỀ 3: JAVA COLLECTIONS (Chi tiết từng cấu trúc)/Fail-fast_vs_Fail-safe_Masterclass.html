@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.7 Fail-fast vs Fail-safe Iterators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        code, pre { font-family: 'Fira Code', monospace !important; }
+        .sidebar-link.active { border-right: 4px solid #f43f5e; background: #fff1f2; color: #9f1239; }
+        .logic-card { transition: all 0.3s ease; }
+        .iterator-sim { min-height: 200px; position: relative; }
+        .mod-count-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white border-r border-slate-200 hidden lg:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-8">
+                <h2 class="text-2xl font-bold text-rose-600">Thầy Dạy Java</h2>
+                <p class="text-xs text-slate-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#philosophy" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">1. Triết lý Thiết kế</a>
+                <a href="#fail-fast" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">2. Fail-fast & modCount</a>
+                <a href="#fail-safe" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">3. Fail-safe (Weakly Consistent)</a>
+                <a href="#visualizer" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-rose-50 text-rose-700 font-bold">4. Interactive Visualizer</a>
+                <a href="#comparison" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">5. Bảng so sánh Chi tiết</a>
+                <a href="#bestpractices" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">6. Senior Best Practices</a>
+                <a href="#interview" class="sidebar-link block py-3 px-8 text-sm font-medium hover:bg-slate-50">7. Câu hỏi Phỏng vấn</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-16 overflow-y-auto">
+            <header class="mb-16">
+                <div class="flex items-center space-x-2 mb-4">
+                    <span class="bg-rose-100 text-rose-800 text-xs font-bold px-3 py-1 rounded-full uppercase">Bài giảng 3.7</span>
+                    <span class="text-slate-400">|</span>
+                    <span class="text-slate-500 text-sm">Deep Dive Internals</span>
+                </div>
+                <h1 class="text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">Fail-fast vs. Fail-safe</h1>
+                <p class="text-xl text-slate-600 max-w-3xl leading-relaxed">Hiểu sâu cơ chế bảo vệ dữ liệu của Java khi duyệt qua các tập hợp trong môi trường đơn luồng và đa luồng.</p>
+            </header>
+
+            <!-- Section 1: Philosophy -->
+            <section id="philosophy" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">1</span>
+                    Triết lý Thiết kế
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 logic-card hover:shadow-md">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        </div>
+                        <h4 class="text-xl font-bold mb-3">Fail-fast: "Thà hy sinh còn hơn sai sót"</h4>
+                        <p class="text-slate-600 text-sm leading-relaxed">
+                            Khi một Iterator nhận thấy cấu trúc của tập hợp bị thay đổi (thêm/xóa), nó sẽ <strong>ném lỗi ngay lập tức</strong>. Mục tiêu là ngăn chặn việc duyệt tiếp trên một trạng thái không ổn định, tránh dẫn đến các lỗi khó tìm (non-deterministic) về sau.
+                        </p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 logic-card hover:shadow-md">
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04c-.243.47-.382 1.002-.382 1.566 0 4.06 2.305 7.583 5.723 9.356a11.954 11.954 0 0010.554 0c3.418-1.773 5.723-5.296 5.723-9.356 0-.564-.139-1.096-.382-1.566z"></path></svg>
+                        </div>
+                        <h4 class="text-xl font-bold mb-3">Fail-safe: "Tiếp tục công việc bất chấp"</h4>
+                        <p class="text-slate-600 text-sm leading-relaxed">
+                            Còn được gọi là <strong>Weakly Consistent</strong>. Iterator làm việc trên một bản sao hoặc snapshot của dữ liệu. Nó <strong>không bao giờ ném lỗi</strong> khi cấu trúc gốc bị thay đổi, nhưng đổi lại, nó có thể không thấy được các cập nhật mới nhất.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Fail-fast Internals -->
+            <section id="fail-fast" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">2</span>
+                    Fail-fast & Vũ điệu modCount
+                </h2>
+                <div class="bg-slate-900 rounded-2xl p-8 mb-8">
+                    <h4 class="text-rose-400 font-mono text-sm mb-4">// Bên trong ArrayList.java (Mô phỏng)</h4>
+                    <pre><code class="language-java">public class ArrayList&lt;E&gt; {
+    protected transient int modCount = 0; // Đếm số lần thay đổi cấu trúc
+
+    public void add(E e) {
+        modCount++; // Tăng mỗi khi add
+        // ... logic add ...
+    }
+
+    private class Itr implements Iterator&lt;E&gt; {
+        int expectedModCount = modCount; // Chốt số tại thời điểm tạo Iterator
+
+        public E next() {
+            checkForComodification();
+            // ... logic next ...
+        }
+
+        final void checkForComodification() {
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+        }
+    }
+}</code></pre>
+                </div>
+                <div class="p-6 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl">
+                    <p class="text-sm text-amber-800">
+                        <strong>Lưu ý:</strong> Fail-fast không chỉ xảy ra trong đa luồng. Ngay cả trong đơn luồng, nếu em vừa duyệt vừa gọi <code>list.remove()</code> thay vì <code>iterator.remove()</code>, lỗi này vẫn sẽ xảy ra.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 3: Fail-safe Internals -->
+            <section id="fail-safe" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">3</span>
+                    Fail-safe (Weakly Consistent)
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div class="space-y-6 text-slate-700">
+                        <p>Các Collection trong package <code>java.util.concurrent</code> (như <code>CopyOnWriteArrayList</code>, <code>ConcurrentHashMap</code>) sử dụng chiến thuật này.</p>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h4 class="font-bold text-rose-600 mb-2">Cơ chế Copy-On-Write:</h4>
+                            <p class="text-sm">Khi Iterator được tạo, nó giữ một tham chiếu đến mảng hiện tại (Snapshot). Nếu có luồng nào thêm phần tử, một mảng MỚI hoàn toàn sẽ được tạo ra, còn Iterator cũ vẫn tiếp tục duyệt trên mảng CŨ.</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-2xl text-emerald-400 font-mono text-xs overflow-x-auto">
+                        <div class="mb-4 text-slate-500">// CopyOnWriteArrayList.java</div>
+                        final Object[] elements = getArray();<br>
+                        return new COWIterator&lt;E&gt;(elements, 0);<br>
+                        <br>
+                        <span class="text-slate-500">// Bất kể dữ liệu gốc thay đổi thế nào</span><br>
+                        <span class="text-slate-500">// Iterator này vẫn trung thành với 'elements' cũ</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Visualizer -->
+            <section id="visualizer" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">4</span>
+                    Interactive Iterator Visualizer
+                </h2>
+                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                        <!-- Controls -->
+                        <div class="space-y-4">
+                            <h4 class="font-bold text-slate-400 uppercase text-xs tracking-widest">Controls</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="nextStep()" id="next-btn" class="bg-rose-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-rose-700 transition">Next Item</button>
+                                <button onclick="modifyList()" class="bg-amber-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-amber-600 transition">Modify Collection</button>
+                                <button onclick="resetSim()" class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold hover:bg-slate-300 transition">Reset</button>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div class="flex justify-between text-sm mb-2">
+                                    <span>Collection modCount:</span>
+                                    <span id="mod-count" class="font-bold text-rose-600">0</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span>Iterator expected:</span>
+                                    <span id="exp-count" class="font-bold text-blue-600">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- State Log -->
+                        <div id="sim-log" class="bg-slate-900 rounded-2xl p-6 text-emerald-400 font-mono text-xs min-h-[150px] max-h-[150px] overflow-y-auto">
+                            // Simulator Ready.
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-4 h-32 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200" id="visual-container">
+                        <!-- Elements go here -->
+                    </div>
+                    <div id="error-box" class="mt-4 hidden p-4 bg-rose-100 text-rose-700 rounded-xl text-center font-bold animate-bounce">
+                        ⚠️ ConcurrentModificationException thrown!
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Comparison -->
+            <section id="comparison" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">5</span>
+                    Bảng so sánh Chi tiết
+                </h2>
+                <div class="overflow-x-auto rounded-3xl border border-slate-200">
+                    <table class="w-full text-left bg-white text-sm">
+                        <thead class="bg-slate-50 border-b">
+                            <tr>
+                                <th class="px-8 py-5 font-bold">Tiêu chí</th>
+                                <th class="px-8 py-5 font-bold text-rose-600">Fail-fast</th>
+                                <th class="px-8 py-5 font-bold text-emerald-600">Fail-safe (Weakly Consistent)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="px-8 py-4 font-semibold">Exception</td>
+                                <td class="px-8 py-4">Ném <code>ConcurrentModificationException</code></td>
+                                <td class="px-8 py-4">Không bao giờ ném Exception</td>
+                            </tr>
+                            <tr>
+                                <td class="px-8 py-4 font-semibold">Cơ chế duyệt</td>
+                                <td class="px-8 py-4">Duyệt trực tiếp trên dữ liệu gốc</td>
+                                <td class="px-8 py-4">Duyệt trên bản sao/snapshot hoặc cấu trúc concurrent</td>
+                            </tr>
+                            <tr>
+                                <td class="px-8 py-4 font-semibold">Hiệu năng bộ nhớ</td>
+                                <td class="px-8 py-4 text-green-600">Tốt (không tốn thêm bộ nhớ)</td>
+                                <td class="px-8 py-4 text-red-600">Tốn thêm (do tạo bản sao - CopyOnWrite)</td>
+                            </tr>
+                            <tr>
+                                <td class="px-8 py-4 font-semibold">Ví dụ tiêu biểu</td>
+                                <td class="px-8 py-4 font-mono text-xs">ArrayList, HashMap, HashSet, Vector</td>
+                                <td class="px-8 py-4 font-mono text-xs">CopyOnWriteArrayList, ConcurrentHashMap</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 6: Best Practices -->
+            <section id="bestpractices" class="mb-20">
+                <h2 class="text-3xl font-bold mb-8 flex items-center">
+                    <span class="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-rose-200">6</span>
+                    Senior Best Practices
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-rose-600 mb-2">Dùng Iterator.remove()</h4>
+                        <p class="text-xs text-slate-500">Nếu cần xóa phần tử khi đang duyệt trong đơn luồng, hãy dùng <code>iterator.remove()</code>. Nó sẽ cập nhật <code>expectedModCount</code> cho khớp với <code>modCount</code>.</p>
+                    </div>
+                    <div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-rose-600 mb-2">Đừng tin tuyệt đối Fail-safe</h4>
+                        <p class="text-xs text-slate-500">Nhớ rằng Fail-safe có tính "Weakly Consistent". Nếu một luồng khác vừa add phần tử vào, Iterator của em có thể sẽ KHÔNG thấy nó. Đừng dùng nó cho các logic cần tính realtime tuyệt đối.</p>
+                    </div>
+                    <div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-rose-600 mb-2">Java 8 RemoveIf</h4>
+                        <p class="text-xs text-slate-500">Thay vì viết loop rườm rà, hãy dùng <code>list.removeIf(e -> condition)</code>. Nó an toàn, ngắn gọn và đã được tối ưu bên trong.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-8">Câu hỏi Phỏng vấn Hóc búa</h2>
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h5 class="font-bold text-slate-800 mb-2">Q1: Tại sao Fail-fast lại được thiết kế? Nó có bảo vệ được Thread-safety không?</h5>
+                        <p class="text-sm text-slate-600">
+                            <strong>Mentor Answer:</strong> KHÔNG. Fail-fast không đảm bảo thread-safety. Nó chỉ là một cơ chế <strong>phát hiện lỗi (detection)</strong> chứ không phải cơ chế <strong>phòng ngừa (prevention)</strong>. Nó được thiết kế để "Fail early, Fail loudly" giúp Developer phát hiện các bug về concurrency sớm hơn.
+                        </p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h5 class="font-bold text-slate-800 mb-2">Q2: Enumeration của Vector là Fail-fast hay Fail-safe?</h5>
+                        <p class="text-sm text-slate-600">
+                            <strong>Mentor Answer:</strong> Đây là câu hỏi bẫy! <code>Enumeration</code> là di sản từ Java 1.0, nó <strong>KHÔNG</strong> phải Fail-fast. Nếu em dùng Enumeration để duyệt Vector và sửa Vector, nó sẽ không ném Exception. Chỉ có <code>Iterator</code> của Vector mới là Fail-fast.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let list = ['A', 'B', 'C', 'D'];
+        let modCount = 0;
+        let expectedModCount = 0;
+        let currentIndex = -1;
+        let isError = false;
+
+        const visual = document.getElementById('visual-container');
+        const log = document.getElementById('sim-log');
+        const modCountEl = document.getElementById('mod-count');
+        const expCountEl = document.getElementById('exp-count');
+        const errorBox = document.getElementById('error-box');
+
+        function updateUI() {
+            visual.innerHTML = '';
+            list.forEach((item, i) => {
+                const node = document.createElement('div');
+                node.className = `w-12 h-12 rounded-lg flex items-center justify-center font-bold transition-all duration-300 ${i === currentIndex ? 'bg-rose-500 text-white scale-110 shadow-lg' : 'bg-white border-2 border-slate-200 text-slate-400'}`;
+                node.innerText = item;
+                visual.appendChild(node);
+            });
+            modCountEl.innerText = modCount;
+            expCountEl.innerText = expectedModCount;
+            if (isError) {
+                errorBox.classList.remove('hidden');
+                document.getElementById('next-btn').disabled = true;
+            } else {
+                errorBox.classList.add('hidden');
+                document.getElementById('next-btn').disabled = false;
+            }
+        }
+
+        function writeLog(msg, color = "text-emerald-400") {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            log.innerHTML = `<div><span class="text-slate-500">[${time}]</span> <span class="${color}">${msg}</span></div>` + log.innerHTML;
+        }
+
+        function nextStep() {
+            if (isError) return;
+            
+            // Check for comodification
+            if (modCount !== expectedModCount) {
+                isError = true;
+                writeLog("CRASH: modCount ("+modCount+") != expectedModCount ("+expectedModCount+")", "text-rose-500");
+                updateUI();
+                return;
+            }
+
+            currentIndex++;
+            if (currentIndex >= list.length) {
+                writeLog("Iteration Finished.", "text-blue-400");
+                currentIndex = -1;
+            } else {
+                writeLog(`Visiting item: ${list[currentIndex]}`);
+            }
+            updateUI();
+        }
+
+        function modifyList() {
+            modCount++;
+            list.push(String.fromCharCode(69 + modCount));
+            writeLog(`Collection Modified! modCount increased to ${modCount}`, "text-amber-400");
+            updateUI();
+        }
+
+        function resetSim() {
+            list = ['A', 'B', 'C', 'D'];
+            modCount = 0;
+            expectedModCount = 0;
+            currentIndex = -1;
+            isError = false;
+            log.innerHTML = '// Simulator Reset.';
+            updateUI();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>

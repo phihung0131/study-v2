@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: 3.4 TreeSet & NavigableSet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .sidebar-link.active { border-right: 4px solid #8b5cf6; background: #f5f3ff; color: #6d28d9; }
+        .tree-node { transition: all 0.5s ease; position: absolute; }
+        .connector { stroke: #ddd; stroke-width: 2; fill: none; }
+        @keyframes scaleUp { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-node { animation: scaleUp 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 hidden md:block sticky top-0 h-screen overflow-y-auto">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-violet-600">Thầy Dạy Java</h2>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 font-semibold">Chương 3: Collections</p>
+            </div>
+            <nav class="mt-2">
+                <a href="#overview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">1. SortedSet & NavigableSet</a>
+                <a href="#internals" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">2. TreeSet Internals (TreeMap)</a>
+                <a href="#ordering" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">3. Comparable vs Comparator</a>
+                <a href="#visualizer" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">4. Mô phỏng Binary Tree</a>
+                <a href="#methods" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">5. Các hàm Navigable đặc biệt</a>
+                <a href="#performance" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">6. Phân tích Performance</a>
+                <a href="#interview" class="sidebar-link block py-2.5 px-6 text-sm font-medium hover:bg-gray-100">7. Câu hỏi Phỏng vấn</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-12 overflow-y-auto">
+            <header class="mb-12">
+                <span class="bg-violet-100 text-violet-800 text-xs font-semibold px-2.5 py-0.5 rounded">BÀI HỌC 3.4</span>
+                <h1 class="text-4xl font-extrabold mt-4 mb-2">TreeSet: The Master of Order</h1>
+                <p class="text-gray-600 text-lg">Khám phá sức mạnh của cấu trúc dữ liệu tự sắp xếp dựa trên Self-Balancing Binary Search Tree.</p>
+            </header>
+
+            <!-- Section 1: Interfaces -->
+            <section id="overview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    SortedSet & NavigableSet
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-lg mb-3">TreeSet là gì?</h3>
+                        <ul class="space-y-3 text-sm text-gray-700">
+                            <li class="flex items-start"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> Là một tập hợp không chứa phần tử trùng lặp.</li>
+                            <li class="flex items-start"><svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> <strong>Dữ liệu luôn được sắp xếp</strong> ngay khi thêm vào.</li>
+                            <li class="flex items-start"><svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"></path></svg> <strong>KHÔNG CHO PHÉP NULL:</strong> Vì nó cần so sánh phần tử để sắp xếp.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-violet-900 text-white p-6 rounded-xl shadow-lg">
+                        <h3 class="font-bold text-lg mb-3">Hierarchy Visualization</h3>
+                        <div class="flex flex-col items-center space-y-2">
+                            <div class="border border-violet-400 px-4 py-1 rounded text-xs">Set (Interface)</div>
+                            <div class="text-xs">↓</div>
+                            <div class="border border-violet-400 px-4 py-1 rounded text-xs">SortedSet (Interface)</div>
+                            <div class="text-xs">↓</div>
+                            <div class="border border-violet-400 px-4 py-1 rounded text-xs font-bold text-yellow-300">NavigableSet</div>
+                            <div class="text-xs">↓</div>
+                            <div class="bg-violet-700 px-6 py-2 rounded-lg font-bold shadow ring-4 ring-violet-500/30">TreeSet</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Internals -->
+            <section id="internals" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    TreeSet Internals: Lại là TreeMap!
+                </h2>
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                    <p class="text-sm text-blue-800 font-medium italic">
+                        "Giống như HashSet dựa vào HashMap, TreeSet thực chất là một lớp vỏ bao quanh `TreeMap`."
+                    </p>
+                </div>
+                <div class="code-block mb-8">
+                    <pre><code class="language-java">// Source code (OpenJDK 17)
+public class TreeSet&lt;E&gt; extends AbstractSet&lt;E&gt; implements NavigableSet&lt;E&gt; {
+    
+    // Đối tượng TreeMap thực hiện mọi công việc nặng nhọc
+    private transient NavigableMap&lt;E,Object&gt; m;
+
+    // Giá trị giả
+    private static final Object PRESENT = new Object();
+
+    public TreeSet() {
+        this(new TreeMap&lt;&gt;());
+    }
+
+    public boolean add(E e) {
+        return m.put(e, PRESENT) == null;
+    }
+}</code></pre>
+                </div>
+                <p class="text-gray-700 mb-4">TreeMap sử dụng cấu trúc <strong>Red-Black Tree</strong>. Đây là một loại cây tìm kiếm nhị phân tự cân bằng, đảm bảo độ phức tạp cho các thao tác tìm kiếm, thêm, xóa luôn là <strong>O(log n)</strong>.</p>
+            </section>
+
+            <!-- Section 3: Ordering -->
+            <section id="ordering" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                    Ordering: Ai đứng trước?
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 class="font-bold text-violet-700 mb-2">1. Natural Ordering</h4>
+                        <p class="text-sm text-gray-600 mb-4">Các phần tử phải triển khai interface <code>Comparable</code>.</p>
+                        <pre><code class="language-java">class Student implements Comparable&lt;Student&gt; {
+    int score;
+    public int compareTo(Student other) {
+        return this.score - other.score;
+    }
+}</code></pre>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 class="font-bold text-violet-700 mb-2">2. Custom Ordering</h4>
+                        <p class="text-sm text-gray-600 mb-4">Sử dụng <code>Comparator</code> khi khởi tạo TreeSet.</p>
+                        <pre><code class="language-java">// Sắp xếp ngược
+TreeSet&lt;Integer&gt; set = new TreeSet&lt;&gt;(
+    (a, b) -> b - a
+);</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Visualizer -->
+            <section id="visualizer" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                    Mô phỏng Binary Search Tree
+                </h2>
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <div class="flex gap-4 mb-8">
+                        <input type="number" id="tree-input" class="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-violet-500 outline-none" placeholder="Nhập số...">
+                        <button onclick="addNodeToTree()" class="bg-violet-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-violet-700 transition">Insert</button>
+                        <button onclick="clearTree()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-300 transition">Clear</button>
+                    </div>
+
+                    <div class="relative w-full h-64 bg-gray-50 rounded-xl overflow-hidden border border-gray-100" id="tree-container">
+                        <!-- Tree nodes will be rendered here -->
+                    </div>
+                    <div class="mt-4 p-4 bg-violet-50 rounded-lg text-center font-mono text-violet-800 text-sm" id="tree-sorted-list">
+                        Sorted Result: []
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Navigable Methods -->
+            <section id="methods" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">5</span>
+                    Các hàm NavigableSet "đỉnh cao"
+                </h2>
+                <p class="text-gray-700 mb-6">NavigableSet cung cấp các phương thức tìm kiếm cực kỳ linh hoạt:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
+                        <code class="text-violet-600 font-bold">lower(e)</code>: Lấy phần tử <strong>&lt; e</strong> lớn nhất.
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
+                        <code class="text-violet-600 font-bold">higher(e)</code>: Lấy phần tử <strong>&gt; e</strong> nhỏ nhất.
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
+                        <code class="text-violet-600 font-bold">floor(e)</code>: Lấy phần tử <strong>&le; e</strong> lớn nhất.
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
+                        <code class="text-violet-600 font-bold">ceiling(e)</code>: Lấy phần tử <strong>&ge; e</strong> nhỏ nhất.
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-gray-100 shadow-sm col-span-full">
+                        <code class="text-violet-600 font-bold">descendingSet()</code>: Trả về một Set được đảo ngược thứ tự (O(1)).
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Performance -->
+            <section id="performance" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">6</span>
+                    Performance & Big O
+                </h2>
+                <div class="overflow-x-auto rounded-xl border border-gray-200">
+                    <table class="w-full text-left bg-white text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-6 py-4 font-bold">Thao tác</th>
+                                <th class="px-6 py-4 font-bold text-violet-600">TreeSet (Red-Black Tree)</th>
+                                <th class="px-6 py-4 font-bold text-red-600">HashSet (Hash Table)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Add / Remove</td>
+                                <td class="px-6 py-4 text-orange-600 font-bold">O(log n)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold">O(1)</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Contains</td>
+                                <td class="px-6 py-4 text-orange-600 font-bold">O(log n)</td>
+                                <td class="px-6 py-4 text-green-600 font-bold">O(1)</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium">Order</td>
+                                <td class="px-6 py-4 text-green-600 font-bold">Always Sorted</td>
+                                <td class="px-6 py-4 text-gray-500">Unordered</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <h4 class="font-bold text-blue-800 mb-2">Mentor Note: Uniqueness in TreeSet</h4>
+                    <p class="text-xs text-blue-700">
+                        Khác với HashSet dùng <code>equals()</code>, TreeSet sử dụng <code>compareTo()</code> (hoặc <code>compare()</code>) để xác định sự trùng lặp. <br>
+                        Nếu <code>compareTo()</code> trả về <strong>0</strong>, TreeSet coi đó là phần tử trùng và sẽ không thêm vào, bất kể <code>equals()</code> có trả về gì đi nữa. Đây là điểm hay gây bug nếu em code không nhất quán.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 7: Interview Questions -->
+            <section id="interview" class="mb-16">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">7</span>
+                    Câu hỏi Phỏng vấn Senior
+                </h2>
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q1: Tại sao TreeSet lại chậm hơn HashSet?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Vì HashSet chỉ tính mã hash và truy cập mảng ($O(1)$). Trong khi TreeSet phải duyệt cây, thực hiện các phép so sánh và thỉnh thoảng phải "xoay cây" (rotate) để tái cân bằng sau mỗi lần thêm/xóa ($O(\log n)$).
+                        </p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h5 class="font-bold text-gray-800 mb-2">Q2: Tôi có thể lưu String trong TreeSet không? Tại sao?</h5>
+                        <p class="text-sm text-gray-600">
+                            <strong>Mentor Answer:</strong> Có, vì class `String` đã implement <code>Comparable&lt;String&gt;</code> sẵn (sắp xếp theo thứ tự từ điển).
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let treeData = [];
+        const container = document.getElementById('tree-container');
+        const sortedEl = document.getElementById('tree-sorted-list');
+
+        function addNodeToTree() {
+            const val = parseInt(document.getElementById('tree-input').value);
+            if (isNaN(val)) return;
+            
+            if (!treeData.includes(val)) {
+                treeData.push(val);
+                treeData.sort((a, b) => a - b);
+                renderTree();
+            }
+            document.getElementById('tree-input').value = '';
+        }
+
+        function clearTree() {
+            treeData = [];
+            renderTree();
+        }
+
+        function renderTree() {
+            container.innerHTML = '';
+            sortedEl.innerText = `Sorted Result: [${treeData.join(', ')}]`;
+
+            if (treeData.length === 0) return;
+
+            // Simplified visualization: Just showing nodes as a sequence for visual impact
+            // because actual Red-Black Tree layout is complex for a mini-canvas
+            const spacing = 60;
+            const startX = (container.clientWidth - (treeData.length - 1) * spacing) / 2;
+
+            treeData.forEach((val, i) => {
+                const node = document.createElement('div');
+                node.className = 'absolute w-10 h-10 bg-violet-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md animate-node';
+                node.style.left = `${startX + i * spacing - 20}px`;
+                node.style.top = '100px';
+                node.innerText = val;
+                container.appendChild(node);
+
+                if (i < treeData.length - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'absolute h-0.5 bg-violet-200';
+                    line.style.left = `${startX + i * spacing + 10}px`;
+                    line.style.top = '120px';
+                    line.style.width = `${spacing - 20}px`;
+                    container.appendChild(line);
+                }
+            });
+        }
+
+        renderTree();
+    </script>
+</body>
+</html>

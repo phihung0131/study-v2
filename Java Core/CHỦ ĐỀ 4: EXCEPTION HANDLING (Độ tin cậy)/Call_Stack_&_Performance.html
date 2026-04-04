@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Masterclass: Call Stack & Performance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f1f5f9; }
+        code { font-family: 'Fira Code', monospace; }
+        .sidebar-item:hover { background-color: #1e293b; border-left: 4px solid #f59e0b; }
+        .active-nav { background-color: #1e293b; border-left: 4px solid #f59e0b; }
+        .glass-card { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* Stack Walk Animation */
+        .stack-frame { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .scanning { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.2); transform: scale(1.05); }
+        .highlight-line { border-left: 3px solid #f59e0b; padding-left: 1rem; margin-left: -1rem; background: rgba(245, 158, 11, 0.05); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-slate-950 border-r border-slate-900 sticky top-0 h-screen overflow-y-auto">
+        <div class="p-8">
+            <h2 class="text-2xl font-bold text-orange-500">Java Mentor</h2>
+            <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Chương 4.5: Internals</p>
+        </div>
+        <nav class="mt-4">
+            <a href="#callstack" class="block py-3 px-8 sidebar-item active-nav text-sm">1. Bản chất Call Stack</a>
+            <a href="#fillinstacktrace" class="block py-3 px-8 sidebar-item text-sm">2. fillInStackTrace()</a>
+            <a href="#cost" class="block py-3 px-8 sidebar-item text-sm">3. Chi phí thực tế (Benchmarks)</a>
+            <a href="#stackwalker" class="block py-3 px-8 sidebar-item text-sm">4. Java 9+ StackWalker</a>
+            <a href="#omitstacktrace" class="block py-3 px-8 sidebar-item text-sm">5. OmitStackTraceInFastThrow</a>
+            <a href="#optimization" class="block py-3 px-8 sidebar-item text-sm">6. Thủ thuật tối ưu hóa</a>
+            <a href="#interview" class="block py-3 px-8 sidebar-item text-sm text-orange-400 font-semibold">7. Interview Questions</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-12 overflow-y-auto">
+        
+        <!-- SECTION 1: Call Stack -->
+        <section id="callstack" class="mb-20">
+            <h1 class="text-4xl font-extrabold mb-6">Call Stack & Exception Internals</h1>
+            <p class="text-lg text-slate-400 mb-8 leading-relaxed max-w-3xl">
+                Nhiều người lầm tưởng từ khóa <code class="text-orange-400">throw</code> hay <code class="text-orange-400">catch</code> làm chậm chương trình. Sự thật là: **Việc khởi tạo Exception Object** mới là "kẻ sát nhân" bộ nhớ và CPU.
+            </p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="glass-card p-8 rounded-2xl border border-slate-800">
+                    <h3 class="text-xl font-bold mb-4 text-orange-400">Cơ chế LIFO</h3>
+                    <p class="text-sm text-slate-400 mb-4 leading-relaxed">
+                        Mỗi Thread có một vùng nhớ riêng gọi là **Stack**. Khi một method được gọi, một **Stack Frame** mới được đẩy vào (push). Frame này chứa các biến local và trạng thái thực thi.
+                    </p>
+                    <div class="space-y-2 mt-6 flex flex-col-reverse" id="stack-viz">
+                        <div class="stack-frame p-3 bg-slate-800 border border-slate-700 rounded text-center text-xs opacity-50">main()</div>
+                        <div class="stack-frame p-3 bg-slate-800 border border-slate-700 rounded text-center text-xs opacity-50">processOrder()</div>
+                        <div class="stack-frame p-3 bg-slate-800 border border-slate-700 rounded text-center text-xs opacity-50">validatePayment()</div>
+                        <div class="stack-frame p-3 bg-slate-800 border border-slate-700 rounded text-center text-xs opacity-50">dbQuery()</div>
+                    </div>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <h3 class="text-xl font-bold mb-4">The "Stack Walk"</h3>
+                    <p class="text-sm text-slate-400 mb-6">
+                        Khi Exception xảy ra, JVM phải thực hiện quá trình <strong>Stack Walk</strong>: Duyệt ngược từ đỉnh Stack về đáy để thu thập thông tin về tên file, tên method và số dòng code.
+                    </p>
+                    <button onclick="startStackWalk()" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-orange-900/40 transition-all self-start">
+                        Mô phỏng Stack Walk
+                    </button>
+                    <p id="walk-status" class="mt-4 text-sm font-mono text-orange-500 italic h-4"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: fillInStackTrace -->
+        <section id="fillinstacktrace" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-orange-400 border-b border-slate-800 pb-2">2. Phương thức fillInStackTrace()</h2>
+            <p class="text-slate-400 mb-6">Đây là phương thức <strong>Native</strong> nằm trong lớp <code class="text-white">Throwable</code>. Nó được gọi mặc định trong Constructor của mọi Exception.</p>
+            
+            <div class="rounded-xl overflow-hidden shadow-2xl">
+                <pre><code class="language-java">// Source code từ JDK (Throwable.java)
+public synchronized Throwable fillInStackTrace() {
+    if (stackTrace != null || backtrace != null /* v.v */) {
+        fillInStackTrace(0); // Gọi native method xử lý bên trong JVM
+        stackTrace = UNASSIGNED_STACK;
+    }
+    return this;
+}
+
+private native Throwable fillInStackTrace(int dummy);</code></pre>
+            </div>
+            <div class="mt-6 p-4 bg-red-950/20 border-l-4 border-red-500">
+                <p class="text-sm text-red-300"><strong>Cảnh báo hiệu năng:</strong> Stack càng sâu (ví dụ trong các framework lớn như Spring hoặc ứng dụng đệ quy), thời gian thực thi của method native này càng lâu.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Cost -->
+        <section id="cost" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-orange-400 border-b border-slate-800 pb-2">3. Benchmarks: Thử nghiệm thực tế</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-6 rounded-xl text-center">
+                    <span class="text-slate-500 text-xs uppercase">Tạo Object thường</span>
+                    <div class="text-3xl font-bold text-emerald-400 mt-2">~10 ns</div>
+                </div>
+                <div class="glass-card p-6 rounded-xl text-center border-2 border-orange-500/20">
+                    <span class="text-slate-500 text-xs uppercase">Tạo Exception (với Stack)</span>
+                    <div class="text-3xl font-bold text-orange-500 mt-2">~5,000 ns</div>
+                </div>
+                <div class="glass-card p-6 rounded-xl text-center">
+                    <span class="text-slate-500 text-xs uppercase">Tạo Fast Exception (không Stack)</span>
+                    <div class="text-3xl font-bold text-sky-400 mt-2">~30 ns</div>
+                </div>
+            </div>
+            <p class="mt-8 text-slate-400 italic text-sm text-center">
+                * Con số mang tính tương đối, phụ thuộc vào độ sâu của Stack. Exception chậm hơn khoảng 100-500 lần so với Object thường.
+            </p>
+        </section>
+
+        <!-- SECTION 4: StackWalker -->
+        <section id="stackwalker" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-sky-400">4. Java 9+ StackWalker API</h2>
+            <p class="text-slate-400 mb-6 leading-relaxed">
+                Trước Java 9, nếu muốn lấy StackTrace em phải dùng <code class="text-white">Thread.currentThread().getStackTrace()</code> - nó sẽ snapshot toàn bộ stack ngay lập tức (rất tốn kém).
+                Từ Java 9, <code class="text-sky-400">StackWalker</code> cho phép chúng ta duyệt Stack một cách <strong>Lazy</strong> và <strong>Stream-based</strong>.
+            </p>
+            <div class="rounded-xl overflow-hidden shadow-2xl">
+                <pre><code class="language-java">// Chỉ lấy 5 frame đầu tiên - Cực kỳ nhanh!
+StackWalker walker = StackWalker.getInstance();
+List&lt;String&gt; frames = walker.walk(s -&gt; s.limit(5)
+                                       .map(StackFrame::getMethodName)
+                                       .collect(Collectors.toList()));</code></pre>
+            </div>
+        </section>
+
+        <!-- SECTION 5: OmitStackTraceInFastThrow -->
+        <section id="omitstacktrace" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-orange-400">5. OmitStackTraceInFastThrow (Bí ẩn mất log)</h2>
+            <div class="p-6 bg-slate-900 border border-slate-700 rounded-xl flex gap-6 items-start">
+                <div class="text-4xl">💡</div>
+                <div>
+                    <p class="text-slate-300 mb-4">
+                        Em đã bao giờ thấy log chỉ hiện mỗi <code class="text-white">java.lang.NullPointerException</code> mà không có dòng code nào chưa?
+                    </p>
+                    <p class="text-sm text-slate-400 leading-relaxed">
+                        Đó là do tối ưu hóa của JVM. Khi một exception (như NPE, ArrayIndexOutOfBounds) bị throw liên tục tại cùng một địa điểm code, JIT compiler sẽ nhận ra và chuyển sang chế độ <strong>"Fast Throw"</strong>. 
+                        Nó sẽ throw một exception <strong>đã được tạo sẵn (Pre-allocated)</strong> và không có StackTrace để tăng tốc độ.
+                    </p>
+                    <div class="mt-4 p-3 bg-slate-800 rounded font-mono text-xs text-orange-300">
+                        JVM Flag để tắt tính năng này: <br>
+                        -XX:-OmitStackTraceInFastThrow
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: OPTIMIZATION -->
+        <section id="optimization" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-emerald-400">6. Thủ thuật tối ưu hóa cho Senior</h2>
+            
+            <div class="space-y-6">
+                <div class="glass-card p-6 rounded-xl">
+                    <h4 class="font-bold text-white mb-2">1. Vô hiệu hóa fillInStackTrace</h4>
+                    <p class="text-sm text-slate-400 mb-4">Dùng cho Business Exceptions dùng để báo hiệu luồng xử lý (Control Flow) mà không cần log stack.</p>
+                    <pre><code class="language-java">public class FastException extends RuntimeException {
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+        return this; // Không làm gì cả, trả về chính mình
+    }
+}</code></pre>
+                </div>
+
+                <div class="glass-card p-6 rounded-xl border-l-4 border-amber-500">
+                    <h4 class="font-bold text-amber-500 mb-2">2. Sử dụng Singleton Exception (CỰC KỲ CẨN THẬN)</h4>
+                    <p class="text-sm text-slate-400 mb-4">Chỉ dùng khi em không quan tâm đến StackTrace và lỗi này xảy ra cực nhiều.</p>
+                    <pre><code class="language-java">public class ValidationUtils {
+    public static final MyException INVALID_INPUT = new MyException("Invalid Input");
+    // Tuy nhiên, StackTrace sẽ luôn chỉ về dòng khai báo static này!
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 7: INTERVIEW -->
+        <section id="interview" class="mb-20">
+            <h2 class="text-3xl font-bold mb-4 text-orange-400">7. Interview Questions</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div class="glass-card p-6 rounded-xl border-l-4 border-slate-500 group cursor-pointer">
+                    <p class="font-bold text-white">Q1: Tại sao việc sử dụng Exception để điều khiển luồng (Control Flow) lại được coi là Anti-pattern?</p>
+                    <div class="mt-2 text-sm text-slate-500 hidden group-hover:block transition-all">
+                        <strong>Đáp án:</strong> 1. Hiệu năng tệ (Stack Walk). 2. Làm code khó đọc (Gần giống lệnh GOTO). 3. Khiến trình debug của IDE nhảy lung tung, gây khó khăn cho bảo trì.
+                    </div>
+                </div>
+                <div class="glass-card p-6 rounded-xl border-l-4 border-slate-500 group cursor-pointer">
+                    <p class="font-bold text-white">Q2: JVM tối ưu hóa "Fast Throw" cho những loại Exception nào?</p>
+                    <div class="mt-2 text-sm text-slate-500 hidden group-hover:block">
+                        <strong>Đáp án:</strong> Chủ yếu là các lỗi nội tại JVM như NPE, ArithmeticException (chia cho 0), ArrayIndexOutOfBoundsException, ArrayStoreException và ClassCastException.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const frames = document.querySelectorAll('.stack-frame');
+        const status = document.getElementById('walk-status');
+
+        async function startStackWalk() {
+            // Reset
+            frames.forEach(f => f.classList.remove('scanning', 'opacity-100'));
+            frames.forEach(f => f.classList.add('opacity-50'));
+            status.innerText = "Initializing Exception...";
+
+            await new Promise(r => setTimeout(r, 800));
+
+            // Walk down (actually it walks "up" the conceptual stack, which is down in LIFO visualization)
+            for (let i = frames.length - 1; i >= 0; i--) {
+                status.innerText = `Walking frame: ${frames[i].innerText}...`;
+                frames[i].classList.add('scanning', 'opacity-100');
+                frames[i].classList.remove('opacity-50');
+                await new Promise(r => setTimeout(r, 400));
+                if (i > 0) frames[i].classList.remove('scanning');
+            }
+
+            status.innerText = "StackTrace built! Performance cost: ~5000ns";
+        }
+
+        // Sidebar active state logic
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active-nav');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active-nav');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

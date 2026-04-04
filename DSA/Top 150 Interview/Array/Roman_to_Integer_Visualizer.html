@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizer: Roman to Integer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .string { color: #ce9178; }
+
+        .symbol-box {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            font-weight: 700;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .symbol-active { border-color: #3b82f6; background-color: #eff6ff; transform: scale(1.1); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2); }
+        .symbol-processed { background-color: #f1f5f9; color: #94a3b8; border-style: dashed; }
+        .symbol-subtractive { border-color: #ef4444; background-color: #fef2f2; }
+        
+        .pointer-label {
+            position: absolute;
+            bottom: -32px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: #334155;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .step-msg {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .calc-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            min-width: 140px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-16">
+            <h1 class="text-5xl font-black tracking-tight text-slate-900 mb-4">Roman to Integer</h1>
+            <p class="text-xl text-slate-500 font-medium italic">LeetCode #13 | Difficulty: Easy | Math, String, Hash Table</p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>📖</span> Problem Summary
+            </h2>
+            <p class="text-lg leading-relaxed text-slate-700 mb-6">
+                Roman numerals are represented by seven different symbols: <b>I, V, X, L, C, D, M</b>. 
+                Usually, they are written largest to smallest from left to right. However, there are six subtraction cases:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-red-50 p-3 rounded-xl border border-red-100 text-sm"><b>I</b> before <b>V/X</b> (4, 9)</div>
+                <div class="bg-red-50 p-3 rounded-xl border border-red-100 text-sm"><b>X</b> before <b>L/C</b> (40, 90)</div>
+                <div class="bg-red-50 p-3 rounded-xl border border-red-100 text-sm"><b>C</b> before <b>D/M</b> (400, 900)</div>
+            </div>
+            <p class="text-slate-700"><b>Goal:</b> Convert a given Roman string (e.g., "MCMXCIV") into its integer value (1994).</p>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-slate-800 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 1</span>
+                <span class="opacity-50">|</span>
+                <span>STRING PRE-PROCESSING</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Simplifier"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    The hardest part is the subtraction logic. Why not eliminate it? 
+                    We can replace "IV" with "IIII", "IX" with "VIIII", etc. 
+                    Once all subtractive pairs are replaced, every symbol in the string is additive, making the sum trivial.
+                </p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="bf-msg" class="step-msg">Click Next to see the string transformation.</div>
+                    <div class="flex justify-center gap-2 mb-12 h-20 overflow-x-auto" id="bf-viz"></div>
+                    
+                    <div class="flex justify-center items-center gap-6 mb-8">
+                        <div class="calc-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Resulting Sum</p>
+                            <p id="bf-sum" class="text-3xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="bfViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="bfViz.next()" id="bf-next-btn" class="px-12 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 1 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10">
+<pre>
+<span class="keyword">public int</span> <span class="type">romanToInt</span>(<span class="type">String</span> romanString) {
+    <span class="comment">// Pre-process the string to remove subtraction complexity</span>
+    romanString = romanString.replace(<span class="string">"IV"</span>, <span class="string">"IIII"</span>)
+                             .replace(<span class="string">"IX"</span>, <span class="string">"VIIII"</span>)
+                             .replace(<span class="string">"XL"</span>, <span class="string">"XXXX"</span>)
+                             .replace(<span class="string">"XC"</span>, <span class="string">"LXXXX"</span>)
+                             .replace(<span class="string">"CD"</span>, <span class="string">"CCCC"</span>)
+                             .replace(<span class="string">"CM"</span>, <span class="string">"DCCCC"</span>);
+
+    <span class="keyword">int</span> totalIntegerSum = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">char</span> symbol : romanString.toCharArray()) {
+        <span class="keyword">if</span> (symbol == <span class="string">'M'</span>) totalIntegerSum += <span class="number">1000</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'D'</span>) totalIntegerSum += <span class="number">500</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'C'</span>) totalIntegerSum += <span class="number">100</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'L'</span>) totalIntegerSum += <span class="number">50</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'X'</span>) totalIntegerSum += <span class="number">10</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'V'</span>) totalIntegerSum += <span class="number">5</span>;
+        <span class="keyword">else if</span> (symbol == <span class="string">'I'</span>) totalIntegerSum += <span class="number">1</span>;
+    }
+    <span class="keyword">return</span> totalIntegerSum;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-slate-700"><b>Time:</b> <b>O(N)</b>. Replacement and iteration are linear.</p>
+                        <p class="text-slate-700 mt-2"><b>Space:</b> <b>O(N)</b>. Creating a new, much longer string.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Pros & Cons</h4>
+                        <p class="text-green-600 font-bold">Pros: Logic is simple and error-proof.</p>
+                        <p class="text-red-600 font-bold">Cons: Very slow due to multiple string allocations and regex searches.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: HASHMAP LOOKAHEAD -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-blue-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 2</span>
+                <span class="opacity-50">|</span>
+                <span>MAP LOOKUP & LOOKAHEAD</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-blue-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Forward Scan"</h3>
+                <p class="text-slate-600 text-lg mb-8">
+                    Iterate from left to right. For each symbol, check the <b>next</b> one. 
+                    If the current value is <b>smaller</b> than the next value (e.g., I < V), we <b>subtract</b> the current value. 
+                    Otherwise, we <b>add</b> it. This handles subtraction naturally without modifying the string.
+                </p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-50 p-8 rounded-3xl mb-10 border border-slate-200">
+                    <div id="hm-msg" class="step-msg text-blue-900">Click Next to scan symbols forward.</div>
+                    <div class="flex justify-center gap-3 mb-12 h-20 overflow-x-auto" id="hm-viz"></div>
+                    
+                    <div class="flex justify-center items-center gap-6 mb-8">
+                        <div class="calc-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Current Total</p>
+                            <p id="hm-sum" class="text-3xl font-bold text-blue-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="hmViz.reset()" class="px-8 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="hmViz.next()" id="hm-next-btn" class="px-12 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 2 -->
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="code-block mb-10 border-l-8 border-blue-600">
+<pre>
+<span class="keyword">public int</span> <span class="type">romanToInt</span>(<span class="type">String</span> s) {
+    <span class="type">Map</span>&lt;<span class="type">Character</span>, <span class="type">Integer</span>&gt; symbolValues = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    symbolValues.put(<span class="string">'I'</span>, <span class="number">1</span>); symbolValues.put(<span class="string">'V'</span>, <span class="number">5</span>);
+    symbolValues.put(<span class="string">'X'</span>, <span class="number">10</span>); symbolValues.put(<span class="string">'L'</span>, <span class="number">50</span>);
+    symbolValues.put(<span class="string">'C'</span>, <span class="number">100</span>); symbolValues.put(<span class="string">'D'</span>, <span class="number">500</span>);
+    symbolValues.put(<span class="string">'M'</span>, <span class="number">1000</span>);
+
+    <span class="keyword">int</span> totalIntegerResult = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i < s.length(); i++) {
+        <span class="keyword">int</span> currentValue = symbolValues.get(s.charAt(i));
+        
+        <span class="comment">// Check lookahead to see if we should subtract</span>
+        <span class="keyword">if</span> (i + <span class="number">1</span> < s.length() && currentValue < symbolValues.get(s.charAt(i + <span class="number">1</span>))) {
+            totalIntegerResult -= currentValue;
+        } <span class="keyword">else</span> {
+            totalIntegerResult += currentValue;
+        }
+    }
+    <span class="keyword">return</span> totalIntegerResult;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                        <h4 class="font-bold text-blue-800 mb-3 uppercase text-sm tracking-widest">Complexity</h4>
+                        <p class="text-blue-900"><b>Time:</b> <b>O(N)</b>. Single pass through the string.</p>
+                        <p class="text-blue-900 mt-2"><b>Space:</b> <b>O(1)</b>. Map size is constant (7 symbols).</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-3 uppercase text-sm tracking-widest">Standard Pattern</h4>
+                        <p class="text-slate-600 italic">This is the most common interview approach. It demonstrates clear understanding of string iteration and dictionary usage.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: OPTIMAL SWITCH REVERSE -->
+        <section class="mb-24">
+            <div class="inline-flex items-center gap-3 bg-emerald-600 text-white px-6 py-2 rounded-full mb-8 font-bold tracking-wide">
+                <span>APPROACH 3</span>
+                <span class="opacity-50">|</span>
+                <span>REVERSE SCAN & SWITCH</span>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-emerald-100">
+                <h3 class="text-2xl font-bold mb-4">Intuition: "The Backwards Hack"</h3>
+                <p class="text-slate-600 text-lg mb-8 text-emerald-900">
+                    If we iterate <b>backwards</b>, we don't need a map or lookahead logic. 
+                    We just keep track of the <b>maximum value seen so far</b>. 
+                    If current value is <b>less</b> than max seen, subtract it. Else, add it and update max. 
+                    Using a <b>switch</b> statement instead of a Map is much faster in Java.
+                </p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-emerald-50 p-8 rounded-3xl mb-10 border border-emerald-200">
+                    <div id="opt-msg" class="step-msg text-emerald-900">Click Next to scan symbols backwards.</div>
+                    <div class="flex justify-center gap-3 mb-12 h-20 overflow-x-auto" id="opt-viz"></div>
+                    
+                    <div class="flex justify-center items-center gap-6 mb-8">
+                        <div class="calc-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Sum</p>
+                            <p id="opt-sum" class="text-3xl font-bold text-emerald-600">0</p>
+                        </div>
+                        <div class="calc-card">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">Max Seen</p>
+                            <p id="opt-max" class="text-3xl font-bold text-emerald-600">0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-6">
+                        <button onclick="optViz.reset()" class="px-8 py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-2xl font-bold transition">Reset</button>
+                        <button onclick="optViz.next()" id="opt-next-btn" class="px-12 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold transition">Next Step</button>
+                    </div>
+                </div>
+
+                <!-- Java Code 3 -->
+                <h3 class="text-xl font-bold mb-4 text-emerald-900">Java Implementation (Optimal)</h3>
+                <div class="code-block mb-10 border-l-8 border-emerald-600">
+<pre>
+<span class="keyword">public int</span> <span class="type">romanToInt</span>(<span class="type">String</span> s) {
+    <span class="keyword">int</span> totalSum = <span class="number">0</span>;
+    <span class="keyword">int</span> maxValueSeen = <span class="number">0</span>;
+    
+    <span class="comment">// Iterate backwards - simplifies the logic significantly</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = s.length() - <span class="number">1</span>; i >= <span class="number">0</span>; i--) {
+        <span class="keyword">int</span> currentNumValue = <span class="keyword">switch</span> (s.charAt(i)) {
+            <span class="keyword">case</span> <span class="string">'M'</span> -> <span class="number">1000</span>;
+            <span class="keyword">case</span> <span class="string">'D'</span> -> <span class="number">500</span>;
+            <span class="keyword">case</span> <span class="string">'C'</span> -> <span class="number">100</span>;
+            <span class="keyword">case</span> <span class="string">'L'</span> -> <span class="number">50</span>;
+            <span class="keyword">case</span> <span class="string">'X'</span> -> <span class="number">10</span>;
+            <span class="keyword">case</span> <span class="string">'V'</span> -> <span class="number">5</span>;
+            <span class="keyword">case</span> <span class="string">'I'</span> -> <span class="number">1</span>;
+            <span class="keyword">default</span> -> <span class="number">0</span>;
+        };
+        
+        <span class="comment">// Comparison determines addition or subtraction</span>
+        <span class="keyword">if</span> (currentNumValue < maxValueSeen) {
+            totalSum -= currentNumValue;
+        } <span class="keyword">else</span> {
+            totalSum += currentNumValue;
+            maxValueSeen = currentNumValue;
+        }
+    }
+    <span class="keyword">return</span> totalSum;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-emerald-100 p-6 rounded-2xl border border-emerald-200">
+                        <h4 class="font-bold text-emerald-800 mb-3 uppercase text-sm tracking-widest">Efficiency</h4>
+                        <p class="text-emerald-900"><b>Time:</b> <b>O(N)</b>. Best case (no map overhead).</p>
+                        <p class="text-emerald-900 mt-2"><b>Space:</b> <b>O(1)</b>. Constant space.</p>
+                    </div>
+                    <div class="bg-slate-900 text-white p-6 rounded-2xl">
+                        <h4 class="font-bold text-emerald-400 mb-3 uppercase text-sm tracking-widest">Why Switch?</h4>
+                        <p class="text-slate-300 text-sm">Java's <code>HashMap</code> involves object creation, hashing, and bucket collisions. A <code>switch</code> compiles to <b>lookupswitch</b> or <b>tableswitch</b> bytecode, which is basically an O(1) jump in machine code.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-12">
+            <h2 class="text-3xl font-bold mb-8">Performance Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100">
+                            <th class="p-4 border">Approach</th>
+                            <th class="p-4 border">Time Complexity</th>
+                            <th class="p-4 border">Space Complexity</th>
+                            <th class="p-4 border">Overhead</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 border font-semibold">Brute Force (Replace)</td>
+                            <td class="p-4 border font-bold">O(N)</td>
+                            <td class="p-4 border font-bold text-red-600">O(N)</td>
+                            <td class="p-4 border text-red-500 uppercase text-xs font-bold">Very High</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border font-semibold">HashMap Lookahead</td>
+                            <td class="p-4 border font-bold">O(N)</td>
+                            <td class="p-4 border font-bold text-emerald-600">O(1)</td>
+                            <td class="p-4 border text-amber-500 uppercase text-xs font-bold">Medium</td>
+                        </tr>
+                        <tr class="bg-emerald-50">
+                            <td class="p-4 border font-semibold text-emerald-800">Reverse Switch</td>
+                            <td class="p-4 border font-bold text-emerald-700">O(N)</td>
+                            <td class="p-4 border font-bold text-emerald-700">O(1)</td>
+                            <td class="p-4 border text-emerald-600 uppercase text-xs font-bold">Minimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <div class="bg-slate-900 text-slate-100 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <h2 class="text-3xl font-bold mb-8 text-emerald-400">⚡ Fast Recall Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Core Patterns</h4>
+                    <p class="text-slate-400 mb-4">
+                        When converting Roman numerals, you have two logical choices:
+                    </p>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">1.</span>
+                            <span><b>Forward Scan:</b> Compare <code>current < next</code>. If true, <b>subtract</b> current.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-500 font-bold">2.</span>
+                            <span><b>Backward Scan:</b> Track <code>maxSeen</code>. If <code>current < maxSeen</code>, <b>subtract</b> current.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white mb-4">Top Interview Tips</h4>
+                    <ul class="space-y-4 text-slate-300">
+                        <li>• Mention <b>HashMap overhead</b> to impress Senior Engineers.</li>
+                        <li>• The input string is guaranteed valid, so you don't need complex validation.</li>
+                        <li>• <b>MCMXCIV</b> is the perfect test case (1000 + (1000-100) + (100-10) + (5-1) = 1994).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROMAN_MAP = { 'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000 };
+        const INPUT = "MCMXCIV";
+
+        // --- BRUTE FORCE ---
+        const bfViz = {
+            raw: INPUT,
+            processed: "",
+            step: 0,
+            sum: 0,
+            idx: 0,
+            init() { this.render(); },
+            reset() {
+                this.processed = ""; this.step = 0; this.sum = 0; this.idx = 0;
+                document.getElementById('bf-next-btn').disabled = false;
+                this.render("Reset. Initial string: " + INPUT);
+            },
+            render(msg) {
+                const container = document.getElementById('bf-viz');
+                const msgEl = document.getElementById('bf-msg');
+                if (msg) msgEl.innerText = msg;
+                container.innerHTML = (this.step === 0 ? this.raw : this.processed).split('').map((char, i) => `
+                    <div class="symbol-box ${this.step === 2 && i < this.idx ? 'symbol-processed' : (this.step === 2 && i === this.idx ? 'symbol-active' : '')}">
+                        ${char}<span class="text-[10px] text-slate-400 mt-1">${ROMAN_MAP[char]}</span>
+                    </div>
+                `).join('');
+                document.getElementById('bf-sum').innerText = this.sum;
+            },
+            next() {
+                if (this.step === 0) {
+                    this.processed = this.raw.replace(/IV/g, 'IIII').replace(/IX/g, 'VIIII').replace(/XL/g, 'XXXX').replace(/XC/g, 'LXXXX').replace(/CD/g, 'CCCC').replace(/CM/g, 'DCCCC');
+                    this.step = 1;
+                    this.render("Step 1: Replaced subtractive pairs. New string: " + this.processed);
+                } else if (this.step === 1) {
+                    this.step = 2;
+                    this.render("Step 2: String is now purely additive. Starting sum...");
+                } else {
+                    if (this.idx < this.processed.length) {
+                        this.sum += ROMAN_MAP[this.processed[this.idx]];
+                        this.idx++;
+                        this.render();
+                    } else {
+                        document.getElementById('bf-next-btn').disabled = true;
+                        this.render("Completed! Final result: " + this.sum);
+                    }
+                }
+            }
+        };
+
+        // --- HASHMAP LOOKAHEAD ---
+        const hmViz = {
+            s: INPUT,
+            idx: 0,
+            sum: 0,
+            init() { this.render(); },
+            reset() {
+                this.idx = 0; this.sum = 0;
+                document.getElementById('hm-next-btn').disabled = false;
+                this.render("Reset. Pointers at the start.");
+            },
+            render(msg) {
+                const container = document.getElementById('hm-viz');
+                const msgEl = document.getElementById('hm-msg');
+                if (msg) msgEl.innerText = msg;
+                container.innerHTML = this.s.split('').map((char, i) => {
+                    let cls = "symbol-box";
+                    if (i === this.idx) cls += " symbol-active";
+                    if (i === this.idx + 1) cls += " border-blue-300 bg-blue-50";
+                    if (i < this.idx) cls += " symbol-processed";
+                    return `<div class="${cls}">${char}<span class="pointer-label">${i === this.idx ? 'CURR' : (i === this.idx+1 ? 'NEXT' : '')}</span></div>`;
+                }).join('');
+                document.getElementById('hm-sum').innerText = this.sum;
+            },
+            next() {
+                if (this.idx < this.s.length) {
+                    let currVal = ROMAN_MAP[this.s[this.idx]];
+                    let nextVal = this.idx + 1 < this.s.length ? ROMAN_MAP[this.s[this.idx+1]] : 0;
+                    
+                    if (currVal < nextVal) {
+                        this.sum -= currVal;
+                        this.render(`Subtracting ${currVal} because next value is larger (${nextVal}).`);
+                    } else {
+                        this.sum += currVal;
+                        this.render(`Adding ${currVal} because it's >= next value.`);
+                    }
+                    this.idx++;
+                } else {
+                    document.getElementById('hm-next-btn').disabled = true;
+                    this.render("Final sum: " + this.sum);
+                }
+            }
+        };
+
+        // --- OPTIMAL REVERSE ---
+        const optViz = {
+            s: INPUT,
+            idx: INPUT.length - 1,
+            sum: 0,
+            max: 0,
+            init() { this.render(); },
+            reset() {
+                this.idx = INPUT.length - 1; this.sum = 0; this.max = 0;
+                document.getElementById('opt-next-btn').disabled = false;
+                this.render("Reset. Starting from the right.");
+            },
+            render(msg) {
+                const container = document.getElementById('opt-viz');
+                const msgEl = document.getElementById('opt-msg');
+                if (msg) msgEl.innerText = msg;
+                container.innerHTML = this.s.split('').map((char, i) => {
+                    let cls = "symbol-box";
+                    if (i === this.idx) cls += " symbol-active border-emerald-500";
+                    if (i > this.idx) cls += " symbol-processed";
+                    return `<div class="${cls}">${char}</div>`;
+                }).join('');
+                document.getElementById('opt-sum').innerText = this.sum;
+                document.getElementById('opt-max').innerText = this.max;
+            },
+            next() {
+                if (this.idx >= 0) {
+                    let val = ROMAN_MAP[this.s[this.idx]];
+                    if (val < this.max) {
+                        this.sum -= val;
+                        this.render(`Val ${val} < MaxSeen ${this.max}. SUBTRACT.`);
+                    } else {
+                        this.sum += val;
+                        this.max = val;
+                        this.render(`Val ${val} >= MaxSeen. ADD and Update Max.`);
+                    }
+                    this.idx--;
+                } else {
+                    document.getElementById('opt-next-btn').disabled = true;
+                    this.render("Backward scan finished. Result: " + this.sum);
+                }
+            }
+        };
+
+        window.onload = () => {
+            bfViz.init();
+            hmViz.init();
+            optViz.init();
+        };
+    </script>
+</body>
+</html>
