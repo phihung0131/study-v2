@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cẩm Nang Toàn Tập: Đa Luồng & Song Song trong Java</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; line-height: 1.7; color: #1a202c; }
+        pre { background: #1a202c; color: #e2e8f0; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; margin: 1.5rem 0; border: 1px solid #2d3748; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.9em; }
+        .keyword { color: #f6ad55; font-weight: bold; }
+        .comment { color: #718096; italic: true; }
+        .string { color: #68d391; }
+        .toc-link { transition: all 0.2s; display: block; padding: 0.25rem 0; }
+        .toc-link:hover { color: #3182ce; transform: translateX(5px); }
+        .section-card { background: white; border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .badge-blue { background: #ebf8ff; color: #2b6cb0; }
+        .badge-red { background: #fff5f5; color: #c53030; }
+        .badge-green { background: #f0fff4; color: #2f855a; }
+        .quote { border-left: 5px solid #4a5568; padding-left: 1.5rem; font-style: italic; color: #4a5568; margin: 1.5rem 0; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <div class="max-w-6xl mx-auto px-6 py-16">
+        <header class="mb-16 border-b pb-10">
+            <h1 class="text-6xl font-extrabold text-slate-900 tracking-tight mb-4">Cẩm Nang Đa Luồng Java</h1>
+            <p class="text-2xl text-slate-600 font-light">Từ Nguyên Lý Hệ Điều Hành đến Virtual Threads & Hệ Thống Phân Tán</p>
+            <div class="flex gap-4 mt-8">
+                <span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">Deep Dive Edition</span>
+                <span class="bg-slate-200 text-slate-700 px-4 py-1 rounded-full text-sm font-semibold">Updated 2024</span>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-12">
+            <!-- Sidebar TOC -->
+            <aside class="lg:w-1/4">
+                <div class="sticky top-8 bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">Nội dung chính</h3>
+                    <nav class="text-sm text-slate-600 space-y-1">
+                        <a href="#os-fundamentals" class="toc-link">1. Process vs Thread & CPU Core</a>
+                        <a href="#lifecycle" class="toc-link">2. Thread Lifecycle & States</a>
+                        <a href="#creation" class="toc-link">3. Khởi tạo & Native Trace-off</a>
+                        <a href="#pool" class="toc-link">4. Thread Pool & Bottleneck</a>
+                        <a href="#sync-basic" class="toc-link">5. Synchronization & Race Condition</a>
+                        <a href="#monitors" class="toc-link">6. Monitors & Intrinsic Locks</a>
+                        <a href="#volatile-atomic" class="toc-link">7. Volatile & Atomic Variables</a>
+                        <a href="#explicit-locks" class="toc-link">8. Explicit Locks (ReentrantLock)</a>
+                        <a href="#communication" class="toc-link">9. Inter-thread Communication</a>
+                        <a href="#juc-utils" class="toc-link">10. JUC Synchronizers</a>
+                        <a href="#forkjoin-async" class="toc-link">11. Fork/Join & CompletableFuture</a>
+                        <a href="#virtual-threads" class="toc-link">12. Virtual Threads (Project Loom)</a>
+                        <a href="#distributed" class="toc-link">13. Distributed Consistency</a>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="lg:w-3/4">
+
+                <!-- Section 1 -->
+                <section id="os-fundamentals" class="section-card">
+                    <span class="badge badge-blue">OS Level</span>
+                    <h2 class="text-3xl font-bold mb-4">1. Tiến trình, Luồng & Bài toán CPU Core</h2>
+                    <p class="mb-4">Trong Java, việc phân biệt giữa Tiến trình (Process) và Luồng (Thread) là cực kỳ quan trọng để hiểu cách hệ thống quản lý tài nguyên.</p>
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-blue-700">Process (Tiến trình)</h4>
+                            <p class="text-sm">Một thực thể độc lập được OS cấp phát Heap, Stack riêng. Nếu P1 sập, P2 không ảnh hưởng.</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-green-700">Thread (Luồng)</h4>
+                            <p class="text-sm">Đơn vị chạy trong Process. Dùng chung Heap nhưng có Stack riêng. Một lỗi nặng ở Thread có thể làm sập cả Process.</p>
+                        </div>
+                    </div>
+                    <div class="quote">
+                        <strong>Câu hỏi:</strong> Máy 4 Core, chạy 8 Thread thì sao? <br>
+                        <strong>Trả lời:</strong> OS dùng <strong>CPU Scheduling</strong>. Tại một tích tắc (ms), 1 Core chỉ chạy 1 Thread. Nó hoán đổi cực nhanh (Context Switch) khiến ta cảm giác chúng chạy song song. Nếu có <strong>Hyper-Threading</strong>, 1 Core vật lý sẽ có 2 Core logic, giúp xử lý 8 luồng mượt mà hơn.
+                    </div>
+                    
+                </section>
+
+                <!-- Section 2 -->
+                <section id="lifecycle" class="section-card">
+                    <span class="badge badge-blue">Java Core</span>
+                    <h2 class="text-3xl font-bold mb-4">2. Thread Lifecycle (Vòng đời luồng)</h2>
+                    <p class="mb-4">JVM quản lý luồng qua 6 trạng thái chính. Hiểu điều này giúp debug "treo" ứng dụng:</p>
+                    <ul class="list-disc ml-6 space-y-2 mb-6">
+                        <li><strong>NEW:</strong> Vừa khởi tạo đối tượng Thread, chưa gọi <code>start()</code>.</li>
+                        <li><strong>RUNNABLE:</strong> Đã sẵn sàng, đang chiếm CPU hoặc đang đợi trong hàng đợi của OS.</li>
+                        <li><strong>BLOCKED:</strong> Đứng đợi cửa để lấy khóa <code>synchronized</code>.</li>
+                        <li><strong>WAITING:</strong> Đợi vô thời hạn (gọi <code>wait()</code>, <code>join()</code>) cho đến khi ai đó đánh thức.</li>
+                        <li><strong>TIMED_WAITING:</strong> Đợi có thời hạn (gọi <code>sleep(ms)</code>).</li>
+                        <li><strong>TERMINATED:</strong> Kết thúc công việc hoặc bị lỗi.</li>
+                    </ul>
+                    
+                </section>
+
+                <!-- Section 3 -->
+                <section id="creation" class="section-card">
+                    <span class="badge badge-red">Deep Dive</span>
+                    <h2 class="text-3xl font-bold mb-4">3. Khởi tạo & Native Trace-off</h2>
+                    <p>Khi gọi <code>start()</code>, JVM gọi xuống hàm native <code>start0()</code> của C++. OS sẽ tạo một luồng thật và cấp phát <strong>1MB Stack</strong>.</p>
+                    <pre><code><span class="comment">// Cách khuyên dùng: Implement Runnable để tách biệt Logic và Worker</span>
+Thread t = <span class="keyword">new</span> Thread(() -> {
+    System.out.println(<span class="string">"Task đang chạy trên: "</span> + Thread.currentThread().getName());
+});
+t.start();</code></pre>
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                        <strong>Trade-off:</strong> Việc tạo 1 Thread rất đắt đỏ. Nếu bạn nhận 1000 request/s và <code>new Thread()</code> cho mỗi cái, bạn sẽ tốn 1GB RAM chỉ để giữ luồng và CPU sẽ chết vì Context Switching (thay vì làm việc).
+                    </div>
+                </section>
+
+                <!-- Section 4 -->
+                <section id="pool" class="section-card">
+                    <span class="badge badge-green">Production Ready</span>
+                    <h2 class="text-3xl font-bold mb-4">4. Thread Pool & Hiện tượng Bottleneck</h2>
+                    <p>Thread Pool giống như một đội công nhân cố định để tránh chi phí tuyển dụng (tạo luồng) liên tục.</p>
+                    <pre><code>ThreadPoolExecutor executor = <span class="keyword">new</span> ThreadPoolExecutor(
+    4, <span class="comment">// Core size</span>
+    10, <span class="comment">// Max size</span>
+    60, TimeUnit.SECONDS,
+    <span class="keyword">new</span> ArrayBlockingQueue<>(100), <span class="comment">// Điểm nghẽn ở đây nếu hàng đợi đầy</span>
+    <span class="keyword">new</span> ThreadPoolExecutor.CallerRunsPolicy()
+);</code></pre>
+                    <div class="quote">
+                        <strong>Tại sao Core có 4 mà Pool có 50?</strong> <br>
+                        Vì phần lớn thời gian luồng là <strong>I/O Bound</strong> (đợi Database, đợi Mạng). Khi 46 ông đang "ngủ" đợi dữ liệu, 4 ông còn lại vẫn có thể dùng CPU để xử lý.
+                    </div>
+                </section>
+
+                <!-- Section 5 -->
+                <section id="sync-basic" class="section-card">
+                    <span class="badge badge-red">Critical</span>
+                    <h2 class="text-3xl font-bold mb-4">5. Race Condition: Bài toán Rút tiền ATM</h2>
+                    <p>Đây là lỗi khi 2 luồng cùng truy cập và sửa đổi dữ liệu chung dẫn đến kết quả sai lệch.</p>
+                    <pre><code><span class="keyword">public synchronized void</span> withdraw(<span class="keyword">int</span> amount) {
+    <span class="keyword">if</span> (balance >= amount) {
+        <span class="comment">// Giả sử Luồng 1 bị dừng ở đây sau khi check OK</span>
+        Thread.sleep(100); 
+        balance -= amount;
+    }
+}</code></pre>
+                    <div class="note">
+                        Sử dụng <code>synchronized</code> sẽ khóa đối tượng lại, chỉ cho 1 người vào thực hiện giao dịch tại 1 thời điểm.
+                    </div>
+                </section>
+
+                <!-- Section 6 -->
+                <section id="monitors" class="section-card">
+                    <span class="badge badge-red">Under the Hood</span>
+                    <h2 class="text-3xl font-bold mb-4">6. Intrinsic Locks & Monitor</h2>
+                    <p>Mỗi Object trong Java có một <strong>Mark Word</strong> chứa thông tin khóa. <code>synchronized</code> sử dụng cơ chế này.</p>
+                    <ul class="list-disc ml-6 space-y-2">
+                        <li><strong>Entry Set:</strong> Nơi các luồng đứng đợi lấy khóa.</li>
+                        <li><strong>Wait Set:</strong> Nơi các luồng tạm buông khóa (gọi <code>wait()</code>) để chờ điều kiện.</li>
+                        <li><strong>Reentrant:</strong> Nếu bạn đã giữ khóa, bạn có thể gọi các hàm synchronized khác của cùng đối tượng đó mà không bị kẹt.</li>
+                    </ul>
+                    
+                </section>
+
+                <!-- Section 7 -->
+                <section id="volatile-atomic" class="section-card">
+                    <span class="badge badge-blue">Optimization</span>
+                    <h2 class="text-3xl font-bold mb-4">7. Volatile vs Atomic: Visibility & Atomicity</h2>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="border p-4 rounded">
+                            <h4 class="font-bold">Volatile</h4>
+                            <p class="text-sm">Giải quyết vấn đề <strong>Visibility</strong>. Đảm bảo luồng đọc luôn thấy giá trị mới nhất từ RAM, không đọc từ CPU Cache.</p>
+                        </div>
+                        <div class="border p-4 rounded">
+                            <h4 class="font-bold">AtomicInteger</h4>
+                            <p class="text-sm">Sử dụng <strong>CAS (Compare-And-Swap)</strong> ở tầng CPU. Không cần Lock nhưng vẫn đảm bảo phép toán <code>count++</code> an toàn.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 8 -->
+                <section id="explicit-locks" class="section-card">
+                    <span class="badge badge-green">Advanced</span>
+                    <h2 class="text-3xl font-bold mb-4">8. Explicit Locks (ReentrantLock)</h2>
+                    <p>Mạnh hơn <code>synchronized</code> vì có khả năng "rút lui" và "thử khóa".</p>
+                    <pre><code><span class="keyword">if</span> (lock.tryLock(5, TimeUnit.SECONDS)) {
+    <span class="keyword">try</span> {
+        <span class="comment">// Xử lý an toàn</span>
+    } <span class="keyword">finally</span> {
+        lock.unlock();
+    }
+} <span class="keyword">else</span> {
+    System.out.println(<span class="string">"Hệ thống bận, vui lòng thử lại sau"</span>);
+}</code></pre>
+                </section>
+
+                <!-- Section 9 -->
+                <section id="communication" class="section-card">
+                    <span class="badge badge-blue">Orchestration</span>
+                    <h2 class="text-3xl font-bold mb-4">9. Inter-thread Communication</h2>
+                    <p>Cách các luồng "nói chuyện" với nhau qua <strong>Condition Objects</strong>.</p>
+                    <div class="quote">
+                        <strong>Ví dụ Kho hàng:</strong> Luồng "Shipper" phải <code>await()</code> nếu kho đầy. Luồng "Khách hàng" sau khi mua sẽ <code>signal()</code> cho Shipper biết kho đã trống chỗ.
+                    </div>
+                </section>
+
+                <!-- Section 10 -->
+                <section id="juc-utils" class="section-card">
+                    <span class="badge badge-green">Tools</span>
+                    <h2 class="text-3xl font-bold mb-4">10. Java Concurrency Utility (JUC)</h2>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 rounded">
+                            <span class="font-bold">CountDownLatch:</span> Chờ N sự kiện xong mới chạy tiếp (ví dụ: Chờ 3 Service Database, Cache, Mail khởi động xong).
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded">
+                            <span class="font-bold">Semaphore:</span> Giới hạn số lượng luồng vào một tài nguyên (ví dụ: tối đa 10 kết nối Database).
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded">
+                            <span class="font-bold">ConcurrentHashMap:</span> Khóa theo từng Bucket thay vì khóa cả Map, giúp hàng nghìn luồng đọc ghi song song.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 11 -->
+                <section id="forkjoin-async" class="section-card">
+                    <span class="badge badge-blue">Parallelism</span>
+                    <h2 class="text-3xl font-bold mb-4">11. Fork/Join & CompletableFuture</h2>
+                    <h3 class="font-bold text-lg">Fork/Join: Đội quân kiến</h3>
+                    <p>Chia nhỏ 10 triệu giao dịch thành các phần 1000 và tính tổng song song bằng <strong>Work-Stealing</strong>.</p>
+                    
+                    <h3 class="font-bold text-lg mt-4">CompletableFuture: Dây chuyền tự động</h3>
+                    <p>Lập trình bất đồng bộ (Non-blocking). Phù hợp gọi API: Gọi hãng bay + Gọi ngân hàng -> Có kết quả thì Gửi Email.</p>
+                </section>
+
+                <!-- Section 12 -->
+                <section id="virtual-threads" class="section-card">
+                    <span class="badge badge-red">Evolution</span>
+                    <h2 class="text-3xl font-bold mb-4">12. Virtual Threads (Project Loom)</h2>
+                    <p>Cuộc cách mạng của Java 21. Cho phép tạo 1.000.000 luồng trên một máy tính cá nhân.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-yellow-50 p-4 rounded">
+                            <h4 class="font-bold">Cơ chế Mount/Unmount</h4>
+                            <p class="text-sm">Khi luồng ảo đợi mạng, JVM bốc nó ra khỏi CPU, lưu trạng thái vào <strong>Heap</strong>. Khi có mạng, JVM nạp lại và chạy tiếp.</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded">
+                            <h4 class="font-bold">Lợi ích</h4>
+                            <p class="text-sm">Viết code dễ hiểu kiểu tuần tự nhưng hiệu năng cực cao như lập trình Reactive phức tạp.</p>
+                        </div>
+                    </div>
+                    
+                </section>
+
+                <!-- Section 13 -->
+                <section id="distributed" class="section-card">
+                    <span class="badge badge-green">Enterprise</span>
+                    <h2 class="text-3xl font-bold mb-4">13. Distributed Consistency (Spring Boot)</h2>
+                    <p>Khi chạy nhiều Server, khóa trong Java vô tác dụng. Chúng ta dùng Database làm trọng tài.</p>
+                    <pre><code><span class="comment">// Optimistic Locking với JPA</span>
+<span class="keyword">@Entity</span>
+<span class="keyword">public class</span> Account {
+    <span class="keyword">private</span> Double balance;
+    <span class="keyword">@Version</span>
+    <span class="keyword">private Integer</span> version; <span class="comment">// DB tự kiểm tra version khi update</span>
+}</code></pre>
+                    <p class="mt-4"><strong>Distributed Lock với Redis:</strong> Dùng để "xếp hàng" người dùng ngay từ tầng ngoài cùng cho các sự kiện như Flash Sale.</p>
+                </section>
+
+            </main>
+        </div>
+
+        <footer class="mt-20 pt-10 border-t text-center text-slate-500">
+            <p class="font-bold mb-2">Đa luồng không làm CPU mạnh hơn, nó chỉ giúp CPU không bị rảnh rỗi.</p>
+            <p class="text-sm">Tài liệu được thiết kế cho việc học tập và tra cứu chuyên sâu Java Concurrency.</p>
+        </footer>
+    </div>
+
+</body>
+</html>
