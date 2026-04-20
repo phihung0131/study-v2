@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 290: Word Pattern Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.85rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .item-box {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            height: 50px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 700;
+            background: white;
+            padding: 0 10px;
+        }
+
+        .active-box {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+
+        .match-box { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .error-box { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+
+        .map-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .step-log {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: #f1f5f9;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">205. Word Pattern</h1>
+            <p class="text-lg text-slate-600">Determining if a string <b>s</b> follows a specific character <b>pattern</b>.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Table</span>
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold">Bijective Mapping</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4">Given a <b>pattern</b> and a string <b>s</b>, find if <b>s</b> follows the same pattern.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                <p><b>Rules for "Following":</b></p>
+                <ul class="list-disc ml-5 space-y-1 text-slate-700">
+                    <li>Each character in <b>pattern</b> maps to exactly one non-empty word in <b>s</b>.</li>
+                    <li>Each non-empty word in <b>s</b> maps to exactly one character in <b>pattern</b>.</li>
+                    <li>The relationship is <b>bijective</b> (one-to-one).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Approach 1: Naive Nested Verification -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Naive Verification (O(N²))</h2>
+                <p class="text-slate-600 mt-2">For every new pair, manually scan all previous pairs to ensure no rules are broken. No extra hash-based data structures used.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-8">
+                    <div class="w-full flex flex-col gap-4">
+                        <div class="flex justify-center items-center gap-4">
+                            <span class="text-xs font-bold text-slate-400 uppercase w-16">Pattern</span>
+                            <div id="naive-pattern" class="flex gap-2"></div>
+                        </div>
+                        <div class="flex justify-center items-center gap-4">
+                            <span class="text-xs font-bold text-slate-400 uppercase w-16">Words</span>
+                            <div id="naive-words" class="flex gap-2"></div>
+                        </div>
+                    </div>
+                    <div id="naive-comparison" class="w-full max-w-md bg-slate-50 p-4 rounded-xl hidden">
+                        <p class="text-xs font-bold text-slate-400 mb-2">SCANNING PREVIOUS PAIRS...</p>
+                        <div id="naive-log" class="space-y-1"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetNaive()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepNaive()" id="btn-naive" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="naive-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">wordPattern</span>(<span class="type">String</span> pattern, <span class="type">String</span> s) {
+    <span class="type">String</span>[] words = s.<span class="method">split</span>(<span class="string">" "</span>);
+    <span class="keyword">if</span> (words.length != pattern.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="keyword">for</span> (<span class="type">int</span> current = 0; current &lt; words.length; current++) {
+        <span class="type">char</span> currentChar = pattern.<span class="method">charAt</span>(current);
+        <span class="type">String</span> currentWord = words[current];
+
+        <span class="comment">// Naive Check: Scan all previous entries</span>
+        <span class="keyword">for</span> (<span class="type">int</span> prev = 0; prev &lt; current; prev++) {
+            <span class="comment">// If characters match, words MUST match</span>
+            <span class="keyword">if</span> (pattern.<span class="method">charAt</span>(prev) == currentChar &amp;&amp; !words[prev].<span class="method">equals</span>(currentWord)) 
+                <span class="keyword">return false</span>;
+            <span class="comment">// If words match, characters MUST match</span>
+            <span class="keyword">if</span> (words[prev].<span class="method">equals</span>(currentWord) &amp;&amp; pattern.<span class="method">charAt</span>(prev) != currentChar) 
+                <span class="keyword">return false</span>;
+        }
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N²)</b>. For each pair, we scan all previous pairs.</p>
+                    <p><b>Space Complexity:</b> <b>O(N)</b> to store the split words array.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Why skip this?</h4>
+                    <p>It's too slow for large patterns. In an interview, this is only a starting point to demonstrate basic logic before optimizing with HashMaps.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Double Mapping -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Double HashMap (O(N))</h2>
+                <p class="text-slate-600 mt-2">Use two maps to store the <b>Pattern → Word</b> and <b>Word → Pattern</b> relationships simultaneously for O(1) lookup.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-8">
+                    <div class="flex gap-12 justify-center items-center">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Current Char</p>
+                            <div id="map-char-box" class="item-box active-box mx-auto">-</div>
+                        </div>
+                        <div class="text-2xl text-slate-300">⟷</div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Current Word</p>
+                            <div id="map-word-box" class="item-box active-box mx-auto">-</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 w-full max-w-lg">
+                        <div>
+                            <p class="text-sm font-bold text-blue-600 mb-2 text-center">Char → Word Map</p>
+                            <div id="char-to-word-list" class="space-y-2 min-h-[120px]"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-blue-600 mb-2 text-center">Word → Char Map</p>
+                            <div id="word-to-char-list" class="space-y-2 min-h-[120px]"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetMap()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepMap()" id="btn-map" class="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="map-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Waiting for input...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">wordPattern</span>(<span class="type">String</span> pattern, <span class="type">String</span> s) {
+    <span class="type">String</span>[] words = s.<span class="method">split</span>(<span class="string">" "</span>);
+    <span class="keyword">if</span> (words.length != pattern.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="type">Map</span>&lt;<span class="type">Character</span>, <span class="type">String</span>&gt; charMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    <span class="type">Map</span>&lt;<span class="type">String</span>, <span class="type">Character</span>&gt; wordMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; words.length; i++) {
+        <span class="type">char</span> c = pattern.<span class="method">charAt</span>(i);
+        <span class="type">String</span> w = words[i];
+
+        <span class="keyword">if</span> (charMap.<span class="method">containsKey</span>(c)) {
+            <span class="keyword">if</span> (!charMap.<span class="method">get</span>(c).<span class="method">equals</span>(w)) <span class="keyword">return false</span>;
+        } <span class="keyword">else</span> {
+            <span class="keyword">if</span> (wordMap.<span class="method">containsKey</span>(w)) <span class="keyword">return false</span>; <span class="comment">// Bijective rule check</span>
+            charMap.<span class="method">put</span>(c, w);
+            wordMap.<span class="method">put</span>(w, c);
+        }
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b>. We iterate once. HashMap operations are O(1) on average.</p>
+                    <p><b>Space Complexity:</b> <b>O(M)</b> where M is the number of unique words/chars.</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Very fast and highly readable. Standard way to solve mapping problems.</p>
+                    <p><b>Cons:</b> Slightly higher constant memory usage due to two Maps.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Single Map Index Mapping -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-purple-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Single Map Indexing (Optimal)</h2>
+                <p class="text-slate-600 mt-2">Using a single <b>HashMap&lt;Object, Integer&gt;</b>. Map both the character and the word to the <b>same index</b> where they were last seen. If the returned values differ, the pattern is broken.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="w-full flex justify-center gap-4 mb-4">
+                        <div id="idx-p-box" class="item-box active-box">?</div>
+                        <div id="idx-w-box" class="item-box active-box">?</div>
+                    </div>
+                    
+                    <div class="w-full max-w-md">
+                        <p class="text-sm font-bold text-purple-600 mb-2">LAST SEEN DICTIONARY</p>
+                        <div id="idx-map-list" class="grid grid-cols-2 gap-2 min-h-[100px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetIdx()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepIdx()" id="btn-idx" class="px-6 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="idx-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Initializing...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">wordPattern</span>(<span class="type">String</span> pattern, <span class="type">String</span> s) {
+    <span class="type">String</span>[] words = s.<span class="method">split</span>(<span class="string">" "</span>);
+    <span class="keyword">if</span> (words.length != pattern.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="comment">// Single map using Object to accept both Character and String</span>
+    <span class="type">Map</span>&lt;<span class="type">Object</span>, <span class="type">Integer</span>&gt; indexMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+
+    <span class="keyword">for</span> (<span class="type">Integer</span> i = 0; i &lt; words.length; i++) {
+        <span class="comment">// put() returns the PREVIOUS value associated with key</span>
+        <span class="type">Object</span> prevCharIdx = indexMap.<span class="method">put</span>(pattern.<span class="method">charAt</span>(i), i);
+        <span class="type">Object</span> prevWordIdx = indexMap.<span class="method">put</span>(words[i], i);
+
+        <span class="comment">// In Java, Map.put returns null if it's the first time seeing the key.</span>
+        <span class="comment">// We check if the previous indices match. If they don't, pattern is broken.</span>
+        <span class="keyword">if</span> (!<span class="type">Objects</span>.<span class="method">equals</span>(prevCharIdx, prevWordIdx)) {
+            <span class="keyword">return false</span>;
+        }
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <h4 class="font-bold text-purple-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b>. Single pass through words.</p>
+                    <p><b>Space Complexity:</b> <b>O(M)</b>. Only one map is used, storing both strings and characters.</p>
+                </div>
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <h4 class="font-bold text-amber-800 mb-2">Pro Tip</h4>
+                    <p>The <b>put()</b> return trick is very clever but requires <code>Integer</code> instead of <code>int</code> to handle <code>null</code> returns from <code>HashMap</code>. Use <code>Objects.equals()</code> for safe comparison.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Comparison Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Comparison Matrix</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Key Advantage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 font-medium">Naive Verification</td>
+                            <td class="p-4"><b>O(N²)</b></td>
+                            <td class="p-4 text-slate-500">O(N)</td>
+                            <td class="p-4 text-slate-500">No Hash Table overhead</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium">Double HashMap</td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4 text-slate-500">O(M)</td>
+                            <td class="p-4 text-slate-700">Highest readability</td>
+                        </tr>
+                        <tr class="bg-purple-50/50">
+                            <td class="p-4 font-bold text-purple-700">Single Map Indexing</td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4 text-slate-500">O(M)</td>
+                            <td class="p-4 text-slate-700">Minimal memory footprint</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Core Logic</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>Step 1</b>: Always split <b>s</b> into a words array first.</li>
+                        <li>• <b>Step 2</b>: Check <code>pattern.length() == words.length</code>. Fail if not.</li>
+                        <li>• <b>Step 3</b>: Mapping must be <b>Bijective</b>. One char cannot map to two words; one word cannot map to two chars.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Corner Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>"abba", "dog cat cat fish"</b> (Pattern match fails)</li>
+                        <li>• <b>"abba", "dog dog dog dog"</b> (Word match fails - many to one)</li>
+                        <li>• <b>"aaaa", "dog cat cat dog"</b> (Word match fails - one to many)</li>
+                        <li>• <b>Spaces</b>: Ensure split handles extra spaces if necessary.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400">
+            Interactive Visualizer - LeetCode Learning Module
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const patternStr = "abba";
+        const wordArr = ["dog", "cat", "cat", "dog"];
+        const failPattern = "abba";
+        const failWords = ["dog", "cat", "cat", "fish"];
+
+        // --- NAIVE STATE ---
+        let naiveIdx = 0;
+        function renderNaive() {
+            document.getElementById('naive-pattern').innerHTML = patternStr.split('').map((c, i) => `<div class="item-box ${i === naiveIdx ? 'active-box' : (i < naiveIdx ? 'match-box' : '')}">${c}</div>`).join('');
+            document.getElementById('naive-words').innerHTML = wordArr.map((w, i) => `<div class="item-box ${i === naiveIdx ? 'active-box' : (i < naiveIdx ? 'match-box' : '')}">${w}</div>`).join('');
+        }
+        function stepNaive() {
+            if (naiveIdx >= patternStr.length) return;
+            const log = document.getElementById('naive-log');
+            const comp = document.getElementById('naive-comparison');
+            comp.classList.remove('hidden');
+            log.innerHTML = "";
+            
+            let char = patternStr[naiveIdx];
+            let word = wordArr[naiveIdx];
+            let fail = false;
+
+            for(let j=0; j<naiveIdx; j++) {
+                let pChar = patternStr[j];
+                let pWord = wordArr[j];
+                let res = "PASS";
+                if (pChar === char && pWord !== word) { res = "FAIL: Char reuse!"; fail = true; }
+                if (pWord === word && pChar !== char) { res = "FAIL: Word reuse!"; fail = true; }
+                log.innerHTML += `<div class="step-log ${fail ? 'text-red-500' : 'text-slate-500'}">[${j}] ${pChar}↔${pWord} vs ${char}↔${word}: ${res}</div>`;
+                if(fail) break;
+            }
+
+            if(fail) {
+                document.getElementById('naive-status').innerHTML = "<span class='text-red-600'>Rule Broken! Returning False.</span>";
+                document.getElementById('btn-naive').disabled = true;
+                return;
+            }
+
+            document.getElementById('naive-status').innerText = `Step ${naiveIdx + 1}: Pair (${char}, ${word}) is valid.`;
+            naiveIdx++;
+            renderNaive();
+            if(naiveIdx === patternStr.length) {
+                document.getElementById('naive-status').innerHTML = "<span class='text-emerald-600 font-bold'>Success! All checks passed.</span>";
+                document.getElementById('btn-naive').disabled = true;
+            }
+        }
+        function resetNaive() {
+            naiveIdx = 0; 
+            document.getElementById('btn-naive').disabled = false;
+            document.getElementById('naive-comparison').classList.add('hidden');
+            document.getElementById('naive-status').innerText = "Ready...";
+            renderNaive();
+        }
+
+        // --- MAP STATE ---
+        let mapIdx = 0;
+        let cToW = {};
+        let wToC = {};
+        function renderMap() {
+            document.getElementById('map-char-box').innerText = patternStr[mapIdx] || "-";
+            document.getElementById('map-word-box').innerText = wordArr[mapIdx] || "-";
+            document.getElementById('char-to-word-list').innerHTML = Object.entries(cToW).map(([k,v]) => `<div class="map-card"><span>${k}</span><span>→</span><span class="text-blue-600">${v}</span></div>`).join('');
+            document.getElementById('word-to-char-list').innerHTML = Object.entries(wToC).map(([k,v]) => `<div class="map-card"><span class="text-blue-600">${k}</span><span>→</span><span>${v}</span></div>`).join('');
+        }
+        function stepMap() {
+            if (mapIdx >= patternStr.length) return;
+            let c = patternStr[mapIdx];
+            let w = wordArr[mapIdx];
+
+            if (cToW[c] && cToW[c] !== w) {
+                document.getElementById('map-status').innerHTML = `<span class="text-red-600 font-bold">ERROR: '${c}' is already mapped to '${cToW[c]}'!</span>`;
+                document.getElementById('btn-map').disabled = true;
+                return;
+            }
+            if (wToC[w] && wToC[w] !== c) {
+                document.getElementById('map-status').innerHTML = `<span class="text-red-600 font-bold">ERROR: '${w}' is already mapped to '${wToC[w]}'!</span>`;
+                document.getElementById('btn-map').disabled = true;
+                return;
+            }
+
+            cToW[c] = w;
+            wToC[w] = c;
+            document.getElementById('map-status').innerText = `Mapping added: ${c} ↔ ${w}`;
+            mapIdx++;
+            renderMap();
+            if(mapIdx === patternStr.length) {
+                document.getElementById('map-status').innerHTML = "<span class='text-emerald-600 font-bold'>Success! Bijective map complete.</span>";
+                document.getElementById('btn-map').disabled = true;
+            }
+        }
+        function resetMap() {
+            mapIdx = 0; cToW = {}; wToC = {};
+            document.getElementById('btn-map').disabled = false;
+            document.getElementById('map-status').innerText = "Waiting for input...";
+            renderMap();
+        }
+
+        // --- INDEX STATE ---
+        let idxStep = 0;
+        let lastSeen = {};
+        function renderIdx() {
+            document.getElementById('idx-p-box').innerText = patternStr[idxStep] || "?";
+            document.getElementById('idx-w-box').innerText = wordArr[idxStep] || "?";
+            document.getElementById('idx-map-list').innerHTML = Object.entries(lastSeen).map(([k,v]) => `<div class="map-card border-purple-100"><span>${k}</span><span class="text-purple-600 font-bold">Idx: ${v}</span></div>`).join('');
+        }
+        function stepIdx() {
+            if (idxStep >= patternStr.length) return;
+            let c = patternStr[idxStep];
+            let w = wordArr[idxStep];
+            
+            let prevC = lastSeen[c] !== undefined ? lastSeen[c] : "NULL";
+            let prevW = lastSeen[w] !== undefined ? lastSeen[w] : "NULL";
+
+            if (prevC !== prevW) {
+                document.getElementById('idx-status').innerHTML = `<span class="text-red-600 font-bold">FAIL: Char was last at ${prevC}, Word at ${prevW}!</span>`;
+                document.getElementById('btn-idx').disabled = true;
+                return;
+            }
+
+            lastSeen[c] = idxStep;
+            lastSeen[w] = idxStep;
+            document.getElementById('idx-status').innerText = `Both seen for first time (or in sync). Updating index to ${idxStep}.`;
+            idxStep++;
+            renderIdx();
+            if(idxStep === patternStr.length) {
+                document.getElementById('idx-status').innerHTML = "<span class='text-emerald-600 font-bold'>Perfect! All index syncs matched.</span>";
+                document.getElementById('btn-idx').disabled = true;
+            }
+        }
+        function resetIdx() {
+            idxStep = 0; lastSeen = {};
+            document.getElementById('btn-idx').disabled = false;
+            document.getElementById('idx-status').innerText = "Initializing...";
+            renderIdx();
+        }
+
+        window.onload = () => {
+            renderNaive();
+            renderMap();
+            renderIdx();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 289: Game of Life - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 2px;
+            padding: 8px;
+            background-color: #cbd5e1;
+            border-radius: 8px;
+            width: fit-content;
+        }
+        .matrix-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-weight: 700;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+        /* Cell States */
+        .cell-alive { background-color: #1e293b !important; color: white; }
+        .cell-dead { background-color: white !important; color: #cbd5e1; }
+        
+        /* Transition States */
+        .cell-dying { background-color: #fca5a5 !important; color: #991b1b; } /* 2: Alive to Dead */
+        .cell-birthing { background-color: #86efac !important; color: #166534; } /* 3: Dead to Alive */
+        
+        /* Interactive States */
+        .cell-active { outline: 3px solid #3b82f6; z-index: 10; }
+        .cell-neighbor { background-color: #dbeafe !important; border: 1px solid #3b82f6; }
+
+        .log-container { height: 160px; overflow-y: auto; scroll-behavior: smooth; border-radius: 8px; }
+        
+        .legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 underline decoration-indigo-500">289. Game of Life</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Implement Conway's Game of Life. The board updates <b>simultaneously</b>: every cell's next state depends on its current 8 neighbors.
+            </p>
+        </header>
+
+        <!-- Rules Section -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="bg-indigo-100 text-indigo-600 p-2 rounded-lg mr-3">📜</span> The 4 Golden Rules
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-sm"><b>1. Under-population:</b> Live cell with < 2 live neighbors ➜ <b>Dies</b>.</p>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-sm"><b>2. Survival:</b> Live cell with 2 or 3 live neighbors ➜ <b>Lives</b>.</p>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-sm"><b>3. Over-population:</b> Live cell with > 3 live neighbors ➜ <b>Dies</b>.</p>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p class="text-sm"><b>4. Reproduction:</b> Dead cell with exactly 3 live neighbors ➜ <b>Becomes Alive</b>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: Extra Copy -->
+        <section id="approach-1" class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Using an Extra Copy</h2>
+                <p class="text-slate-600">The most straightforward method: read from a static copy of the board to calculate new states for the original board.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Simulation: Snapshot Strategy</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div class="flex flex-col md:flex-row gap-8 items-center">
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Copy (Read-Only)</span>
+                            <div id="grid-v1-copy" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                        </div>
+                        <div class="text-3xl text-slate-300">➜</div>
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Original (Updating)</span>
+                            <div id="grid-v1-main" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v1.toggle()" id="v1-play" class="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition font-bold">Play Step-by-Step</button>
+                        <button onclick="v1.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v1-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation (O(MN) Space)</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> gameOfLife(int[][] board) {
+    int rows = board.length;
+    int cols = board[0].length;
+
+    <span class="text-slate-500">// Create a copy to store the current state</span>
+    int[][] copyBoard = <span class="text-emerald-400">new</span> int[rows][cols];
+    <span class="text-emerald-400">for</span> (int r = 0; r < rows; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < cols; c++) {
+            copyBoard[r][c] = board[r][c];
+        }
+    }
+
+    <span class="text-slate-500">// Iterate through board cells</span>
+    <span class="text-emerald-400">for</span> (int r = 0; r < rows; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < cols; c++) {
+            int liveNeighbors = countLiveNeighbors(copyBoard, r, c);
+
+            <span class="text-slate-500">// Apply Rules based on copyBoard state</span>
+            <span class="text-emerald-400">if</span> (copyBoard[r][c] == 1 && (liveNeighbors < 2 || liveNeighbors > 3)) {
+                board[r][c] = 0; <span class="text-slate-500">// Dies</span>
+            } <span class="text-emerald-400">else if</span> (copyBoard[r][c] == 0 && liveNeighbors == 3) {
+                board[r][c] = 1; <span class="text-slate-500">// Reproduces</span>
+            }
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(M * N)</b> - We visit every cell once for copying and once for processing.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(M * N)</b> - We allocate an entire duplicate grid.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Pros & Cons</h4>
+                    <p class="text-emerald-600 font-semibold">Pros: Simple, readable, handles "simultaneous" updates easily.</p>
+                    <p class="text-rose-600 font-semibold">Cons: Large memory footprint for high-resolution boards.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: O(1) Space Encoding -->
+        <section id="approach-2" class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: State Encoding (In-Place)</h2>
+                <p class="text-slate-600">The expert way: use transition markers to store both the "current" and "next" states in a single integer cell.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Animation: Transition States</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div class="flex flex-wrap gap-4 mb-4 justify-center">
+                        <div class="text-xs font-bold"><span class="legend-dot bg-white border"></span> Dead (0)</div>
+                        <div class="text-xs font-bold"><span class="legend-dot bg-slate-800"></span> Alive (1)</div>
+                        <div class="text-xs font-bold"><span class="legend-dot bg-red-300"></span> Dying (-1)</div>
+                        <div class="text-xs font-bold"><span class="legend-dot bg-green-300"></span> Birthing (2)</div>
+                    </div>
+                    
+                    <div id="grid-v2" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v2.toggle()" id="v2-play" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold">Play Animation</button>
+                        <button onclick="v2.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v2-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation (O(1) Space)</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> gameOfLife(int[][] board) {
+    int rows = board.length, cols = board[0].length;
+
+    <span class="text-slate-500">// Pass 1: Encode states</span>
+    <span class="text-emerald-400">for</span> (int r = 0; r < rows; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < cols; c++) {
+            int liveNeighbors = countLiveNeighbors(board, r, c);
+
+            <span class="text-slate-500">// If cell is alive and dies, mark as -1</span>
+            <span class="text-emerald-400">if</span> (board[r][c] == 1 && (liveNeighbors < 2 || liveNeighbors > 3)) {
+                board[r][c] = -1;
+            }
+            <span class="text-slate-500">// If cell is dead and lives, mark as 2</span>
+            <span class="text-emerald-400">if</span> (board[r][c] == 0 && liveNeighbors == 3) {
+                board[r][c] = 2;
+            }
+        }
+    }
+
+    <span class="text-slate-500">// Pass 2: Finalize states</span>
+    <span class="text-emerald-400">for</span> (int r = 0; r < rows; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < cols; c++) {
+            <span class="text-emerald-400">if</span> (board[r][c] > 0) board[r][c] = 1;
+            <span class="text-emerald-400">else</span> board[r][c] = 0;
+        }
+    }
+}
+
+<span class="text-emerald-400">private int</span> countLiveNeighbors(int[][] board, int r, int c) {
+    int count = 0;
+    <span class="text-emerald-400">for</span> (int i = r - 1; i <= r + 1; i++) {
+        <span class="text-emerald-400">for</span> (int j = c - 1; j <= c + 1; j++) {
+            <span class="text-emerald-400">if</span> (i == r && j == c) <span class="text-emerald-400">continue</span>;
+            <span class="text-emerald-400">if</span> (i >= 0 && i < board.length && j >= 0 && j < board[0].length 
+                && <span class="text-indigo-400">Math.abs(board[i][j]) == 1</span>) {
+                count++;
+            }
+        }
+    }
+    <span class="text-emerald-400">return</span> count;
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(M * N)</b> - Two full passes.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(1)</b> - No auxiliary arrays. We use the bits/values of the input array itself.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">The Magic of Math.abs()</h4>
+                    <p class="text-slate-700 leading-relaxed">
+                        By marking a dying cell as <b>-1</b>, its absolute value is still 1. This means future neighbor counts in the <i>same pass</i> still see it as "currently alive," preserving the simultaneous update logic!
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-6 text-center">Comparison Table</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-100 text-slate-500 uppercase text-xs">
+                        <th class="py-3 px-4">Approach</th>
+                        <th class="py-3 px-4">Time</th>
+                        <th class="py-3 px-4">Space</th>
+                        <th class="py-3 px-4">Implementation Difficulty</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700">
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Extra Copy</td>
+                        <td class="py-4 px-4 font-mono text-sm">O(MN)</td>
+                        <td class="py-4 px-4 font-mono text-sm text-red-500">O(MN)</td>
+                        <td class="py-4 px-4">Low</td>
+                    </tr>
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold text-indigo-600">State Encoding</td>
+                        <td class="py-4 px-4 font-mono text-sm">O(MN)</td>
+                        <td class="py-4 px-4 font-mono text-sm text-emerald-600 font-bold">O(1)</td>
+                        <td class="py-4 px-4">Medium (Indexing & Logic)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-800 text-white p-8 rounded-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-indigo-400">💡 Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Simultaneous Update</h4>
+                    <p class="text-sm italic">"The key is that cell state changes must not influence other cell state changes in the same generation."</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Neighborhood Definition</h4>
+                    <p class="text-sm">Don't forget the diagonal neighbors! There are 8 neighbors total. Use a nested loop <b>-1 to 1</b> to check them cleanly.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Bit Manipulation Trick</h4>
+                    <p class="text-sm">You can use the 2nd bit to store the future state: <b>board[i][j] |= (nextState << 1)</b>. Then shift right to get the final state.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edge Cases -->
+        <section class="p-6 bg-slate-100 rounded-2xl">
+            <h3 class="font-bold text-slate-800 mb-4">Edge Cases to Consider</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">1x1 Grid</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">All cells dead</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">All cells alive</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Infinite Board (How to handle boundaries?)</span>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const initialBoard = [
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [1, 1, 1, 0],
+            [0, 0, 0, 0]
+        ];
+
+        class BaseVisualizer {
+            constructor(config) {
+                this.config = config;
+                this.isPlaying = false;
+                this.step = 0;
+                this.timer = null;
+                this.data = JSON.parse(JSON.stringify(initialBoard));
+                this.steps = [];
+            }
+
+            init() {
+                this.generateSteps();
+                this.render();
+            }
+
+            updateLog(msg) {
+                const log = document.getElementById(this.config.logId);
+                const div = document.createElement('div');
+                div.className = 'mb-1 pb-1 border-b border-slate-100 last:border-0';
+                div.innerHTML = `<span class="text-blue-500 font-bold">></span> ${msg}`;
+                log.prepend(div);
+            }
+
+            renderGrid(id, matrix, highlightR = null, highlightC = null) {
+                const grid = document.getElementById(id);
+                if (!grid) return;
+                grid.innerHTML = '';
+                const m = matrix.length;
+                const n = matrix[0].length;
+                for(let r=0; r<m; r++) {
+                    for(let c=0; c<n; c++) {
+                        const cell = document.createElement('div');
+                        const val = matrix[r][c];
+                        cell.className = 'matrix-cell ' + (val === 1 ? 'cell-alive' : 'cell-dead');
+                        if (val === -1) cell.className = 'matrix-cell cell-dying';
+                        if (val === 2) cell.className = 'matrix-cell cell-birthing';
+                        
+                        if (r === highlightR && c === highlightC) cell.classList.add('cell-active');
+                        
+                        // Neighbor highlighting logic for active cell
+                        if (highlightR !== null) {
+                            if (Math.abs(r - highlightR) <= 1 && Math.abs(c - highlightC) <= 1 && !(r === highlightR && c === highlightC)) {
+                                cell.classList.add('cell-neighbor');
+                            }
+                        }
+
+                        cell.innerText = val;
+                        grid.appendChild(cell);
+                    }
+                }
+            }
+
+            toggle() {
+                if(this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.isPlaying = true;
+                const btn = document.getElementById(this.config.playBtnId);
+                if (btn) btn.innerText = "Pause";
+                this.timer = setInterval(() => this.next(), 800);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                const btn = document.getElementById(this.config.playBtnId);
+                if (btn) btn.innerText = "Play";
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.step = 0;
+                this.data = JSON.parse(JSON.stringify(initialBoard));
+                const log = document.getElementById(this.config.logId);
+                if (log) log.innerHTML = '';
+                this.render();
+            }
+
+            next() {
+                if(this.step >= this.steps.length) {
+                    this.pause();
+                    this.updateLog("Generation Update Complete.");
+                    return;
+                }
+                const action = this.steps[this.step];
+                action.execute(this);
+                this.step++;
+            }
+        }
+
+        // --- APPROACH 1: EXTRA COPY ---
+        const v1 = new BaseVisualizer({
+            gridId: ['grid-v1-copy', 'grid-v1-main'],
+            logId: 'v1-log',
+            playBtnId: 'v1-play'
+        });
+
+        v1.render = function() {
+            this.renderGrid('grid-v1-copy', initialBoard);
+            this.renderGrid('grid-v1-main', this.data);
+        };
+
+        v1.generateSteps = function() {
+            const m = 4, n = 4;
+            for(let r=0; r<m; r++) {
+                for(let c=0; c<n; c++) {
+                    let live = 0;
+                    for(let i=r-1; i<=r+1; i++) {
+                        for(let j=c-1; j<=c+1; j++) {
+                            if (i==r && j==c) continue;
+                            if (i>=0 && i<m && j>=0 && j<n && initialBoard[i][j] === 1) live++;
+                        }
+                    }
+
+                    const next = (initialBoard[r][c] === 1) ? (live === 2 || live === 3 ? 1 : 0) : (live === 3 ? 1 : 0);
+                    const msg = initialBoard[r][c] === 1 
+                        ? `Cell [${r},${c}] is ALIVE with ${live} neighbors. ${next ? 'Lives' : 'Dies'}.`
+                        : `Cell [${r},${c}] is DEAD with ${live} neighbors. ${next ? 'Reproduces!' : 'Stays dead'}.`;
+
+                    this.steps.push({
+                        execute: (vis) => {
+                            vis.data[r][c] = next;
+                            vis.renderGrid('grid-v1-copy', initialBoard, r, c);
+                            vis.renderGrid('grid-v1-main', vis.data, r, c);
+                            vis.updateLog(msg);
+                        }
+                    });
+                }
+            }
+        };
+        v1.init();
+
+        // --- APPROACH 2: STATE ENCODING ---
+        const v2 = new BaseVisualizer({
+            gridId: 'grid-v2',
+            logId: 'v2-log',
+            playBtnId: 'v2-play'
+        });
+
+        v2.render = function() {
+            this.renderGrid('grid-v2', this.data);
+        };
+
+        v2.generateSteps = function() {
+            const m = 4, n = 4;
+            // First Pass
+            for(let r=0; r<m; r++) {
+                for(let c=0; c<n; c++) {
+                    let live = 0;
+                    for(let i=r-1; i<=r+1; i++) {
+                        for(let j=c-1; j<=c+1; j++) {
+                            if (i==r && j==c) continue;
+                            if (i>=0 && i<m && j>=0 && j<n && Math.abs(this.data[i][j]) === 1) live++;
+                        }
+                    }
+
+                    let marker = this.data[r][c];
+                    let msg = "";
+                    if (this.data[r][c] === 1 && (live < 2 || live > 3)) {
+                        marker = -1;
+                        msg = `Cell [${r},${c}] will die. Marking as -1. Neighbors: ${live}`;
+                    } else if (this.data[r][c] === 0 && live === 3) {
+                        marker = 2;
+                        msg = `Cell [${r},${c}] will be born. Marking as 2. Neighbors: ${live}`;
+                    } else {
+                        msg = `Cell [${r},${c}] remains unchanged. Neighbors: ${live}`;
+                    }
+
+                    this.steps.push({
+                        execute: (vis) => {
+                            vis.data[r][c] = marker;
+                            vis.renderGrid('grid-v2', vis.data, r, c);
+                            vis.updateLog(msg);
+                        }
+                    });
+                }
+            }
+
+            // Final Pass
+            this.steps.push({
+                execute: (vis) => {
+                    for(let r=0; r<m; r++) {
+                        for(let c=0; c<n; c++) {
+                            vis.data[r][c] = vis.data[r][c] > 0 ? 1 : 0;
+                        }
+                    }
+                    vis.renderGrid('grid-v2', vis.data);
+                    vis.updateLog("Pass 2: Finalizing all transition states to 0 or 1.");
+                }
+            });
+        };
+        v2.init();
+
+    </script>
+</body>
+</html>

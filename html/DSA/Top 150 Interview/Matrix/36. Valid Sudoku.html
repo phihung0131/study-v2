@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 36: Valid Sudoku - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 1px;
+            background-color: #334155;
+            border: 3px solid #1e293b;
+            width: fit-content;
+        }
+        .sudoku-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .sudoku-cell.border-right { border-right: 2px solid #1e293b; }
+        .sudoku-cell.border-bottom { border-bottom: 2px solid #1e293b; }
+        .cell-highlight { background-color: #fef08a !important; color: #854d0e; }
+        .cell-checking { background-color: #93c5fd !important; color: #1e40af; }
+        .cell-error { background-color: #fca5a5 !important; color: #991b1b; }
+        .cell-success { background-color: #86efac !important; color: #166534; }
+        .log-container { height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 underline decoration-blue-500">36. Valid Sudoku</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Determine if a 9 x 9 Sudoku board is valid. Only the filled cells need to be validated according to the three rules of Sudoku.
+            </p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="bg-blue-100 text-blue-600 p-2 rounded-lg mr-3">📝</span> Problem Rules
+            </h2>
+            <ul class="space-y-3 text-slate-700">
+                <li class="flex items-start">
+                    <span class="text-blue-500 mr-2 font-bold">1.</span>
+                    <span>Each row must contain the digits 1-9 without repetition.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-blue-500 mr-2 font-bold">2.</span>
+                    <span>Each column must contain the digits 1-9 without repetition.</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-blue-500 mr-2 font-bold">3.</span>
+                    <span>Each of the nine 3 x 3 sub-boxes of the grid must contain the digits 1-9 without repetition.</span>
+                </li>
+            </ul>
+            <p class="mt-4 text-sm text-slate-500 italic font-medium">Note: A Sudoku board (partially filled) could be valid but is not necessarily solvable. Only the filled cells need to be validated.</p>
+        </section>
+
+        <!-- APPROACH 1: Three Pass HashSet -->
+        <section id="approach-1" class="space-y-6">
+            <div class="border-l-4 border-amber-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Three Pass Iteration (HashSet)</h2>
+                <p class="text-slate-600">The most intuitive way: check each row, then each column, then each 3x3 box independently using sets.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4">Interactive Animation: Row-Column-Box Checks</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v1" class="sudoku-grid"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v1.prev()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Back</button>
+                        <button onclick="v1.toggle()" id="v1-play" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">Play</button>
+                        <button onclick="v1.next()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Next</button>
+                        <button onclick="v1.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div class="text-sm font-bold text-slate-500 uppercase mb-2">Step Log</div>
+                        <div id="v1-log" class="log-container bg-white border border-slate-200 rounded-xl p-4 text-sm code-font text-slate-700"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public boolean</span> isValidSudoku(char[][] board) {
+    <span class="text-slate-500">// Check Rows</span>
+    <span class="text-emerald-400">for</span> (int row = 0; row < 9; row++) {
+        Set&lt;Character&gt; rowSet = <span class="text-emerald-400">new</span> HashSet&lt;&gt;();
+        <span class="text-emerald-400">for</span> (int col = 0; col < 9; col++) {
+            <span class="text-emerald-400">if</span> (!checkValid(board[row][col], rowSet)) <span class="text-emerald-400">return false</span>;
+        }
+    }
+
+    <span class="text-emerald-400">// Check Columns</span>
+    <span class="text-emerald-400">for</span> (int col = 0; col < 9; col++) {
+        Set&lt;Character&gt; colSet = <span class="text-emerald-400">new</span> HashSet&lt;&gt;();
+        <span class="text-emerald-400">for</span> (int row = 0; row < 9; row++) {
+            <span class="text-emerald-400">if</span> (!checkValid(board[row][col], colSet)) <span class="text-emerald-400">return false</span>;
+        }
+    }
+
+    <span class="text-emerald-400">// Check 3x3 Boxes</span>
+    <span class="text-emerald-400">for</span> (int box = 0; box < 9; box++) {
+        Set&lt;Character&gt; boxSet = <span class="text-emerald-400">new</span> HashSet&lt;&gt;();
+        <span class="text-emerald-400">for</span> (int i = 0; i < 3; i++) {
+            <span class="text-emerald-400">for</span> (int j = 0; j < 3; j++) {
+                int r = (box / 3) * 3 + i;
+                int c = (box % 3) * 3 + j;
+                <span class="text-emerald-400">if</span> (!checkValid(board[r][c], boxSet)) <span class="text-emerald-400">return false</span>;
+            }
+        }
+    }
+    <span class="text-emerald-400">return true</span>;
+}
+
+<span class="text-emerald-400">private boolean</span> checkValid(char val, Set&lt;Character&gt; set) {
+    <span class="text-emerald-400">if</span> (val == '.') <span class="text-emerald-400">return true</span>;
+    <span class="text-emerald-400">if</span> (set.contains(val)) <span class="text-emerald-400">return false</span>;
+    set.add(val);
+    <span class="text-emerald-400">return true</span>;
+}</pre>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> O(1) - Technically, the board is fixed at 81 cells (9x9). If we consider N as the dimension, it is O(N²).</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> O(1) - The sets store at most 9 characters at a time.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Pros & Cons</h4>
+                    <p class="text-slate-700 font-semibold text-emerald-600">Pros: Easy to debug, clear separation of logic.</p>
+                    <p class="text-slate-700 font-semibold text-rose-600">Cons: Traverses the board three separate times; less efficient memory management with multiple Set objects.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: Single Pass with Matrix Encoding -->
+        <section id="approach-2" class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Single Pass (Bitmasks / Arrays)</h2>
+                <p class="text-slate-600">The "Pro" way: validate rows, columns, and sub-boxes in a single traversal using integer arrays as frequency trackers.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4">Interactive Animation: Single Pass Validation</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v2" class="sudoku-grid"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v2.prev()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Back</button>
+                        <button onclick="v2.toggle()" id="v2-play" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold">Play</button>
+                        <button onclick="v2.next()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Next</button>
+                        <button onclick="v2.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div class="text-sm font-bold text-slate-500 uppercase mb-2">Step Log</div>
+                        <div id="v2-log" class="log-container bg-white border border-slate-200 rounded-xl p-4 text-sm code-font text-slate-700"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public boolean</span> isValidSudoku(char[][] board) {
+    <span class="text-slate-500">// We use a boolean array [9][9] to track if digit k has appeared in row/col/box i</span>
+    <span class="text-emerald-400">boolean</span>[][] rows = <span class="text-emerald-400">new boolean</span>[9][9];
+    <span class="text-emerald-400">boolean</span>[][] cols = <span class="text-emerald-400">new boolean</span>[9][9];
+    <span class="text-emerald-400">boolean</span>[][] boxes = <span class="text-emerald-400">new boolean</span>[9][9];
+
+    <span class="text-emerald-400">for</span> (int r = 0; r < 9; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < 9; c++) {
+            <span class="text-emerald-400">if</span> (board[r][c] == '.') <span class="text-emerald-400">continue</span>;
+
+            int num = board[r][c] - '1'; <span class="text-slate-500">// convert '1'-'9' to 0-8 index</span>
+            int boxIndex = (r / 3) * 3 + (c / 3);
+
+            <span class="text-emerald-400">if</span> (rows[r][num] || cols[c][num] || boxes[boxIndex][num]) {
+                <span class="text-emerald-400">return false</span>; <span class="text-slate-500">// Duplicate detected!</span>
+            }
+
+            rows[r][num] = <span class="text-emerald-400">true</span>;
+            cols[c][num] = <span class="text-emerald-400">true</span>;
+            boxes[boxIndex][num] = <span class="text-emerald-400">true</span>;
+        }
+    }
+    <span class="text-emerald-400">return true</span>;
+}</pre>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> O(N²) - Still O(81) = O(1). We visit each cell exactly once.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> O(N²) - Still O(3 * 81) = O(1). We pre-allocate tracking arrays.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Why this is faster?</h4>
+                    <p class="text-slate-700">1. Single pass: Only 81 iterations instead of 243.</p>
+                    <p class="text-slate-700">2. Primitive arrays vs Objects: Boolean arrays are much faster and use less memory than `HashSet&lt;Character&gt;` which involves boxing and hashing.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-6">Comparison Table</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-100">
+                        <th class="py-3 px-4 font-bold text-slate-600">Approach</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Time</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Space</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Pros</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700">
+                    <tr class="border-b border-slate-50">
+                        <td class="py-4 px-4 font-semibold">Three Pass HashSet</td>
+                        <td class="py-4 px-4"><b>O(1)</b></td>
+                        <td class="py-4 px-4"><b>O(1)</b></td>
+                        <td class="py-4 px-4">Simple, logic separated</td>
+                    </tr>
+                    <tr class="border-b border-slate-50">
+                        <td class="py-4 px-4 font-semibold">Single Pass Array</td>
+                        <td class="py-4 px-4"><b>O(1)</b></td>
+                        <td class="py-4 px-4"><b>O(1)</b></td>
+                        <td class="py-4 px-4 text-emerald-600 font-bold">Fastest, efficient memory</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-blue-900 text-white p-8 rounded-2xl">
+            <h2 class="text-2xl font-bold mb-4">💡 Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-blue-300 mb-2">Box Indexing Formula</h4>
+                    <p class="text-sm">To convert (row, col) to a box index (0-8):<br>
+                    <code class="bg-blue-800 px-1 rounded">idx = (r / 3) * 3 + (c / 3)</code></p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-blue-300 mb-2">The "Valid" nuance</h4>
+                    <p class="text-sm">A "Valid" board doesn't mean it's "Solvable". Don't try to solve it; just check for duplicate numbers in rows, cols, and boxes.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-blue-300 mb-2">Optimal Pattern</h4>
+                    <p class="text-sm">Use 2D boolean arrays to store states. `row[i][num]` means digit `num` exists in row `i`. This is O(1) lookup.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edge Cases -->
+        <section class="p-6 bg-slate-100 rounded-2xl">
+            <h3 class="font-bold text-slate-800 mb-4">Edge Cases to Consider</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Empty Board (all '.')</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Board with only one number</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Board that looks valid but cannot be solved</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Duplicates in different boxes but same row</span>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const initialBoard = [
+            ["5","3",".",".","7",".",".",".","."],
+            ["6",".",".","1","9","5",".",".","."],
+            [".","9","8",".",".",".",".","6","."],
+            ["8",".",".",".","6",".",".",".","3"],
+            ["4",".",".","8",".","3",".",".","1"],
+            ["7",".",".",".","2",".",".",".","6"],
+            [".","6",".",".",".",".","2","8","."],
+            [".",".",".","4","1","9",".",".","5"],
+            [".",".",".",".","8",".",".","7","9"]
+        ];
+
+        class SudokuVisualizer {
+            constructor(gridId, logId, playBtnId, type) {
+                this.gridId = gridId;
+                this.logId = logId;
+                this.playBtnId = playBtnId;
+                this.type = type; // 1 for Three Pass, 2 for Single Pass
+                this.currentStep = 0;
+                this.steps = [];
+                this.isPlaying = false;
+                this.timer = null;
+                this.init();
+            }
+
+            init() {
+                this.generateSteps();
+                this.renderGrid();
+                this.updateLog("Ready to begin visualization.");
+            }
+
+            generateSteps() {
+                this.steps = [];
+                if (this.type === 1) {
+                    // Row checks (just sample)
+                    for(let r=0; r<2; r++) {
+                        for(let c=0; c<9; c++) {
+                            this.steps.push({r, c, type: 'check-row', msg: `Row ${r}: checking cell (${r}, ${c})`});
+                        }
+                    }
+                    // Box checks (sample)
+                    this.steps.push({r:0, c:0, type: 'check-box', msg: "Checking first 3x3 box..."});
+                } else {
+                    // Single pass
+                    for(let r=0; r<3; r++) {
+                        for(let c=0; c<9; c++) {
+                            this.steps.push({r, c, type: 'process', msg: `Processing cell (${r}, ${c})`});
+                        }
+                    }
+                    this.steps.push({r:3, c:0, type: 'finish', msg: "Continuing for all 81 cells..."});
+                }
+            }
+
+            renderGrid() {
+                const container = document.getElementById(this.gridId);
+                container.innerHTML = '';
+                for (let r = 0; r < 9; r++) {
+                    for (let c = 0; c < 9; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'sudoku-cell';
+                        cell.id = `${this.gridId}-${r}-${c}`;
+                        cell.innerText = initialBoard[r][c] === '.' ? '' : initialBoard[r][c];
+                        if (c === 2 || c === 5) cell.classList.add('border-right');
+                        if (r === 2 || r === 5) cell.classList.add('border-bottom');
+                        container.appendChild(cell);
+                    }
+                }
+            }
+
+            updateLog(msg) {
+                const log = document.getElementById(this.logId);
+                const entry = document.createElement('div');
+                entry.className = 'mb-1 p-1 border-b border-slate-100 last:border-0';
+                entry.innerHTML = `<span class="text-blue-500 font-bold">></span> ${msg}`;
+                log.prepend(entry);
+            }
+
+            highlight(r, c, className) {
+                // Clear previous
+                document.querySelectorAll(`#${this.gridId} .sudoku-cell`).forEach(el => {
+                    el.classList.remove('cell-highlight', 'cell-checking', 'cell-error', 'cell-success');
+                });
+                if (r !== null && c !== null) {
+                    const el = document.getElementById(`${this.gridId}-${r}-${c}`);
+                    if (el) el.classList.add(className);
+                }
+            }
+
+            next() {
+                if (this.currentStep < this.steps.length) {
+                    const step = this.steps[this.currentStep];
+                    this.updateLog(step.msg);
+                    this.highlight(step.r, step.c, 'cell-checking');
+                    this.currentStep++;
+                } else {
+                    this.pause();
+                    this.updateLog("Visualization sequence complete.");
+                }
+            }
+
+            prev() {
+                if (this.currentStep > 0) {
+                    this.currentStep--;
+                    const step = this.steps[this.currentStep];
+                    this.highlight(step.r, step.c, 'cell-checking');
+                }
+            }
+
+            toggle() {
+                if (this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.isPlaying = true;
+                document.getElementById(this.playBtnId).innerText = "Pause";
+                this.timer = setInterval(() => this.next(), 600);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                document.getElementById(this.playBtnId).innerText = "Play";
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.currentStep = 0;
+                this.renderGrid();
+                document.getElementById(this.logId).innerHTML = '';
+                this.updateLog("Reset to start.");
+            }
+        }
+
+        const v1 = new SudokuVisualizer('grid-v1', 'v1-log', 'v1-play', 1);
+        const v2 = new SudokuVisualizer('grid-v2', 'v2-log', 'v2-play', 2);
+    </script>
+</body>
+</html>

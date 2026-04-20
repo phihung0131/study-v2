@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 56: Merge Intervals - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .interval-box {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+        .timeline-container {
+            position: relative;
+            height: 120px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px dashed #cbd5e1;
+        }
+        .interval-active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            z-index: 10;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .interval-merged {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        .interval-compare {
+            background-color: #fef9c3;
+            border-color: #eab308;
+        }
+        .result-item {
+            padding: 4px 10px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">56. Merge Intervals</h1>
+            <div class="flex justify-center gap-4 text-sm mb-6">
+                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-semibold">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Array</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Sorting</span>
+            </div>
+            <p class="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
+                Given an array of <b>intervals</b> where <b>intervals[i] = [start, end]</b>, merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
+            </p>
+        </header>
+
+        <!-- Problem Summary Section -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Problem Summary</h2>
+            <p class="text-slate-600 mb-4">
+                Two intervals <b>[a, b]</b> and <b>[c, d]</b> overlap if <b>c &le; b</b> and <b>a &le; d</b>. When they overlap, they merge into a single interval: <b>[min(a, c), max(b, d)]</b>.
+            </p>
+            <div class="bg-slate-50 p-4 rounded-xl border-l-4 border-slate-400">
+                <p class="font-semibold text-slate-700">Example:</p>
+                <code class="block mt-2">Input: intervals = [[1,3],[2,6],[8,10],[15,18]]</code>
+                <code class="block text-blue-600 mt-1">Output: [[1,6],[8,10],[15,18]]</code>
+                <p class="text-xs text-slate-500 mt-2 italic">Explanation: Since intervals [1,3] and [2,6] overlap, merge them into [1,6].</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-slate-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                <h2 class="text-3xl font-bold text-slate-800">Approach: Brute Force (N² Merging)</h2>
+            </div>
+
+            <div class="bg-slate-100 p-6 rounded-2xl mb-8 border border-slate-200">
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Intuition</h3>
+                <p class="text-slate-700 leading-relaxed">
+                    Without sorting, we must compare every interval with every other interval. If we find two that overlap, we merge them into one and restart the process (or keep track of which are merged) until no more overlaps exist. This is similar to finding connected components in a graph.
+                </p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <h3 class="text-lg font-bold text-slate-700 mb-6 text-center underline decoration-slate-300">N² Comparison Animation</h3>
+                
+                <div id="app1-canvas" class="timeline-container relative">
+                    <!-- Intervals represented as blocks -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app1-status" class="text-slate-600 font-medium h-8 italic text-center">
+                        Click "Next Step" to compare intervals pairwise.
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="resetApp1()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app1-next" onclick="nextStepApp1()" class="px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-6 py-3 bg-slate-800">
+                    <span class="text-slate-300 text-sm font-medium">MergeBruteForce.java</span>
+                </div>
+                <pre class="p-6 text-sm code-font leading-relaxed overflow-x-auto text-slate-300">
+<span class="text-purple-400">public int</span>[][] <span class="text-yellow-400">merge</span>(<span class="text-purple-400">int</span>[][] intervals) {
+    <span class="text-purple-400">boolean</span>[] isMerged = <span class="text-purple-400">new boolean</span>[intervals.length];
+    List&lt;<span class="text-purple-400">int</span>[]&gt; result = <span class="text-purple-400">new</span> ArrayList&lt;&gt;();
+
+    <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span> i = 0; i &lt; intervals.length; i++) {
+        <span class="text-purple-400">if</span> (isMerged[i]) <span class="text-purple-400">continue</span>;
+        
+        <span class="text-purple-400">int</span>[] current = intervals[i];
+        <span class="text-purple-400">boolean</span> foundMerge;
+        
+        <span class="text-purple-400">do</span> {
+            foundMerge = <span class="text-purple-400">false</span>;
+            <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span> j = i + 1; j &lt; intervals.length; j++) {
+                <span class="text-purple-400">if</span> (!isMerged[j] && <span class="text-yellow-400">overlaps</span>(current, intervals[j])) {
+                    current[0] = Math.min(current[0], intervals[j][0]);
+                    current[1] = Math.max(current[1], intervals[j][1]);
+                    isMerged[j] = <span class="text-purple-400">true</span>;
+                    foundMerge = <span class="text-purple-400">true</span>;
+                }
+            }
+        } <span class="text-purple-400">while</span> (foundMerge); <span class="text-green-500">// Repeat scan if something merged</span>
+        
+        result.add(current);
+    }
+    <span class="text-purple-400">return</span> result.toArray(<span class="text-purple-400">new int</span>[0][]);
+}</pre>
+            </div>
+
+            <!-- Complexity Analysis -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Complexity Analysis</h4>
+                    <ul class="space-y-3">
+                        <li>
+                            <b class="text-orange-600">Time: O(N²)</b>
+                            <p class="text-sm text-slate-500">In the worst case (unsorted input), we might need to perform multiple passes over the array to ensure all transitive overlaps are caught.</p>
+                        </li>
+                        <li>
+                            <b class="text-green-600">Space: O(N)</b>
+                            <p class="text-sm text-slate-500">To store the result and potentially a <b>boolean[]</b> to track merged states.</p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Pros & Cons</h4>
+                    <p class="text-sm text-red-600 font-bold">Cons: Inefficient for large datasets.</p>
+                    <p class="text-sm text-slate-600">Pros: Conceptually simple if you view it as grouping overlapping ranges.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: SORTING (OPTIMAL) -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                <h2 class="text-3xl font-bold text-slate-800">Approach: Sorting (The Optimal Way)</h2>
+            </div>
+
+            <div class="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100">
+                <h3 class="text-xl font-semibold text-blue-800 mb-2">Intuition</h3>
+                <p class="text-blue-900 leading-relaxed">
+                    By sorting intervals by their <b>start times</b>, we guarantee that if two intervals overlap, they must be adjacent in the sorted list (or one will overlap with a series of subsequent ones). This allows us to merge everything in a <b>single linear pass</b>.
+                </p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <h3 class="text-lg font-bold text-slate-700 mb-6 text-center underline decoration-blue-300">Optimal Sorting Animation</h3>
+                
+                <div class="flex justify-between items-end px-4 mb-2 text-xs font-bold text-slate-400">
+                    <span>TIME 0</span>
+                    <span>5</span>
+                    <span>10</span>
+                    <span>15</span>
+                    <span>20</span>
+                </div>
+                <div id="app2-canvas" class="timeline-container relative">
+                    <!-- Sorted intervals as blocks -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app2-status" class="text-slate-600 font-medium h-8 italic text-center">
+                        Click "Next Step" to see the one-pass merge.
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="resetApp2()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app2-next" onclick="nextStepApp2()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+
+                    <div class="w-full mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="text-xs uppercase text-slate-400 font-bold mb-2">Merged Results List</div>
+                        <div id="app2-results" class="flex flex-wrap gap-2 min-h-[40px]">
+                            <!-- Results here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-6 py-3 bg-slate-800">
+                    <span class="text-slate-300 text-sm font-medium">MergeOptimal.java</span>
+                </div>
+                <pre class="p-6 text-sm code-font leading-relaxed overflow-x-auto text-slate-300">
+<span class="text-purple-400">public int</span>[][] <span class="text-yellow-400">merge</span>(<span class="text-purple-400">int</span>[][] intervals) {
+    <span class="text-purple-400">if</span> (intervals.length &lt;= 1) <span class="text-purple-400">return</span> intervals;
+
+    <span class="text-green-500">// 1. Sort by start time: O(N log N)</span>
+    Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+
+    List&lt;<span class="text-purple-400">int</span>[]&gt; mergedList = <span class="text-purple-400">new</span> ArrayList&lt;&gt;();
+    <span class="text-purple-400">int</span>[] lastInterval = intervals[0];
+    mergedList.add(lastInterval);
+
+    <span class="text-green-500">// 2. Linear scan: O(N)</span>
+    <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span>[] current : intervals) {
+        <span class="text-purple-400">int</span> lastEnd = lastInterval[1];
+        <span class="text-purple-400">int</span> currentStart = current[0];
+        <span class="text-purple-400">int</span> currentEnd = current[1];
+
+        <span class="text-purple-400">if</span> (currentStart &lt;= lastEnd) {
+            <span class="text-green-500">// Overlap: Update the end of the last added interval</span>
+            lastInterval[1] = Math.max(lastEnd, currentEnd);
+        } <span class="text-purple-400">else</span> {
+            <span class="text-green-500">// No Overlap: Add current as the new "last" reference</span>
+            lastInterval = current;
+            mergedList.add(lastInterval);
+        }
+    }
+
+    <span class="text-purple-400">return</span> mergedList.toArray(<span class="text-purple-400">new int</span>[mergedList.size()][]);
+}</pre>
+            </div>
+
+            <!-- Complexity Analysis -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Complexity Analysis</h4>
+                    <ul class="space-y-3">
+                        <li>
+                            <b class="text-blue-600">Time: O(N log N)</b>
+                            <p class="text-sm text-slate-500">The dominant operation is the initial sort. The subsequent scan is O(N).</p>
+                        </li>
+                        <li>
+                            <b class="text-green-600">Space: O(log N) or O(N)</b>
+                            <p class="text-sm text-slate-500">Space for sorting algorithm (recursion stack) plus space for the result array.</p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Pros & Cons</h4>
+                    <p class="text-sm text-green-600 font-bold">Pros: Optimal time complexity. Elegant code.</p>
+                    <p class="text-sm text-slate-600">Cons: Requires O(N log N) time even if the array is "almost" sorted.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-800 text-white p-8 rounded-3xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="text-yellow-400">💡</span> Pattern Recognition
+                </h3>
+                <ul class="space-y-3 text-slate-300">
+                    <li><b class="text-white">Sort First:</b> Whenever you see "Intervals", the first thought should be: "Do I need to sort these by start or end time?"</li>
+                    <li><b class="text-white">Greedy Choice:</b> By processing intervals in chronological order, we only ever need to look at the <i>most recently merged</i> interval.</li>
+                    <li><b class="text-white">Updating in Place:</b> In Java, objects in a list share references. Updating <code>lastInterval[1]</code> automatically updates it inside the <code>mergedList</code>.</li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 p-8 rounded-3xl">
+                <h3 class="text-xl font-bold text-amber-800 mb-4 flex items-center gap-2">
+                    <span class="text-amber-600">🚩</span> Tricky Edge Cases
+                </h3>
+                <ul class="space-y-3 text-amber-900">
+                    <li><b>Nested Intervals:</b> <code>[[1,10], [2,5]]</code>. The result is <code>[[1,10]]</code>. Don't forget <code>Math.max</code>!</li>
+                    <li><b>Exact Touch:</b> <code>[[1,2], [2,3]]</code>. These <b>do</b> overlap.</li>
+                    <li><b>Large Values:</b> Watch for Integer overflow if you calculate lengths (though not usually an issue in this specific problem).</li>
+                    <li><b>Single Interval:</b> Ensure your code handles <code>intervals.length == 1</code> without extra logic.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="text-center text-slate-400 text-sm pb-12">
+            LeetCode Interactive Visualizer &bull; Merge Intervals &bull; Java Instructor Mode
+        </footer>
+    </div>
+
+    <script>
+        // --- Shared Data & Constants ---
+        const RAW_DATA = [[1, 3], [2, 6], [8, 10], [15, 18]];
+        const SCALE = 25; // Pixels per unit
+
+        // --- Approach 1 (Brute Force) Logic ---
+        let app1State = {
+            intervals: JSON.parse(JSON.stringify(RAW_DATA)),
+            i: 0,
+            j: 1,
+            step: 0,
+            isFinished: false
+        };
+
+        function initApp1() {
+            const canvas = document.getElementById('app1-canvas');
+            canvas.innerHTML = '';
+            app1State.intervals.forEach((interval, idx) => {
+                const div = document.createElement('div');
+                div.id = `app1-int-${idx}`;
+                div.className = 'interval-box absolute';
+                div.style.left = (interval[0] * SCALE) + 'px';
+                div.style.width = ((interval[1] - interval[0]) * SCALE) + 'px';
+                div.style.top = (idx * 25) + 'px';
+                div.innerText = `[${interval[0]},${interval[1]}]`;
+                div.style.backgroundColor = '#e2e8f0';
+                canvas.appendChild(div);
+            });
+        }
+
+        function resetApp1() {
+            app1State = {
+                intervals: JSON.parse(JSON.stringify(RAW_DATA)),
+                i: 0,
+                j: 1,
+                step: 0,
+                isFinished: false
+            };
+            document.getElementById('app1-status').innerText = 'Ready to compare.';
+            document.getElementById('app1-next').disabled = false;
+            initApp1();
+        }
+
+        function nextStepApp1() {
+            if (app1State.isFinished) return;
+
+            const { i, j, intervals } = app1State;
+            const status = document.getElementById('app1-status');
+
+            // Reset colors
+            intervals.forEach((_, idx) => {
+                document.getElementById(`app1-int-${idx}`).classList.remove('interval-compare', 'interval-merged');
+            });
+
+            if (i >= intervals.length) {
+                app1State.isFinished = true;
+                status.innerText = "All comparisons finished.";
+                return;
+            }
+
+            const boxI = document.getElementById(`app1-int-${i}`);
+            const boxJ = document.getElementById(`app1-int-${j}`);
+            boxI.classList.add('interval-compare');
+            boxJ.classList.add('interval-compare');
+
+            const intI = intervals[i];
+            const intJ = intervals[j];
+
+            // Check overlap
+            const overlap = (intI[1] >= intJ[0] && intJ[1] >= intI[0]);
+
+            if (overlap) {
+                status.innerText = `Merging [${intI}] and [${intJ}]...`;
+                intI[0] = Math.min(intI[0], intJ[0]);
+                intI[1] = Math.max(intI[1], intJ[1]);
+                
+                // Animate Merge
+                boxI.style.left = (intI[0] * SCALE) + 'px';
+                boxI.style.width = ((intI[1] - intI[0]) * SCALE) + 'px';
+                boxI.innerText = `[${intI[0]},${intI[1]}]`;
+                boxI.classList.add('interval-merged');
+                boxJ.style.opacity = '0'; // Hide merged
+                
+                // In actual brute force, we'd remove J or mark it. 
+                // For animation, we move to next pair.
+            } else {
+                status.innerText = `Comparing [${intI}] with [${intJ}]: No overlap.`;
+            }
+
+            // Move pointers
+            app1State.j++;
+            if (app1State.j >= intervals.length) {
+                app1State.i++;
+                app1State.j = app1State.i + 1;
+            }
+
+            if (app1State.i >= intervals.length - 1) {
+                app1State.isFinished = true;
+                document.getElementById('app1-next').disabled = true;
+            }
+        }
+
+        // --- Approach 2 (Optimal) Logic ---
+        let app2State = {
+            intervals: [...RAW_DATA].sort((a,b) => a[0] - b[0]),
+            currentIdx: 0,
+            merged: [],
+            isFinished: false
+        };
+
+        function initApp2() {
+            const canvas = document.getElementById('app2-canvas');
+            canvas.innerHTML = '';
+            app2State.intervals.forEach((interval, idx) => {
+                const div = document.createElement('div');
+                div.id = `app2-int-${idx}`;
+                div.className = 'interval-box absolute';
+                div.style.left = (interval[0] * SCALE) + 'px';
+                div.style.width = ((interval[1] - interval[0]) * SCALE) + 'px';
+                div.style.top = (idx * 15) + 'px';
+                div.style.backgroundColor = '#f8fafc';
+                div.style.border = '1px solid #cbd5e1';
+                div.innerText = `[${interval[0]},${interval[1]}]`;
+                canvas.appendChild(div);
+            });
+            document.getElementById('app2-results').innerHTML = '';
+        }
+
+        function resetApp2() {
+            app2State = {
+                intervals: [...RAW_DATA].sort((a,b) => a[0] - b[0]),
+                currentIdx: 0,
+                merged: [],
+                isFinished: false
+            };
+            document.getElementById('app2-status').innerText = 'Ready.';
+            document.getElementById('app2-next').disabled = false;
+            initApp2();
+        }
+
+        function nextStepApp2() {
+            if (app2State.isFinished) return;
+
+            const idx = app2State.currentIdx;
+            const status = document.getElementById('app2-status');
+            const current = app2State.intervals[idx];
+            const box = document.getElementById(`app2-int-${idx}`);
+
+            if (app2State.merged.length === 0) {
+                // First one
+                app2State.merged.push([...current]);
+                box.classList.add('interval-active');
+                addResultPillApp2(current);
+                status.innerText = `Started with first interval: [${current}]`;
+            } else {
+                const lastMerged = app2State.merged[app2State.merged.length - 1];
+                
+                if (current[0] <= lastMerged[1]) {
+                    // Overlap
+                    status.innerText = `[${current}] overlaps with [${lastMerged}]. Expanding...`;
+                    lastMerged[1] = Math.max(lastMerged[1], current[1]);
+                    updateLastPillApp2(lastMerged);
+                    box.classList.add('interval-merged');
+                    box.style.transform = 'scale(0.8)';
+                    box.style.opacity = '0.5';
+                } else {
+                    // No Overlap
+                    app2State.merged.push([...current]);
+                    box.classList.add('interval-active');
+                    addResultPillApp2(current);
+                    status.innerText = `[${current}] does not overlap. Adding to results.`;
+                }
+            }
+
+            app2State.currentIdx++;
+            if (app2State.currentIdx >= app2State.intervals.length) {
+                app2State.isFinished = true;
+                document.getElementById('app1-next').disabled = true;
+                status.innerText = "All intervals processed!";
+            }
+        }
+
+        function addResultPillApp2(interval) {
+            const container = document.getElementById('app2-results');
+            const p = document.createElement('span');
+            p.className = 'result-item bg-blue-50 border-blue-200 text-blue-700 font-bold';
+            p.innerText = `[${interval[0]}, ${interval[1]}]`;
+            container.appendChild(p);
+        }
+
+        function updateLastPillApp2(interval) {
+            const container = document.getElementById('app2-results');
+            if (container.lastChild) {
+                container.lastChild.innerText = `[${interval[0]}, ${interval[1]}]`;
+                container.lastChild.classList.add('ring-2', 'ring-green-400');
+                setTimeout(() => container.lastChild.classList.remove('ring-2', 'ring-green-400'), 500);
+            }
+        }
+
+        window.onload = () => {
+            initApp1();
+            initApp2();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 54: Spiral Matrix - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 4px;
+            background-color: #e2e8f0;
+            padding: 4px;
+            border-radius: 8px;
+            width: fit-content;
+        }
+        .matrix-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .cell-visited { background-color: #86efac !important; color: #166534; transform: scale(0.9); }
+        .cell-active { background-color: #3b82f6 !important; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); z-index: 10; }
+        .cell-boundary { border: 2px dashed #94a3b8; }
+        .log-container { height: 180px; overflow-y: auto; scroll-behavior: smooth; }
+        
+        .arrow-indicator {
+            position: absolute;
+            font-size: 20px;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 underline decoration-indigo-500">54. Spiral Matrix</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Given an <b>m x n</b> matrix, return all elements of the matrix in spiral order.
+            </p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="bg-indigo-100 text-indigo-600 p-2 rounded-lg mr-3">🌀</span> Problem Essence
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Imagine you are walking along the edges of a garden, turning clockwise every time you hit a wall or a path you've already walked. You start at the top-left and move right until you can't anymore, then down, then left, then up, repeating the cycle.
+            </p>
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4">
+                <p class="text-sm text-amber-800 font-medium">Key Challenge: Knowing exactly when to turn and when to stop to avoid infinite loops or array out-of-bounds errors.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: Simulation with Visited Matrix -->
+        <section id="approach-1" class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Simulation with Visited Matrix</h2>
+                <p class="text-slate-600">The intuitive approach: move in a direction until you hit a boundary or a visited cell, then rotate 90° clockwise.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Interactive Simulation: Pathfinding Mode</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v1" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v1.prev()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Back</button>
+                        <button onclick="v1.toggle()" id="v1-play" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">Play Animation</button>
+                        <button onclick="v1.next()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Next Step</button>
+                        <button onclick="v1.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-bold text-slate-500 uppercase">Current Output</span>
+                            <span id="v1-counter" class="text-xs font-mono bg-slate-200 px-2 py-1 rounded">0/12</span>
+                        </div>
+                        <div id="v1-output" class="p-3 bg-white border rounded-lg min-h-[40px] flex flex-wrap gap-2 text-sm font-bold text-blue-600 mb-4"></div>
+                        
+                        <div class="text-sm font-bold text-slate-500 uppercase mb-2">Logic Log</div>
+                        <div id="v1-log" class="log-container bg-white border border-slate-200 rounded-xl p-4 text-sm code-font text-slate-700"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation (Visited Matrix)</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public List&lt;Integer&gt;</span> spiralOrder(int[][] matrix) {
+    List&lt;Integer&gt; result = <span class="text-emerald-400">new</span> ArrayList&lt;&gt;();
+    <span class="text-emerald-400">if</span> (matrix.length == 0) <span class="text-emerald-400">return</span> result;
+
+    int rows = matrix.length, cols = matrix[0].length;
+    <span class="text-emerald-400">boolean</span>[][] visited = <span class="text-emerald-400">new boolean</span>[rows][cols];
+    
+    <span class="text-slate-500">// Right, Down, Left, Up</span>
+    int[] dRow = {0, 1, 0, -1};
+    int[] dCol = {1, 0, -1, 0};
+    
+    int currentRow = 0, currentCol = 0, directionIdx = 0;
+
+    <span class="text-emerald-400">for</span> (int i = 0; i < rows * cols; i++) {
+        result.add(matrix[currentRow][currentCol]);
+        visited[currentRow][currentCol] = <span class="text-emerald-400">true</span>;
+        
+        <span class="text-slate-500">// Predict next step</span>
+        int nextRow = currentRow + dRow[directionIdx];
+        int nextCol = currentCol + dCol[directionIdx];
+        
+        <span class="text-slate-500">// Turn if out of bounds OR already visited</span>
+        <span class="text-emerald-400">if</span> (nextRow >= 0 && nextRow < rows && nextCol >= 0 && nextCol < cols && !visited[nextRow][nextCol]) {
+            currentRow = nextRow;
+            currentCol = nextCol;
+        } <span class="text-emerald-400">else</span> {
+            directionIdx = (directionIdx + 1) % 4;
+            currentRow += dRow[directionIdx];
+            currentCol += dCol[directionIdx];
+        }
+    }
+    <span class="text-emerald-400">return</span> result;
+}</pre>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(m * n)</b> - We visit every single cell in the matrix exactly once.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(m * n)</b> - We maintain a boolean <b>visited</b> matrix of the same dimensions as the input.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Pros & Cons</h4>
+                    <p class="text-slate-700 font-semibold text-emerald-600">Pros: Very intuitive, follows the physical movement naturally.</p>
+                    <p class="text-slate-700 font-semibold text-rose-600">Cons: Uses extra memory for the visited matrix, which isn't strictly necessary.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: Optimal Boundary Shrinking -->
+        <section id="approach-2" class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Optimal Boundary Shrinking</h2>
+                <p class="text-slate-600">The "Space-Efficient" way: maintain four pointers (top, bottom, left, right) and shrink the search space after each side is completed.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Interactive Simulation: Boundary Mode</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v2" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v2.prev()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Back</button>
+                        <button onclick="v2.toggle()" id="v2-play" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold">Play Animation</button>
+                        <button onclick="v2.next()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition">Next Step</button>
+                        <button onclick="v2.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div class="grid grid-cols-4 gap-2 mb-4 text-center font-mono text-xs">
+                            <div class="bg-slate-200 p-1 rounded">Top: <span id="v2-top">0</span></div>
+                            <div class="bg-slate-200 p-1 rounded">Bottom: <span id="v2-bottom">2</span></div>
+                            <div class="bg-slate-200 p-1 rounded">Left: <span id="v2-left">0</span></div>
+                            <div class="bg-slate-200 p-1 rounded">Right: <span id="v2-right">3</span></div>
+                        </div>
+                        <div id="v2-output" class="p-3 bg-white border rounded-lg min-h-[40px] flex flex-wrap gap-2 text-sm font-bold text-indigo-600 mb-4"></div>
+                        
+                        <div class="text-sm font-bold text-slate-500 uppercase mb-2">Logic Log</div>
+                        <div id="v2-log" class="log-container bg-white border border-slate-200 rounded-xl p-4 text-sm code-font text-slate-700"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation (Boundary Shrink)</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public List&lt;Integer&gt;</span> spiralOrder(int[][] matrix) {
+    List&lt;Integer&gt; result = <span class="text-emerald-400">new</span> ArrayList&lt;&gt;();
+    int topRow = 0;
+    int bottomRow = matrix.length - 1;
+    int leftCol = 0;
+    int rightCol = matrix[0].length - 1;
+
+    <span class="text-emerald-400">while</span> (topRow <= bottomRow && leftCol <= rightCol) {
+        <span class="text-slate-500">// 1. Traverse Right</span>
+        <span class="text-emerald-400">for</span> (int j = leftCol; j <= rightCol; j++) 
+            result.add(matrix[topRow][j]);
+        topRow++;
+
+        <span class="text-slate-500">// 2. Traverse Down</span>
+        <span class="text-emerald-400">for</span> (int i = topRow; i <= bottomRow; i++) 
+            result.add(matrix[i][rightCol]);
+        rightCol--;
+
+        <span class="text-emerald-400">if</span> (topRow <= bottomRow) {
+            <span class="text-slate-500">// 3. Traverse Left</span>
+            <span class="text-emerald-400">for</span> (int j = rightCol; j >= leftCol; j--) 
+                result.add(matrix[bottomRow][j]);
+            bottomRow--;
+        }
+
+        <span class="text-emerald-400">if</span> (leftCol <= rightCol) {
+            <span class="text-slate-500">// 4. Traverse Up</span>
+            <span class="text-emerald-400">for</span> (int i = bottomRow; i >= topRow; i--) 
+                result.add(matrix[i][leftCol]);
+            leftCol++;
+        }
+    }
+    <span class="text-emerald-400">return</span> result;
+}</pre>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(m * n)</b> - Constant work per cell.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(1)</b> - Excluding the result list, we only use 4 integer variables for boundaries.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">The "Edge" Protection</h4>
+                    <p class="text-slate-700">The crucial part of this algorithm is the <b>if</b> checks before traversing Left and Up. Since we modify <b>topRow</b> and <b>rightCol</b> inside the while loop, the condition might change mid-iteration.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-6 text-center">Comparison Matrix</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-100">
+                        <th class="py-3 px-4 font-bold text-slate-600">Approach</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Time</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Space</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Complexity to Code</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700">
+                    <tr class="border-b border-slate-50">
+                        <td class="py-4 px-4 font-semibold">Simulation (Visited)</td>
+                        <td class="py-4 px-4 font-mono">O(m*n)</td>
+                        <td class="py-4 px-4 font-mono">O(m*n)</td>
+                        <td class="py-4 px-4">Low - Easy to follow logically</td>
+                    </tr>
+                    <tr class="border-b border-slate-50">
+                        <td class="py-4 px-4 font-semibold text-indigo-600">Boundary Shrinking</td>
+                        <td class="py-4 px-4 font-mono">O(m*n)</td>
+                        <td class="py-4 px-4 font-mono text-emerald-600 font-bold">O(1)</td>
+                        <td class="py-4 px-4">Medium - Requires careful boundary checks</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-indigo-900 text-white p-8 rounded-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-indigo-200">💡 Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-indigo-300 mb-2">Direction Cycling</h4>
+                    <p class="text-sm">In a spiral, the sequence is always <b>Right → Down → Left → Up</b>. Use direction arrays: `dr = {0, 1, 0, -1}` and `dc = {1, 0, -1, 0}`.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-300 mb-2">Why Boundary Shrink?</h4>
+                    <p class="text-sm">It's the optimal answer. By eliminating the visited matrix, you reduce auxiliary space from <b>O(N)</b> to <b>O(1)</b>.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-300 mb-2">Termination Condition</h4>
+                    <p class="text-sm">The loop continues as long as `left <= right` and `top <= bottom`. Always re-check these conditions before going back left or up.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edge Cases -->
+        <section class="p-6 bg-slate-100 rounded-2xl">
+            <h3 class="font-bold text-slate-800 mb-4">Edge Cases to Consider</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Single Row Matrix (1 x n)</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Single Column Matrix (m x 1)</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Single Element (1 x 1)</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Rectangle (Wide or Tall)</span>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const matrixData = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12]
+        ];
+        const rows = 3;
+        const cols = 4;
+
+        class BaseVisualizer {
+            constructor(gridId, logId, outputId, playBtnId) {
+                this.gridId = gridId;
+                this.logId = logId;
+                this.outputId = outputId;
+                this.playBtnId = playBtnId;
+                this.currentStep = 0;
+                this.steps = [];
+                this.isPlaying = false;
+                this.timer = null;
+            }
+
+            renderGrid() {
+                const container = document.getElementById(this.gridId);
+                container.innerHTML = '';
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'matrix-cell';
+                        cell.id = `${this.gridId}-${r}-${c}`;
+                        cell.innerText = matrixData[r][c];
+                        container.appendChild(cell);
+                    }
+                }
+            }
+
+            updateLog(msg) {
+                const log = document.getElementById(this.logId);
+                const entry = document.createElement('div');
+                entry.className = 'mb-1 p-1 border-b border-slate-100 last:border-0';
+                entry.innerHTML = `<span class="text-indigo-500 font-bold">></span> ${msg}`;
+                log.prepend(entry);
+            }
+
+            updateOutput(val) {
+                const out = document.getElementById(this.outputId);
+                const span = document.createElement('span');
+                span.className = 'bg-slate-100 px-2 py-1 rounded text-xs border';
+                span.innerText = val;
+                out.appendChild(span);
+            }
+
+            highlight(r, c, type) {
+                const el = document.getElementById(`${this.gridId}-${r}-${c}`);
+                if (el) el.classList.add(type);
+            }
+
+            clearHighlights() {
+                document.querySelectorAll(`#${this.gridId} .matrix-cell`).forEach(el => {
+                    el.classList.remove('cell-active');
+                });
+            }
+
+            toggle() {
+                if (this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.isPlaying = true;
+                document.getElementById(this.playBtnId).innerText = "Pause";
+                this.timer = setInterval(() => this.next(), 600);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                document.getElementById(this.playBtnId).innerText = "Play";
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.currentStep = 0;
+                this.renderGrid();
+                document.getElementById(this.logId).innerHTML = '';
+                document.getElementById(this.outputId).innerHTML = '';
+                this.updateLog("Reset animation.");
+            }
+        }
+
+        class SimulationVisualizer extends BaseVisualizer {
+            generateSteps() {
+                this.steps = [];
+                const visited = Array.from({length: rows}, () => Array(cols).fill(false));
+                const dr = [0, 1, 0, -1];
+                const dc = [1, 0, -1, 0];
+                let r = 0, c = 0, di = 0;
+
+                for (let i = 0; i < rows * cols; i++) {
+                    this.steps.push({r, c, val: matrixData[r][c], msg: `Visited cell (${r}, ${c}) with value ${matrixData[r][c]}`});
+                    visited[r][c] = true;
+
+                    let nr = r + dr[di];
+                    let nc = c + dc[di];
+
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+                        r = nr; c = nc;
+                    } else {
+                        di = (di + 1) % 4;
+                        r += dr[di];
+                        c += dc[di];
+                        if (i < rows * cols - 1)
+                            this.steps[this.steps.length-1].msg += ". Hit boundary, rotating clockwise.";
+                    }
+                }
+            }
+
+            next() {
+                if (this.currentStep < this.steps.length) {
+                    const step = this.steps[this.currentStep];
+                    this.clearHighlights();
+                    this.highlight(step.r, step.c, 'cell-active');
+                    this.highlight(step.r, step.c, 'cell-visited');
+                    this.updateLog(step.msg);
+                    this.updateOutput(step.val);
+                    this.currentStep++;
+                    document.getElementById('v1-counter').innerText = `${this.currentStep}/12`;
+                } else {
+                    this.pause();
+                    this.updateLog("All cells visited!");
+                }
+            }
+        }
+
+        class BoundaryVisualizer extends BaseVisualizer {
+            generateSteps() {
+                this.steps = [];
+                let top = 0, bottom = rows - 1, left = 0, right = cols - 1;
+
+                while (top <= bottom && left <= right) {
+                    // Right
+                    for (let j = left; j <= right; j++) 
+                        this.steps.push({r: top, c: j, val: matrixData[top][j], t: top, b: bottom, l: left, r_ptr: right, msg: `Moving Right along top boundary.`});
+                    top++;
+                    this.steps[this.steps.length-1].msg += " Top boundary pushed down.";
+
+                    // Down
+                    for (let i = top; i <= bottom; i++) 
+                        this.steps.push({r: i, c: right, val: matrixData[i][right], t: top, b: bottom, l: left, r_ptr: right, msg: `Moving Down along right boundary.`});
+                    right--;
+                    this.steps[this.steps.length-1].msg += " Right boundary pushed left.";
+
+                    // Left
+                    if (top <= bottom) {
+                        for (let j = right; j >= left; j--) 
+                            this.steps.push({r: bottom, c: j, val: matrixData[bottom][j], t: top, b: bottom, l: left, r_ptr: right, msg: `Moving Left along bottom boundary.`});
+                        bottom--;
+                        this.steps[this.steps.length-1].msg += " Bottom boundary pushed up.";
+                    }
+
+                    // Up
+                    if (left <= right) {
+                        for (let i = bottom; i >= top; i--) 
+                            this.steps.push({r: i, c: left, val: matrixData[i][left], t: top, b: bottom, l: left, r_ptr: right, msg: `Moving Up along left boundary.`});
+                        left++;
+                        this.steps[this.steps.length-1].msg += " Left boundary pushed right.";
+                    }
+                }
+            }
+
+            next() {
+                if (this.currentStep < this.steps.length) {
+                    const step = this.steps[this.currentStep];
+                    this.clearHighlights();
+                    this.highlight(step.r, step.c, 'cell-active');
+                    this.highlight(step.r, step.c, 'cell-visited');
+                    this.updateLog(step.msg);
+                    this.updateOutput(step.val);
+                    
+                    document.getElementById('v2-top').innerText = step.t;
+                    document.getElementById('v2-bottom').innerText = step.b;
+                    document.getElementById('v2-left').innerText = step.l;
+                    document.getElementById('v2-right').innerText = step.r_ptr;
+                    
+                    this.currentStep++;
+                } else {
+                    this.pause();
+                    this.updateLog("Spiral complete!");
+                }
+            }
+        }
+
+        const v1 = new SimulationVisualizer('grid-v1', 'v1-log', 'v1-output', 'v1-play');
+        v1.generateSteps();
+        v1.renderGrid();
+
+        const v2 = new BoundaryVisualizer('grid-v2', 'v2-log', 'v2-output', 'v2-play');
+        v2.generateSteps();
+        v2.renderGrid();
+    </script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 242: Valid Anagram Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .cell {
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-weight: 700;
+            background: white;
+        }
+
+        .active-cell {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .match-cell {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+
+        .fail-cell {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .empty-cell {
+            opacity: 0.3;
+            background-color: #f1f5f9;
+        }
+
+        .freq-slot {
+            width: 32px;
+            height: 32px;
+            font-size: 0.75rem;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .freq-active {
+            background-color: #fbbf24;
+            border-color: #d97706;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">242. Valid Anagram</h1>
+            <p class="text-lg text-slate-600">Checking if two strings contain the exact same characters in any order.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Table</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Sorting</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4">Given two strings <b>s</b> and <b>t</b>, return <b>true</b> if <b>t</b> is an anagram of <b>s</b>, and <b>false</b> otherwise.</p>
+            <p class="text-slate-600 italic border-l-4 border-slate-200 pl-4 py-2">
+                <b>Anagram Definition:</b> A word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
+            </p>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Search and Mark (Brute Force)</h2>
+                <p class="text-slate-600 mt-2">Iterate through every character in <b>s</b>. For each, search through <b>t</b> for a match. If found, mark that character in <b>t</b> as "used".</p>
+            </div>
+
+            <!-- Animation Area -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Source String S</p>
+                        <div id="brute-s" class="flex gap-2 justify-center"></div>
+                    </div>
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Target String T (Scanning...)</p>
+                        <div id="brute-t" class="flex gap-2 justify-center flex-wrap"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 pt-4 border-t">
+                    <button onclick="resetBrute()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepBrute()" id="btn-brute" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="brute-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready...</div>
+            </div>
+
+            <!-- Java Code Area -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isAnagram</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="keyword">if</span> (s.<span class="method">length</span>() != t.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="comment">// Use a boolean array to track used characters in string t</span>
+    <span class="type">boolean</span>[] usedInT = <span class="keyword">new</span> <span class="type">boolean</span>[t.<span class="method">length</span>()];
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; s.<span class="method">length</span>(); i++) {
+        <span class="type">char</span> charS = s.<span class="method">charAt</span>(i);
+        <span class="type">boolean</span> foundMatch = <span class="keyword">false</span>;
+
+        <span class="keyword">for</span> (<span class="type">int</span> j = 0; j &lt; t.<span class="method">length</span>(); j++) {
+            <span class="keyword">if</span> (!usedInT[j] &amp;&amp; t.<span class="method">charAt</span>(j) == charS) {
+                usedInT[j] = <span class="keyword">true</span>; <span class="comment">// Consume the character</span>
+                foundMatch = <span class="keyword">true</span>;
+                <span class="keyword">break</span>;
+            }
+        }
+        <span class="keyword">if</span> (!foundMatch) <span class="keyword">return false</span>;
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <!-- Analysis Area -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N²)</b> where N is string length. Nested loops result in quadratic time.</p>
+                    <p><b>Space Complexity:</b> <b>O(N)</b> for the boolean array tracking used characters.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Verdict</h4>
+                    <p>Very slow for long strings. The constant scanning of the second string is redundant if we use a more structured data format.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Sorting -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Sort and Compare</h2>
+                <p class="text-slate-600 mt-2">If two strings are anagrams, they will look identical after being sorted alphabetically. Sorting brings matching characters to the same index.</p>
+            </div>
+
+            <!-- Animation Area -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-indigo-500 mb-2 uppercase" id="sort-label-s">String S (Original)</p>
+                        <div id="sort-s" class="flex gap-2 justify-center"></div>
+                    </div>
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-indigo-500 mb-2 uppercase" id="sort-label-t">String T (Original)</p>
+                        <div id="sort-t" class="flex gap-2 justify-center"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 pt-4 border-t">
+                    <button onclick="resetSort()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepSort()" id="btn-sort" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="sort-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Step 1: Sort strings</div>
+            </div>
+
+            <!-- Java Code Area -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isAnagram</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="keyword">if</span> (s.<span class="method">length</span>() != t.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="comment">// Convert to char arrays</span>
+    <span class="type">char</span>[] sArray = s.<span class="method">toCharArray</span>();
+    <span class="type">char</span>[] tArray = t.<span class="method">toCharArray</span>();
+
+    <span class="comment">// Sort both arrays alphabetically</span>
+    <span class="type">Arrays</span>.<span class="method">sort</span>(sArray);
+    <span class="type">Arrays</span>.<span class="method">sort</span>(tArray);
+
+    <span class="comment">// If anagrams, arrays must be identical</span>
+    <span class="keyword">return</span> <span class="type">Arrays</span>.<span class="method">equals</span>(sArray, tArray);
+}
+                </div>
+            </div>
+
+            <!-- Analysis Area -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N log N)</b> dominated by the sorting algorithm (Dual-Pivot Quicksort in Java).</p>
+                    <p><b>Space Complexity:</b> <b>O(N)</b> to store the char array copies of the strings.</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Verdict</h4>
+                    <p>Very clean and readable. This is a solid solution for coding interviews unless O(N) is strictly required.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Frequency Array -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Frequency Count (Optimal)</h2>
+                <p class="text-slate-600 mt-2">Use an integer array of size 26 to count occurrences. Add for <b>s</b> and subtract for <b>t</b>. If all slots end at zero, it's a match.</p>
+            </div>
+
+            <!-- Animation Area -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="flex gap-12 mb-4">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2">S: "cat"</p>
+                            <div id="freq-s" class="flex gap-2"></div>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2">T: "act"</p>
+                            <div id="freq-t" class="flex gap-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-emerald-600 mb-2 text-center uppercase">Alphabet Frequency Array (26 slots)</p>
+                        <div id="freq-array" class="flex flex-wrap gap-1 justify-center"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 pt-4 border-t">
+                    <button onclick="resetFreq()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepFreq()" id="btn-freq" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="freq-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Step 1: Count characters in S</div>
+            </div>
+
+            <!-- Java Code Area -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isAnagram</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="keyword">if</span> (s.<span class="method">length</span>() != t.<span class="method">length</span>()) <span class="keyword">return false</span>;
+
+    <span class="comment">// 26 slots for 'a' through 'z'</span>
+    <span class="type">int</span>[] counts = <span class="keyword">new</span> <span class="type">int</span>[26];
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; s.<span class="method">length</span>(); i++) {
+        counts[s.<span class="method">charAt</span>(i) - <span class="string">'a'</span>]++; <span class="comment">// Increment for S</span>
+        counts[t.<span class="method">charAt</span>(i) - <span class="string">'a'</span>]--; <span class="comment">// Decrement for T</span>
+    }
+
+    <span class="comment">// If anagram, every slot should be 0</span>
+    <span class="keyword">for</span> (<span class="type">int</span> count : counts) {
+        <span class="keyword">if</span> (count != 0) <span class="keyword">return false</span>;
+    }
+    
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <!-- Analysis Area -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b>. We iterate over strings once and the 26-slot array once.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. The array size is constant (26), regardless of input string length.</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Pro Tip</h4>
+                    <p>This is the most efficient way to solve counting problems involving fixed character sets (like lowercase English letters).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Approach Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Pros</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4">Brute Force</td>
+                            <td class="p-4">O(N²)</td>
+                            <td class="p-4">O(N)</td>
+                            <td class="p-4 text-slate-500">No complex logic</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4">Sorting</td>
+                            <td class="p-4">O(N log N)</td>
+                            <td class="p-4">O(N)</td>
+                            <td class="p-4 text-slate-500">Highly readable, minimal code</td>
+                        </tr>
+                        <tr class="bg-emerald-50/50">
+                            <td class="p-4 font-bold text-emerald-700">Frequency Array</td>
+                            <td class="p-4 font-bold text-emerald-700">O(N)</td>
+                            <td class="p-4 font-bold text-emerald-700">O(1)</td>
+                            <td class="p-4 font-bold text-emerald-700">Mathematically optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Key Patterns</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• "Anagram" = "Exact Character Frequency Match".</li>
+                        <li>• <b>Always</b> start by checking if <code>s.length() == t.length()</code>.</li>
+                        <li>• Use <code>int[26]</code> for 26-lowercase problems.</li>
+                        <li>• Use <code>HashMap&lt;Character, Integer&gt;</code> for Unicode/Generic problems.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Corner Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>Different Lengths</b>: Immediate False.</li>
+                        <li>• <b>Case Sensitivity</b>: Usually LeetCode says "lowercase only", but clarify in interviews.</li>
+                        <li>• <b>Empty Strings</b>: Both empty = True.</li>
+                        <li>• <b>Special Characters</b>: Treat as regular chars or ignore? (Clarify with interviewer).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400">
+            Interactive Java Visualizer - Mastering Algorithms Visually.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const s_word = "anagram";
+        const t_word = "nagaram";
+        
+        // --- BRUTE FORCE ---
+        let bruteIdx = 0;
+        let bruteTUsed = new Array(t_word.length).fill(false);
+        function renderBrute() {
+            const sc = document.getElementById('brute-s');
+            const tc = document.getElementById('brute-t');
+            sc.innerHTML = s_word.split('').map((c, i) => `<div class="cell ${i === bruteIdx ? 'active-cell' : (i < bruteIdx ? 'match-cell' : '')}">${c}</div>`).join('');
+            tc.innerHTML = t_word.split('').map((c, i) => `<div class="cell ${bruteTUsed[i] ? 'match-cell' : ''}">${c}</div>`).join('');
+        }
+        function stepBrute() {
+            if (bruteIdx >= s_word.length) return;
+            const char = s_word[bruteIdx];
+            let found = false;
+            for(let j=0; j<t_word.length; j++) {
+                if(!bruteTUsed[j] && t_word[j] === char) {
+                    bruteTUsed[j] = true;
+                    found = true;
+                    document.getElementById('brute-status').innerText = `Matched '${char}' at index ${j} of T.`;
+                    break;
+                }
+            }
+            if(!found) {
+                document.getElementById('brute-status').innerHTML = `<span class="text-red-600">FAILED: Could not find matching '${char}' in T.</span>`;
+                document.getElementById('btn-brute').disabled = true;
+                return;
+            }
+            bruteIdx++;
+            renderBrute();
+            if(bruteIdx === s_word.length) {
+                document.getElementById('brute-status').innerHTML = `<span class="text-emerald-600 font-bold">SUCCESS! All characters matched.</span>`;
+                document.getElementById('btn-brute').disabled = true;
+            }
+        }
+        function resetBrute() {
+            bruteIdx = 0; bruteTUsed.fill(false);
+            document.getElementById('brute-status').innerText = "Ready...";
+            document.getElementById('btn-brute').disabled = false;
+            renderBrute();
+        }
+
+        // --- SORTING ---
+        let sortStage = 0; // 0: raw, 1: sorted, 2+: comparing
+        let sortCompareIdx = 0;
+        const s_sorted = s_word.split('').sort();
+        const t_sorted = t_word.split('').sort();
+
+        function renderSort() {
+            const sc = document.getElementById('sort-s');
+            const tc = document.getElementById('sort-t');
+            const labelS = document.getElementById('sort-label-s');
+            const labelT = document.getElementById('sort-label-t');
+
+            if(sortStage === 0) {
+                sc.innerHTML = s_word.split('').map(c => `<div class="cell">${c}</div>`).join('');
+                tc.innerHTML = t_word.split('').map(c => `<div class="cell">${c}</div>`).join('');
+                labelS.innerText = "String S (Original)";
+                labelT.innerText = "String T (Original)";
+            } else {
+                labelS.innerText = "String S (Sorted)";
+                labelT.innerText = "String T (Sorted)";
+                sc.innerHTML = s_sorted.map((c, i) => `<div class="cell ${i === sortCompareIdx && sortStage > 1 ? 'active-cell' : (i < sortCompareIdx ? 'match-cell' : '')}">${c}</div>`).join('');
+                tc.innerHTML = t_sorted.map((c, i) => `<div class="cell ${i === sortCompareIdx && sortStage > 1 ? 'active-cell' : (i < sortCompareIdx ? 'match-cell' : '')}">${c}</div>`).join('');
+            }
+        }
+        function stepSort() {
+            if(sortStage === 0) {
+                sortStage = 1;
+                document.getElementById('sort-status').innerText = "Strings sorted alphabetically. Now comparing...";
+            } else {
+                sortStage = 2;
+                if(s_sorted[sortCompareIdx] === t_sorted[sortCompareIdx]) {
+                    document.getElementById('sort-status').innerText = `Index ${sortCompareIdx}: '${s_sorted[sortCompareIdx]}' matches.`;
+                    sortCompareIdx++;
+                    if(sortCompareIdx === s_sorted.length) {
+                        document.getElementById('sort-status').innerHTML = `<span class="text-emerald-600 font-bold">SUCCESS! Identical patterns.</span>`;
+                        document.getElementById('btn-sort').disabled = true;
+                    }
+                } else {
+                    document.getElementById('sort-status').innerHTML = `<span class="text-red-600 font-bold">FAILED: Mismatch at index ${sortCompareIdx}.</span>`;
+                    document.getElementById('btn-sort').disabled = true;
+                }
+            }
+            renderSort();
+        }
+        function resetSort() {
+            sortStage = 0; sortCompareIdx = 0;
+            document.getElementById('sort-status').innerText = "Step 1: Sort strings";
+            document.getElementById('btn-sort').disabled = false;
+            renderSort();
+        }
+
+        // --- FREQUENCY ---
+        let freqIdx = 0;
+        let freqMode = 'S'; // 'S' then 'T'
+        let freqCounts = new Array(26).fill(0);
+        const f_s = "cat";
+        const f_t = "act";
+
+        function renderFreq() {
+            const sc = document.getElementById('freq-s');
+            const tc = document.getElementById('freq-t');
+            const farr = document.getElementById('freq-array');
+            
+            sc.innerHTML = f_s.split('').map((c, i) => `<div class="cell ${freqMode === 'S' && i === freqIdx ? 'active-cell' : (freqMode === 'T' || i < freqIdx ? 'match-cell' : '')}">${c}</div>`).join('');
+            tc.innerHTML = f_t.split('').map((c, i) => `<div class="cell ${freqMode === 'T' && i === freqIdx ? 'active-cell' : (freqMode === 'DONE' || (freqMode === 'T' && i < freqIdx) ? 'match-cell' : '')}">${c}</div>`).join('');
+
+            farr.innerHTML = freqCounts.map((count, i) => {
+                const char = String.fromCharCode(97 + i);
+                const isRel = f_s.includes(char) || f_t.includes(char);
+                return `<div class="freq-slot ${isRel ? 'border-blue-300' : ''}">
+                    <span class="text-[9px] text-slate-400">${char}</span>
+                    <span class="font-bold ${count !== 0 ? 'text-blue-600' : 'text-slate-300'}">${count}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function stepFreq() {
+            if(freqMode === 'S') {
+                const char = f_s[freqIdx];
+                freqCounts[char.charCodeAt(0) - 97]++;
+                document.getElementById('freq-status').innerText = `Added '${char}' to counts.`;
+                freqIdx++;
+                if(freqIdx === f_s.length) {
+                    freqMode = 'T';
+                    freqIdx = 0;
+                }
+            } else if(freqMode === 'T') {
+                const char = f_t[freqIdx];
+                freqCounts[char.charCodeAt(0) - 97]--;
+                document.getElementById('freq-status').innerText = `Subtracted '${char}' from counts.`;
+                freqIdx++;
+                if(freqIdx === f_t.length) {
+                    freqMode = 'DONE';
+                    const isAnagram = freqCounts.every(c => c === 0);
+                    if(isAnagram) {
+                        document.getElementById('freq-status').innerHTML = `<span class="text-emerald-600 font-bold">ALL ZERO! Valid Anagram.</span>`;
+                    } else {
+                        document.getElementById('freq-status').innerHTML = `<span class="text-red-600 font-bold">NON-ZERO SLOTS! Not an anagram.</span>`;
+                    }
+                    document.getElementById('btn-freq').disabled = true;
+                }
+            }
+            renderFreq();
+        }
+
+        function resetFreq() {
+            freqIdx = 0; freqMode = 'S'; freqCounts.fill(0);
+            document.getElementById('freq-status').innerText = "Step 1: Count characters in S";
+            document.getElementById('btn-freq').disabled = false;
+            renderFreq();
+        }
+
+        window.onload = () => {
+            renderBrute();
+            renderSort();
+            renderFreq();
+        }
+    </script>
+</body>
+</html>

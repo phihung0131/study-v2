@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 15: 3Sum - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        
+        pre, code {
+            font-family: 'Fira+Code', monospace;
+        }
+
+        .cell {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .pointer-label {
+            transition: all 0.3s ease;
+        }
+
+        .found-triplet {
+            background-color: #22c55e !important;
+            color: white !important;
+            border-color: #16a34a !important;
+            transform: scale(1.05);
+        }
+
+        .active-search {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="max-w-5xl mx-auto space-y-16">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-5xl font-extrabold text-slate-900 tracking-tight">15. 3Sum</h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto">
+                Given an integer array nums, return all unique triplets [nums[i], nums[j], nums[k]] such that their sum is 0.
+            </p>
+            <div class="flex justify-center gap-3 text-sm font-bold uppercase tracking-wider">
+                <span class="px-4 py-1 bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">Medium</span>
+                <span class="px-4 py-1 bg-blue-100 text-blue-700 rounded-full border border-blue-200">Two Pointers</span>
+                <span class="px-4 py-1 bg-purple-100 text-purple-700 rounded-full border border-purple-200">Sorting</span>
+            </div>
+        </header>
+
+        <!-- Problem Logic -->
+        <section class="bg-blue-50 rounded-3xl p-8 border border-blue-100 shadow-sm">
+            <h2 class="text-2xl font-bold text-blue-900 mb-4">The Logic</h2>
+            <p class="text-blue-800 leading-relaxed">
+                The challenge isn't just finding three numbers that add to zero, but finding <b>unique</b> triplets. 
+                Sorting the array first is the key trick—it allows us to easily skip duplicate values and use efficient pointer movement.
+            </p>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Brute Force (Nested Loops)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    Check every possible combination of three different indices. Use a Set to store the triplets to ensure uniqueness.
+                </p>
+            </div>
+
+            <!-- Animation Zone 1 -->
+            <div class="p-8 bg-slate-50 border-b border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div class="text-center md:text-left">
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Input: [-1, 0, 1, 2, -1, -4]</div>
+                        <div class="text-xl font-bold text-slate-700">Unique Triplets Found: <span id="app1-count" class="text-blue-600">0</span></div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app1.next()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app1.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 p-10 min-h-[250px] flex flex-col items-center justify-center space-y-12">
+                    <div id="app1-array" class="flex flex-wrap justify-center gap-3">
+                        <!-- Cells via JS -->
+                    </div>
+                    <div id="app1-msg" class="text-xl font-semibold text-slate-600 text-center h-8"></div>
+                </div>
+            </div>
+
+            <!-- Code Zone 1 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public List&lt;List&lt;Integer&gt;&gt;</span> threeSum(<span class="text-blue-400">int[]</span> nums) {
+    Set&lt;List&lt;Integer&gt;&gt; uniqueTriplets = <span class="text-pink-400">new</span> HashSet&lt;&gt;();
+    <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> i = 0; i < nums.length; i++) {
+        <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> j = i + 1; j < nums.length; j++) {
+            <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> k = j + 1; k < nums.length; k++) {
+                <span class="text-pink-400">if</span> (nums[i] + nums[j] + nums[k] == 0) {
+                    List&lt;Integer&gt; triplet = Arrays.asList(nums[i], nums[j], nums[k]);
+                    Collections.sort(triplet);
+                    uniqueTriplets.add(triplet);
+                }
+            }
+        }
+    }
+    <span class="text-pink-400">return new</span> ArrayList&lt;&gt;(uniqueTriplets);
+}</code></pre>
+                </div>
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li><b>Time Complexity:</b> <b>O(n³)</b> - Triple nested loops iterate over all combinations.</li>
+                            <li><b>Space Complexity:</b> <b>O(n)</b> - The Set stores unique triplets.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-red-500 w-fit mb-4">Cons</h4>
+                        <p class="text-slate-600">
+                            Extremely slow for arrays larger than 100 elements. The sorting inside the loops to handle uniqueness adds even more overhead.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 2: Sorting + Two Pointers -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Sorting + Two Pointers (Optimal)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    Sort the array first. Fix one pointer <b>i</b>, then use two pointers (<b>left</b> and <b>right</b>) to find the remaining two numbers.
+                </p>
+            </div>
+
+            <!-- Animation Zone 2 -->
+            <div class="p-8 bg-slate-50 border-b border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div class="text-center md:text-left">
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Sorted Input: [-4, -1, -1, 0, 1, 2]</div>
+                        <div class="text-xl font-bold text-slate-700">Triplets Found: <span id="app2-count" class="text-green-600">0</span></div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app2.next()" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app2.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 p-10 min-h-[300px] flex flex-col items-center justify-center space-y-16">
+                    <div id="app2-array" class="flex flex-wrap justify-center gap-4">
+                        <!-- Cells via JS -->
+                    </div>
+                    <div id="app2-msg" class="text-xl font-semibold text-slate-700 text-center h-8"></div>
+                    <div class="flex gap-8 text-sm font-bold text-slate-400 uppercase tracking-tighter">
+                        <div>Sum Target: <span class="text-slate-900">0</span></div>
+                        <div>Current Sum: <span id="app2-sum" class="text-blue-600">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Zone 2 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public List&lt;List&lt;Integer&gt;&gt;</span> threeSum(<span class="text-blue-400">int[]</span> nums) {
+    Arrays.sort(nums);
+    List&lt;List&lt;Integer&gt;&gt; result = <span class="text-pink-400">new</span> ArrayList&lt;&gt;();
+
+    <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> i = 0; i < nums.length - 2; i++) {
+        <span class="text-slate-500">// Skip duplicate values for the fixed pointer</span>
+        <span class="text-pink-400">if</span> (i > 0 && nums[i] == nums[i - 1]) <span class="text-pink-400">continue</span>;
+
+        <span class="text-blue-400">int</span> leftPointer = i + 1;
+        <span class="text-blue-400">int</span> rightPointer = nums.length - 1;
+
+        <span class="text-pink-400">while</span> (leftPointer < rightPointer) {
+            <span class="text-blue-400">int</span> sum = nums[i] + nums[leftPointer] + nums[rightPointer];
+
+            <span class="text-pink-400">if</span> (sum == 0) {
+                result.add(Arrays.asList(nums[i], nums[leftPointer], nums[rightPointer]));
+                leftPointer++;
+                rightPointer--;
+                <span class="text-slate-500">// Skip duplicates for left and right pointers</span>
+                <span class="text-pink-400">while</span> (leftPointer < rightPointer && nums[leftPointer] == nums[leftPointer - 1]) leftPointer++;
+                <span class="text-pink-400">while</span> (leftPointer < rightPointer && nums[rightPointer] == nums[rightPointer + 1]) rightPointer--;
+            } <span class="text-pink-400">else if</span> (sum < 0) {
+                leftPointer++;
+            } <span class="text-pink-400">else</span> {
+                rightPointer--;
+            }
+        }
+    }
+    <span class="text-pink-400">return</span> result;
+}</code></pre>
+                </div>
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-green-500 w-fit mb-4">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li><b>Time Complexity:</b> <b>O(n²)</b> - Outer loop runs <b>n</b> times, and the two-pointer inner scan runs <b>n</b> times.</li>
+                            <li><b>Space Complexity:</b> <b>O(log n)</b> to <b>O(n)</b> depending on the sorting implementation.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Pros</h4>
+                        <p class="text-slate-600">
+                            The standard optimal solution. Sorting allows us to skip duplicate values easily, ensuring our result set contains unique triplets without using a heavy Set.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Approach Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                            <th class="p-4">Approach</th>
+                            <th class="p-4">Time</th>
+                            <th class="p-4">Space</th>
+                            <th class="p-4">Duplicates Handle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-slate-100">
+                            <td class="p-4 font-semibold">Brute Force</td>
+                            <td class="p-4 font-mono">O(n³)</td>
+                            <td class="p-4 font-mono">O(n)</td>
+                            <td class="p-4 text-slate-500 italic">HashSet of lists</td>
+                        </tr>
+                        <tr class="bg-green-50/50">
+                            <td class="p-4 font-bold text-green-700">Two Pointers</td>
+                            <td class="p-4 font-mono font-bold text-green-700">O(n²)</td>
+                            <td class="p-4 font-mono font-bold text-green-700">O(1)*</td>
+                            <td class="p-4 text-green-700 font-semibold italic">Manual skip logic</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-4 text-sm text-slate-400 italic">*Excluding output list and sorting space.</p>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-slate-900 text-white rounded-3xl p-8 shadow-xl">
+                <h3 class="text-2xl font-bold mb-4">⚡ Quick Cheat Sheet</h3>
+                <ul class="space-y-4 text-slate-300">
+                    <li>• <b>Sorted?</b> If the problem asks for triplets/sums and uniqueness, sort first!</li>
+                    <li>• <b>Two Pointers:</b> Use them whenever you need to find a sum in a sorted range.</li>
+                    <li>• <b>Skip Duplicates:</b> <code>if (i > 0 && nums[i] == nums[i-1]) continue;</code></li>
+                    <li>• <b>Target:</b> 3Sum is essentially fixing one number and solving <b>2Sum</b> for the rest.</li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 rounded-3xl p-8 border border-amber-100">
+                <h3 class="text-2xl font-bold text-amber-900 mb-4">🧩 Edge Cases</h3>
+                <ul class="space-y-4 text-amber-800">
+                    <li>• <b>Short Array:</b> Length < 3 (Return empty list).</li>
+                    <li>• <b>All Zeros:</b> `[0, 0, 0, 0]` should return `[[0, 0, 0]]`.</li>
+                    <li>• <b>No Triplets:</b> No three numbers add to zero.</li>
+                    <li>• <b>Duplicates:</b> Multiple occurrences of the same numbers (e.g. `[-1, -1, 0, 1, 1]`).</li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- Shared Data ---
+        const data1 = [-1, 0, 1, 2, -1, -4];
+        const data2 = [-4, -1, -1, 0, 1, 2]; // Sorted
+
+        // --- Brute Force Logic ---
+        const app1 = {
+            i: 0, j: 1, k: 2,
+            count: 0,
+            done: false,
+            init() {
+                const container = document.getElementById('app1-array');
+                container.innerHTML = data1.map((v, idx) => `
+                    <div id="app1-cell-${idx}" class="cell w-12 h-14 border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-lg bg-white relative">
+                        ${v}
+                        <div id="app1-label-${idx}" class="absolute -top-6 text-[10px] font-bold text-blue-500 uppercase"></div>
+                    </div>
+                `).join('');
+                this.updateLabels();
+            },
+            updateLabels() {
+                data1.forEach((_, idx) => {
+                    const label = document.getElementById(`app1-label-${idx}`);
+                    const cell = document.getElementById(`app1-cell-${idx}`);
+                    label.textContent = "";
+                    cell.className = "cell w-12 h-14 border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-lg bg-white relative";
+                    
+                    if (idx === this.i) { label.textContent = "i"; cell.classList.add('border-blue-500', 'bg-blue-50'); }
+                    if (idx === this.j) { label.textContent = "j"; cell.classList.add('border-indigo-500', 'bg-indigo-50'); }
+                    if (idx === this.k) { label.textContent = "k"; cell.classList.add('border-purple-500', 'bg-purple-50'); }
+                });
+            },
+            next() {
+                if (this.done) return;
+                const sum = data1[this.i] + data1[this.j] + data1[this.k];
+                const msg = document.getElementById('app1-msg');
+                msg.textContent = `${data1[this.i]} + ${data1[this.j]} + ${data1[this.k]} = ${sum}`;
+
+                if (sum === 0) {
+                    this.count++;
+                    document.getElementById('app1-count').textContent = this.count;
+                    msg.classList.add('text-green-600');
+                    const triplet = [this.i, this.j, this.k];
+                    triplet.forEach(idx => document.getElementById(`app1-cell-${idx}`).classList.add('found-triplet'));
+                } else {
+                    msg.classList.remove('text-green-600');
+                }
+
+                // Increment indices
+                this.k++;
+                if (this.k >= data1.length) {
+                    this.j++;
+                    this.k = this.j + 1;
+                    if (this.j >= data1.length - 1) {
+                        this.i++;
+                        this.j = this.i + 1;
+                        this.k = this.j + 1;
+                        if (this.i >= data1.length - 2) {
+                            this.done = true;
+                            msg.textContent = "Finished all combinations.";
+                        }
+                    }
+                }
+                if (!this.done) this.updateLabels();
+            },
+            reset() {
+                this.i = 0; this.j = 1; this.k = 2; this.count = 0; this.done = false;
+                document.getElementById('app1-count').textContent = "0";
+                document.getElementById('app1-msg').textContent = "";
+                this.init();
+            }
+        };
+
+        // --- Two Pointers Logic ---
+        const app2 = {
+            i: 0,
+            left: 1,
+            right: 5,
+            count: 0,
+            done: false,
+            init() {
+                const container = document.getElementById('app2-array');
+                container.innerHTML = data2.map((v, idx) => `
+                    <div id="app2-cell-${idx}" class="cell w-14 h-16 border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-xl bg-white relative">
+                        ${v}
+                        <div id="app2-label-${idx}" class="absolute -top-7 text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
+                    </div>
+                `).join('');
+                this.updateUI();
+            },
+            updateUI() {
+                data2.forEach((_, idx) => {
+                    const label = document.getElementById(`app2-label-${idx}`);
+                    const cell = document.getElementById(`app2-cell-${idx}`);
+                    label.textContent = "";
+                    cell.className = "cell w-14 h-16 border-2 border-slate-200 rounded-xl flex items-center justify-center font-bold text-xl bg-white relative";
+                    
+                    if (idx === this.i) { label.textContent = "Fix i"; cell.classList.add('border-blue-500', 'bg-blue-50', 'ring-4', 'ring-blue-100'); }
+                    else if (idx === this.left) { label.textContent = "Left"; cell.classList.add('border-green-500', 'bg-green-50'); }
+                    else if (idx === this.right) { label.textContent = "Right"; cell.classList.add('border-red-500', 'bg-red-50'); }
+                    else if (idx < this.i) { cell.classList.add('opacity-30', 'bg-slate-50'); }
+                });
+            },
+            next() {
+                if (this.done) return;
+                
+                const valI = data2[this.i];
+                const valL = data2[this.left];
+                const valR = data2[this.right];
+                const sum = valI + valL + valR;
+                
+                const msg = document.getElementById('app2-msg');
+                const sumEl = document.getElementById('app2-sum');
+                sumEl.textContent = sum;
+
+                if (sum === 0) {
+                    this.count++;
+                    document.getElementById('app2-count').textContent = this.count;
+                    msg.innerHTML = `<span class="text-green-600">Match! Found [${valI}, ${valL}, ${valR}]</span>`;
+                    
+                    // Mark found
+                    [this.i, this.left, this.right].forEach(idx => document.getElementById(`app2-cell-${idx}`).classList.add('found-triplet'));
+                    
+                    this.left++;
+                    this.right--;
+                    
+                    // Skip logic check in next step or simulate? Let's just move pointers.
+                } else if (sum < 0) {
+                    msg.textContent = `${sum} < 0: Need a larger value. Moving Left →`;
+                    this.left++;
+                } else {
+                    msg.textContent = `${sum} > 0: Need a smaller value. Moving ← Right`;
+                    this.right--;
+                }
+
+                // Check bounds and duplicates for i
+                if (this.left >= this.right) {
+                    this.i++;
+                    // Skip i duplicates
+                    while (this.i < data2.length - 2 && data2[this.i] === data2[this.i - 1]) this.i++;
+                    
+                    this.left = this.i + 1;
+                    this.right = data2.length - 1;
+                    
+                    if (this.i >= data2.length - 2) {
+                        this.done = true;
+                        msg.textContent = "Finished scanning array.";
+                    }
+                }
+                
+                if (!this.done) this.updateUI();
+            },
+            reset() {
+                this.i = 0; this.left = 1; this.right = 5; this.count = 0; this.done = false;
+                document.getElementById('app2-count').textContent = "0";
+                document.getElementById('app2-msg').textContent = "";
+                document.getElementById('app2-sum').textContent = "0";
+                this.init();
+            }
+        };
+
+        window.onload = () => {
+            app1.init();
+            app2.init();
+        };
+    </script>
+</body>
+</html>

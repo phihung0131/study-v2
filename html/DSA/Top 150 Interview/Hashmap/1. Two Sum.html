@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 1: Two Sum Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .array-cell {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 700;
+            background: white;
+            position: relative;
+        }
+
+        .cell-active-i { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-5px); }
+        .cell-active-j { border-color: #f59e0b; background-color: #fffbeb; transform: translateY(-5px); }
+        .cell-match { border-color: #22c55e; background-color: #dcfce7; color: #166534; }
+        
+        .map-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+
+        .pointer-label {
+            position: absolute;
+            top: -25px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">1. Two Sum</h1>
+            <p class="text-lg text-slate-600">Find two numbers that add up to a specific target.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Array</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Hash Table</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4 text-slate-700">Given an array of integers <b>nums</b> and an integer <b>target</b>, return indices of the two numbers such that they add up to <b>target</b>.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 italic text-slate-600">
+                <b>Constraints:</b>
+                <ul class="list-disc ml-5 mt-2">
+                    <li>Exactly one solution exists.</li>
+                    <li>You may not use the same element twice.</li>
+                    <li>Indices can be returned in any order.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force</h2>
+                <p class="text-slate-600 mt-2">Check every possible pair of numbers in the array. If their sum equals the target, return their indices.</p>
+            </div>
+
+            <!-- Animation 1 -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-12">
+                    <div class="text-center space-y-2">
+                        <p class="text-sm font-bold text-slate-400 uppercase">Target: <span id="brute-target" class="text-slate-900">9</span></p>
+                        <div id="brute-array" class="flex gap-3 justify-center pt-8"></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border w-full max-w-sm text-center">
+                        <p class="text-xs font-bold text-slate-400 mb-1 uppercase">Current Calculation</p>
+                        <div id="brute-calc" class="text-xl font-mono text-slate-700">Waiting to start...</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4">
+                    <button onclick="resetBrute()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepBrute()" id="btn-brute" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Next Step</button>
+                </div>
+            </div>
+
+            <!-- Code 1 -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span>[] <span class="method">twoSum</span>(<span class="keyword">int</span>[] nums, <span class="keyword">int</span> target) {
+    <span class="keyword">for</span> (<span class="keyword">int</span> outerIndex = 0; outerIndex &lt; nums.length; outerIndex++) {
+        <span class="keyword">for</span> (<span class="keyword">int</span> innerIndex = outerIndex + 1; innerIndex &lt; nums.length; innerIndex++) {
+            <span class="keyword">if</span> (nums[outerIndex] + nums[innerIndex] == target) {
+                <span class="keyword">return new int</span>[] { outerIndex, innerIndex };
+            }
+        }
+    }
+    <span class="keyword">return new int</span>[] {}; <span class="comment">// Should not happen per constraints</span>
+}
+                </div>
+            </div>
+
+            <!-- Analysis 1 -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n²)</b>. For each element, we loop through the rest of the array.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. We only use constant extra space.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> No extra memory needed. Extremely simple to implement.</p>
+                    <p><b>Cons:</b> Extremely slow for large datasets. Inefficient use of information.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 2: Two-Pass Hash Map -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Two-Pass Hash Map</h2>
+                <p class="text-slate-600 mt-2">First, build a dictionary mapping values to indices. Then, iterate again to see if each element's <b>complement</b> (target - num) exists in the map.</p>
+            </div>
+
+            <!-- Animation 2 -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="flex flex-col items-center">
+                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase">Input Array</p>
+                        <div id="tp-array" class="flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">Hash Map (Value → Index)</p>
+                        <div id="tp-map" class="bg-white rounded-lg border min-h-[150px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4">
+                    <button onclick="resetTP()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepTP()" id="btn-tp" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="tp-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Phase 1: Building the Map...</div>
+            </div>
+
+            <!-- Code 2 -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span>[] <span class="method">twoSum</span>(<span class="keyword">int</span>[] nums, <span class="keyword">int</span> target) {
+    Map&lt;Integer, Integer&gt; numToIndexMap = <span class="keyword">new</span> HashMap&lt;&gt;();
+    
+    <span class="comment">// Pass 1: Build the map</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = 0; i &lt; nums.length; i++) {
+        numToIndexMap.put(nums[i], i);
+    }
+    
+    <span class="comment">// Pass 2: Find the complement</span>
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = 0; i &lt; nums.length; i++) {
+        <span class="keyword">int</span> complement = target - nums[i];
+        <span class="keyword">if</span> (numToIndexMap.containsKey(complement) &amp;&amp; numToIndexMap.get(complement) != i) {
+            <span class="keyword">return new int</span>[] { i, numToIndexMap.get(complement) };
+        }
+    }
+    <span class="keyword">return new int</span>[] {};
+}
+                </div>
+            </div>
+
+            <!-- Analysis 2 -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n)</b>. We traverse the list twice, but Hash Map lookups are O(1).</p>
+                    <p><b>Space Complexity:</b> <b>O(n)</b>. We store all elements in the Map.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Much faster than brute force. Decouples counting from searching.</p>
+                    <p><b>Cons:</b> Requires O(n) extra space. Two passes through the data.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 3: One-Pass Hash Map -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: One-Pass Hash Map (Optimal)</h2>
+                <p class="text-slate-600 mt-2">Search and insert simultaneously. For each number, check if its complement is <b>already</b> in the map. If not, add the current number and keep moving.</p>
+            </div>
+
+            <!-- Animation 3 -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="flex flex-col items-center">
+                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase">Input Array</p>
+                        <div id="op-array" class="flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">Hash Map (History)</p>
+                        <div id="op-map" class="bg-white rounded-lg border min-h-[150px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4">
+                    <button onclick="resetOP()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepOP()" id="btn-op" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="op-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Waiting to start...</div>
+            </div>
+
+            <!-- Code 3 -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span>[] <span class="method">twoSum</span>(<span class="keyword">int</span>[] nums, <span class="keyword">int</span> target) {
+    Map&lt;Integer, Integer&gt; prevMap = <span class="keyword">new</span> HashMap&lt;&gt;();
+    
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = 0; i &lt; nums.length; i++) {
+        <span class="keyword">int</span> complement = target - nums[i];
+        
+        <span class="keyword">if</span> (prevMap.containsKey(complement)) {
+            <span class="keyword">return new int</span>[] { prevMap.get(complement), i };
+        }
+        
+        prevMap.put(nums[i], i);
+    }
+    <span class="keyword">return new int</span>[] {};
+}
+                </div>
+            </div>
+
+            <!-- Analysis 3 -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n)</b>. One single pass through the array.</p>
+                    <p><b>Space Complexity:</b> <b>O(n)</b>. Still requires a map to store seen values.</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Key takeaway</h4>
+                    <p>This is the industry-standard solution. It is efficient in both time and logic complexity.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Comparison Matrix</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold text-slate-700">Approach</th>
+                            <th class="p-4 font-bold text-slate-700">Time</th>
+                            <th class="p-4 font-bold text-slate-700">Space</th>
+                            <th class="p-4 font-bold text-slate-700">Complexity</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 font-medium">Brute Force</td>
+                            <td class="p-4 text-red-600">O(n²)</td>
+                            <td class="p-4 text-emerald-600">O(1)</td>
+                            <td class="p-4">High Time</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium">Two-Pass Hash Map</td>
+                            <td class="p-4 text-emerald-600">O(n)</td>
+                            <td class="p-4 text-red-600">O(n)</td>
+                            <td class="p-4">Low Time</td>
+                        </tr>
+                        <tr class="bg-emerald-50/30">
+                            <td class="p-4 font-bold text-emerald-700">One-Pass Hash Map</td>
+                            <td class="p-4 text-emerald-600">O(n)</td>
+                            <td class="p-4 text-red-600">O(n)</td>
+                            <td class="p-4 font-bold text-emerald-700">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Core Pattern</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• Finding a "match" for current element? Use a <b>Hash Map</b>.</li>
+                        <li>• <b>Complement</b> logic: <code>target - nums[i] = complement</code>.</li>
+                        <li>• "One-pass" usually means checking the map before inserting.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Follow-up Questions</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• What if the array is <b>sorted</b>? Use <b>Two Pointers</b> (O(n) time, O(1) space).</li>
+                        <li>• Can we do better than O(n) space? Not without sorting.</li>
+                        <li>• What if there are multiple pairs? Use a list to store all results.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400">
+            Interactive Algorithmic Learning - Created for Mastery.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- Shared Data ---
+        const nums = [2, 7, 11, 15];
+        const target = 9;
+
+        // --- Brute Force Logic ---
+        let bI = 0;
+        let bJ = 1;
+        let bFound = false;
+
+        function renderBrute() {
+            const container = document.getElementById('brute-array');
+            container.innerHTML = nums.map((n, idx) => {
+                let statusClass = '';
+                if (idx === bI) statusClass = 'cell-active-i';
+                if (idx === bJ) statusClass = 'cell-active-j';
+                if (bFound && (idx === bI || idx === bJ)) statusClass = 'cell-match';
+
+                return `
+                    <div class="array-cell ${statusClass}">
+                        ${idx === bI ? '<span class="pointer-label text-blue-600">i</span>' : ''}
+                        ${idx === bJ ? '<span class="pointer-label text-amber-600">j</span>' : ''}
+                        ${n}
+                    </div>
+                `;
+            }).join('');
+
+            const calc = document.getElementById('brute-calc');
+            if (bFound) {
+                calc.innerHTML = `<span class="text-emerald-600">${nums[bI]} + ${nums[bJ]} = ${target}! Found!</span>`;
+            } else {
+                calc.innerHTML = `${nums[bI]} + ${nums[bJ]} = ${nums[bI] + nums[bJ]}`;
+            }
+        }
+
+        function stepBrute() {
+            if (bFound) return;
+            
+            if (nums[bI] + nums[bJ] === target) {
+                bFound = true;
+                document.getElementById('btn-brute').disabled = true;
+                renderBrute();
+                return;
+            }
+
+            bJ++;
+            if (bJ >= nums.length) {
+                bI++;
+                bJ = bI + 1;
+            }
+            renderBrute();
+        }
+
+        function resetBrute() {
+            bI = 0; bJ = 1; bFound = false;
+            document.getElementById('btn-brute').disabled = false;
+            renderBrute();
+        }
+
+        // --- Two-Pass Logic ---
+        let tpIdx = 0;
+        let tpPass = 1; // 1 for mapping, 2 for searching
+        let tpMap = {};
+        let tpFound = false;
+
+        function renderTP() {
+            const arr = document.getElementById('tp-array');
+            const map = document.getElementById('tp-map');
+            
+            arr.innerHTML = nums.map((n, idx) => {
+                let cls = '';
+                if (tpIdx === idx) cls = 'cell-active-i';
+                if (tpFound && (idx === tpIdx || idx === tpMap[target-nums[idx]])) cls = 'cell-match';
+                return `<div class="array-cell ${cls}">${n}</div>`;
+            }).join('');
+
+            map.innerHTML = Object.entries(tpMap).map(([k, v]) => `
+                <div class="map-row">
+                    <span class="font-bold text-slate-400">Key: ${k}</span>
+                    <span class="text-indigo-600">Idx: ${v}</span>
+                </div>
+            `).join('');
+        }
+
+        function stepTP() {
+            if (tpFound) return;
+
+            if (tpPass === 1) {
+                tpMap[nums[tpIdx]] = tpIdx;
+                tpIdx++;
+                if (tpIdx >= nums.length) {
+                    tpPass = 2;
+                    tpIdx = 0;
+                    document.getElementById('tp-status').innerText = "Phase 2: Searching for Complement...";
+                }
+            } else {
+                let comp = target - nums[tpIdx];
+                if (tpMap[comp] !== undefined && tpMap[comp] !== tpIdx) {
+                    tpFound = true;
+                    document.getElementById('tp-status').innerHTML = `<span class="text-emerald-600">Found! Index ${tpIdx} and ${tpMap[comp]}</span>`;
+                    document.getElementById('btn-tp').disabled = true;
+                } else {
+                    tpIdx++;
+                }
+            }
+            renderTP();
+        }
+
+        function resetTP() {
+            tpIdx = 0; tpPass = 1; tpMap = {}; tpFound = false;
+            document.getElementById('btn-tp').disabled = false;
+            document.getElementById('tp-status').innerText = "Phase 1: Building the Map...";
+            renderTP();
+        }
+
+        // --- One-Pass Logic ---
+        let opIdx = 0;
+        let opMap = {};
+        let opFound = false;
+
+        function renderOP() {
+            const arr = document.getElementById('op-array');
+            const map = document.getElementById('op-map');
+            
+            arr.innerHTML = nums.map((n, idx) => {
+                let cls = '';
+                if (opIdx === idx) cls = 'cell-active-i';
+                if (opFound && (idx === opIdx || nums[idx] === (target - nums[opIdx]))) cls = 'cell-match';
+                return `<div class="array-cell ${cls}">${n}</div>`;
+            }).join('');
+
+            map.innerHTML = Object.entries(opMap).map(([k, v]) => `
+                <div class="map-row">
+                    <span class="font-bold text-slate-400">Val: ${k}</span>
+                    <span class="text-emerald-600">Idx: ${v}</span>
+                </div>
+            `).join('');
+        }
+
+        function stepOP() {
+            if (opFound || opIdx >= nums.length) return;
+
+            let num = nums[opIdx];
+            let comp = target - num;
+
+            if (opMap[comp] !== undefined) {
+                opFound = true;
+                document.getElementById('op-status').innerHTML = `<span class="text-emerald-600">Success! Found complement ${comp} in history.</span>`;
+                document.getElementById('btn-op').disabled = true;
+            } else {
+                document.getElementById('op-status').innerText = `Complement ${comp} not found. Adding ${num} to history.`;
+                opMap[num] = opIdx;
+                opIdx++;
+            }
+            renderOP();
+        }
+
+        function resetOP() {
+            opIdx = 0; opMap = {}; opFound = false;
+            document.getElementById('btn-op').disabled = false;
+            document.getElementById('op-status').innerText = "Waiting to start...";
+            renderOP();
+        }
+
+        // Initialize all
+        window.onload = () => {
+            renderBrute();
+            renderTP();
+            renderOP();
+        };
+    </script>
+</body>
+</html>

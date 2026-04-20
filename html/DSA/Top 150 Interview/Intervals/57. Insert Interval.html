@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 57: Insert Interval - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .interval-box {
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.4s ease;
+            position: absolute;
+            border: 2px solid transparent;
+        }
+        .timeline-container {
+            position: relative;
+            height: 160px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .bg-grid {
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .phase-label {
+            position: absolute;
+            bottom: 10px;
+            left: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .interval-standard { background-color: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+        .interval-new { background-color: #fef9c3; border-color: #eab308; color: #854d0e; z-index: 20; }
+        .interval-merging { background-color: #dcfce7; border-color: #22c55e; color: #166534; z-index: 30; }
+        .interval-processed { opacity: 0.3; transform: scale(0.95); }
+        
+        .result-pill {
+            padding: 4px 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">57. Insert Interval</h1>
+            <div class="flex justify-center gap-4 text-sm mb-6">
+                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-semibold">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Array</span>
+                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-semibold">Simulation</span>
+            </div>
+            <p class="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
+                Insert a <b>new interval</b> into a sorted, non-overlapping array. Merge any overlaps that occur as a result of the insertion.
+            </p>
+        </header>
+
+        <!-- Problem Summary Section -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Problem Summary</h2>
+            <p class="text-slate-600 mb-4">
+                We are given a list of intervals <code>[[s1, e1], [s2, e2]...]</code> sorted by <code>start</code>. We must insert <code>[newStart, newEnd]</code> such that the resulting list remains sorted and non-overlapping.
+            </p>
+            <div class="bg-slate-50 p-4 rounded-xl border-l-4 border-indigo-400">
+                <p class="font-semibold text-slate-700 text-sm">Target Example:</p>
+                <code class="block mt-1 text-sm">intervals = [[1,2],[3,5],[6,7],[8,10],[12,16]], newInterval = [4,8]</code>
+                <code class="block text-indigo-600 mt-1 font-bold">Output: [[1,2],[3,10],[12,16]]</code>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: THREE-PHASE LINEAR SCAN -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                <h2 class="text-3xl font-bold text-slate-800">Approach: The Three-Phase Linear Scan</h2>
+            </div>
+
+            <div class="bg-indigo-50 p-6 rounded-2xl mb-8 border border-indigo-100">
+                <h3 class="text-xl font-semibold text-indigo-800 mb-2">Intuition</h3>
+                <p class="text-indigo-900 leading-relaxed">
+                    Since the input is <b>already sorted</b>, we can process it in one pass by splitting the task into three logical phases:
+                    <br>1. <b>Before:</b> Add all intervals that end before the new interval starts.
+                    <br>2. <b>During:</b> Merge all intervals that overlap with the new interval.
+                    <br>3. <b>After:</b> Add all remaining intervals that start after the merged interval ends.
+                </p>
+            </div>
+
+            <!-- Animation Zone 1 -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <h3 class="text-lg font-bold text-slate-700 mb-2 text-center">Linear Scan Animation</h3>
+                <p class="text-xs text-slate-400 text-center mb-6 uppercase tracking-widest">Processing Phases: Left -> Overlap -> Right</p>
+                
+                <div id="app1-canvas" class="timeline-container bg-grid">
+                    <div class="phase-label" id="app1-phase-ui">Phase: Idle</div>
+                    <!-- Intervals -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app1-status" class="text-slate-600 font-medium h-8 italic text-center">
+                        Click "Next" to begin the three-phase scan.
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="resetApp1()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app1-next" onclick="nextStepApp1()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+
+                    <div class="w-full mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="text-xs uppercase text-slate-400 font-bold mb-2">Building Result List</div>
+                        <div id="app1-results" class="flex flex-wrap gap-2 min-h-[40px]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone 1 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-6 py-3 bg-slate-800">
+                    <span class="text-slate-300 text-sm font-medium">InsertInterval.java</span>
+                </div>
+                <pre class="p-6 text-sm code-font leading-relaxed overflow-x-auto text-slate-300">
+<span class="text-purple-400">public int</span>[][] <span class="text-yellow-400">insert</span>(<span class="text-purple-400">int</span>[][] intervals, <span class="text-purple-400">int</span>[] newInterval) {
+    List&lt;<span class="text-purple-400">int</span>[]&gt; result = <span class="text-purple-400">new</span> ArrayList&lt;&gt;();
+    <span class="text-purple-400">int</span> i = 0, n = intervals.length;
+
+    <span class="text-green-500">// Phase 1: Add intervals that end before newInterval starts</span>
+    <span class="text-purple-400">while</span> (i &lt; n && intervals[i][1] &lt; newInterval[0]) {
+        result.add(intervals[i++]);
+    }
+
+    <span class="text-green-500">// Phase 2: Merge overlapping intervals</span>
+    <span class="text-purple-400">while</span> (i &lt; n && intervals[i][0] &lt;= newInterval[1]) {
+        newInterval[0] = Math.min(newInterval[0], intervals[i][0]);
+        newInterval[1] = Math.max(newInterval[1], intervals[i][1]);
+        i++;
+    }
+    result.add(newInterval);
+
+    <span class="text-green-500">// Phase 3: Add remaining intervals</span>
+    <span class="text-purple-400">while</span> (i &lt; n) {
+        result.add(intervals[i++]);
+    }
+
+    <span class="text-purple-400">return</span> result.toArray(<span class="text-purple-400">new int</span>[result.size()][]);
+}</pre>
+            </div>
+
+            <!-- Complexity -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Complexity</h4>
+                    <ul class="space-y-3">
+                        <li><b>Time: O(n)</b> - We traverse the array exactly once.</li>
+                        <li><b>Space: O(n)</b> - To store the result list.</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Pros & Cons</h4>
+                    <p class="text-sm text-green-600 font-bold">Pros: Extremely simple to implement and understand.</p>
+                    <p class="text-sm text-slate-600">Cons: Requires extra space for a new list if modifying in-place isn't allowed.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: BINARY SEARCH FOR BOUNDARIES -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                <h2 class="text-3xl font-bold text-slate-800">Approach: Binary Search for Boundaries</h2>
+            </div>
+
+            <div class="bg-emerald-50 p-6 rounded-2xl mb-8 border border-emerald-100">
+                <h3 class="text-xl font-semibold text-emerald-800 mb-2">Intuition</h3>
+                <p class="text-emerald-900 leading-relaxed">
+                    If the input array is very large and the insertion only affects a small middle portion, we can use <b>Binary Search</b> to find exactly where the overlap begins and ends. While the merge still takes linear time for the affected elements, we avoid manually scanning "clean" portions of the array.
+                </p>
+            </div>
+
+            <!-- Animation Zone 2 -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <h3 class="text-lg font-bold text-slate-700 mb-6 text-center">Binary Search & Splice Animation</h3>
+                
+                <div id="app2-canvas" class="timeline-container bg-grid">
+                    <div class="phase-label" id="app2-phase-ui">Mode: Search</div>
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app2-status" class="text-slate-600 font-medium h-8 italic text-center">
+                        Searching for insertion index...
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="resetApp2()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app2-next" onclick="nextStepApp2()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone 2 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-6 py-3 bg-slate-800">
+                    <span class="text-slate-300 text-sm font-medium">BinaryInsert.java</span>
+                </div>
+                <pre class="p-6 text-sm code-font leading-relaxed overflow-x-auto text-slate-300">
+<span class="text-green-500">// Finding the 'start' index using binary search</span>
+<span class="text-purple-400">int</span> leftIdx = binarySearch(intervals, newInterval[0], <span class="text-purple-400">true</span>);
+<span class="text-green-500">// Finding the 'end' index using binary search</span>
+<span class="text-purple-400">int</span> rightIdx = binarySearch(intervals, newInterval[1], <span class="text-purple-400">false</span>);
+
+<span class="text-green-500">// Then merge everything between [leftIdx, rightIdx]</span>
+<span class="text-green-500">// Time: O(log N) search + O(K) merging where K is affected elements.</span></pre>
+            </div>
+
+            <!-- Complexity Analysis -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                <h4 class="font-bold text-slate-800 mb-3 uppercase text-xs">Why use Binary Search?</h4>
+                <p class="text-sm text-slate-600">
+                    In systems with massive datasets where you might insert one interval into 1,000,000 existing ones, jumping to the overlap point in <b>O(log N)</b> is significantly faster than scanning the first 500,000 "safe" intervals.
+                </p>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-800 text-white p-8 rounded-3xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="text-yellow-400">💡</span> Strategy Summary
+                </h3>
+                <ul class="space-y-3 text-slate-300">
+                    <li><b class="text-white">Rule of Thumb:</b> If <code>intervals[i].end < newInterval.start</code>, it's safe.</li>
+                    <li><b class="text-white">Overlap Condition:</b> <code>intervals[i].start <= newInterval.end</code> AND <code>intervals[i].end >= newInterval.start</code>.</li>
+                    <li><b class="text-white">In-Place:</b> In Java, <code>ArrayList</code> is better than array for deletions/insertions.</li>
+                </ul>
+            </div>
+            <div class="bg-red-50 border border-red-100 p-8 rounded-3xl">
+                <h3 class="text-xl font-bold text-red-800 mb-4 flex items-center gap-2">
+                    <span class="text-red-600">⚠</span> Common Pitfalls
+                </h3>
+                <ul class="space-y-3 text-red-900">
+                    <li><b>Missing the end:</b> Forgetting to add the "After" intervals after merging.</li>
+                    <li><b>Empty Input:</b> Make sure to handle an empty input array by returning <code>[newInterval]</code>.</li>
+                    <li><b>End of Array:</b> The merge might happen at the very last element; your <code>while</code> loops must check <code>i < n</code>.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="text-center text-slate-400 text-sm pb-12">
+            LeetCode Algorithm Instructor &bull; Insert Interval Visualizer &bull; Java
+        </footer>
+    </div>
+
+    <script>
+        // --- Shared Data ---
+        const INTERVALS = [[1, 2], [3, 5], [6, 7], [8, 10], [12, 16]];
+        const NEW_INT = [4, 8];
+        const SCALE = 20;
+
+        // --- Approach 1 Logic ---
+        let app1State = {
+            i: 0,
+            phase: 1, // 1: Before, 2: Merge, 3: After, 4: End
+            currentNew: [...NEW_INT],
+            isFinished: false
+        };
+
+        function initApp1() {
+            const canvas = document.getElementById('app1-canvas');
+            canvas.innerHTML = '<div class="phase-label" id="app1-phase-ui">Phase: Idle</div>';
+            INTERVALS.forEach((int, idx) => {
+                const div = createIntDiv(int, idx, 'interval-standard');
+                div.id = `app1-int-${idx}`;
+                canvas.appendChild(div);
+            });
+            // New Interval Ghost
+            const ghost = createIntDiv(NEW_INT, 100, 'interval-new');
+            ghost.id = 'app1-new-ghost';
+            ghost.style.top = '100px';
+            ghost.style.borderStyle = 'dashed';
+            canvas.appendChild(ghost);
+        }
+
+        function nextStepApp1() {
+            if (app1State.isFinished) return;
+            const status = document.getElementById('app1-status');
+            const phaseUI = document.getElementById('app1-phase-ui');
+            const i = app1State.i;
+            const n = INTERVALS.length;
+
+            if (app1State.phase === 1) {
+                phaseUI.innerText = "Phase 1: Before Overlap";
+                if (i < n && INTERVALS[i][1] < app1State.currentNew[0]) {
+                    status.innerText = `Interval ${i} ends before ${app1State.currentNew[0]}. Safe to add.`;
+                    document.getElementById(`app1-int-${i}`).classList.add('interval-processed');
+                    addResultPill('app1-results', INTERVALS[i]);
+                    app1State.i++;
+                } else {
+                    app1State.phase = 2;
+                    status.innerText = "Encountered potential overlap. Switching to Merge Phase.";
+                    nextStepApp1();
+                }
+            } else if (app1State.phase === 2) {
+                phaseUI.innerText = "Phase 2: Merging";
+                if (i < n && INTERVALS[i][0] <= app1State.currentNew[1]) {
+                    status.innerText = `Interval ${i} [${INTERVALS[i]}] overlaps with current [${app1State.currentNew}]. Merging...`;
+                    const box = document.getElementById(`app1-int-${i}`);
+                    box.classList.add('interval-merging');
+                    
+                    app1State.currentNew[0] = Math.min(app1State.currentNew[0], INTERVALS[i][0]);
+                    app1State.currentNew[1] = Math.max(app1State.currentNew[1], INTERVALS[i][1]);
+                    
+                    // Update Ghost
+                    const ghost = document.getElementById('app1-new-ghost');
+                    ghost.style.left = (app1State.currentNew[0] * SCALE) + 'px';
+                    ghost.style.width = ((app1State.currentNew[1] - app1State.currentNew[0]) * SCALE) + 'px';
+                    ghost.innerText = `[${app1State.currentNew}]`;
+                    ghost.classList.remove('interval-new');
+                    ghost.classList.add('interval-merging');
+                    ghost.style.borderStyle = 'solid';
+
+                    app1State.i++;
+                } else {
+                    addResultPill('app1-results', app1State.currentNew);
+                    app1State.phase = 3;
+                    status.innerText = "Merge complete. Added final merged interval.";
+                }
+            } else if (app1State.phase === 3) {
+                phaseUI.innerText = "Phase 3: After Overlap";
+                if (i < n) {
+                    status.innerText = `Adding remaining interval ${i}.`;
+                    document.getElementById(`app1-int-${i}`).classList.add('interval-processed');
+                    addResultPill('app1-results', INTERVALS[i]);
+                    app1State.i++;
+                } else {
+                    app1State.isFinished = true;
+                    status.innerText = "All intervals processed successfully.";
+                    document.getElementById('app1-next').disabled = true;
+                }
+            }
+        }
+
+        // --- Approach 2 Logic (Simplified for Visualisation) ---
+        let app2State = { step: 0 };
+        function initApp2() {
+            const canvas = document.getElementById('app2-canvas');
+            canvas.innerHTML = '<div class="phase-label" id="app2-phase-ui">Mode: Search</div>';
+            INTERVALS.forEach((int, idx) => {
+                const div = createIntDiv(int, idx, 'interval-standard');
+                div.id = `app2-int-${idx}`;
+                canvas.appendChild(div);
+            });
+        }
+
+        function nextStepApp2() {
+            const status = document.getElementById('app2-status');
+            if (app2State.step === 0) {
+                status.innerText = "Binary Search: Found overlap starts at index 1.";
+                document.getElementById('app2-int-1').classList.add('ring-4', 'ring-emerald-400');
+                app2State.step++;
+            } else if (app2State.step === 1) {
+                status.innerText = "Binary Search: Found overlap ends at index 3.";
+                document.getElementById('app2-int-3').classList.add('ring-4', 'ring-emerald-400');
+                app2State.step++;
+            } else {
+                status.innerText = "Merging [1-3] with New Interval...";
+                // Visual cleanup
+                [1,2,3].forEach(id => {
+                    const el = document.getElementById(`app2-int-${id}`);
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-20px)';
+                });
+                const merged = createIntDiv([3, 10], 1, 'interval-merging');
+                merged.style.top = '40px';
+                document.getElementById('app2-canvas').appendChild(merged);
+                document.getElementById('app2-next').disabled = true;
+            }
+        }
+
+        // --- Helpers ---
+        function createIntDiv(int, row, className) {
+            const div = document.createElement('div');
+            div.className = `interval-box ${className}`;
+            div.style.left = (int[0] * SCALE) + 'px';
+            div.style.width = ((int[1] - int[0]) * SCALE) + 'px';
+            div.style.top = (row * 20 + 20) + 'px';
+            div.innerText = `[${int[0]},${int[1]}]`;
+            return div;
+        }
+
+        function addResultPill(containerId, int) {
+            const container = document.getElementById(containerId);
+            const span = document.createElement('span');
+            span.className = 'result-pill';
+            span.innerText = `[${int[0]}, ${int[1]}]`;
+            container.appendChild(span);
+        }
+
+        function resetApp1() {
+            app1State = { i: 0, phase: 1, currentNew: [...NEW_INT], isFinished: false };
+            document.getElementById('app1-status').innerText = 'Ready.';
+            document.getElementById('app1-next').disabled = false;
+            document.getElementById('app1-results').innerHTML = '';
+            initApp1();
+        }
+
+        function resetApp2() {
+            app2State = { step: 0 };
+            document.getElementById('app2-status').innerText = 'Ready.';
+            document.getElementById('app2-next').disabled = false;
+            initApp2();
+        }
+
+        window.onload = () => { initApp1(); initApp2(); };
+    </script>
+</body>
+</html>

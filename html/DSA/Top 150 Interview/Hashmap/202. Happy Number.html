@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 202: Happy Number Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .number-node {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            font-weight: 700;
+            background: white;
+            position: relative;
+        }
+
+        .active-node {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.1);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+
+        .happy-node {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+
+        .unhappy-node {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .pointer-tag {
+            position: absolute;
+            top: -30px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .tag-slow { background-color: #f59e0b; }
+        .tag-fast { background-color: #8b5cf6; }
+
+        .calculation-box {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">202. Happy Number</h1>
+            <p class="text-lg text-slate-600">Detecting cycles in the sequence of digit-square sums.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Table</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Two Pointers</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Definition</h2>
+            <p class="mb-4 text-slate-700">Write an algorithm to determine if a number <b>n</b> is happy.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                <p>A <b>happy number</b> is defined by the following process:</p>
+                <ol class="list-decimal ml-5 space-y-1 text-slate-700">
+                    <li>Starting with any positive integer, replace the number by the sum of the squares of its digits.</li>
+                    <li>Repeat the process until the number equals 1 (at which point it will stay 1).</li>
+                    <li>Otherwise, it loops endlessly in a <b>cycle</b> which does not include 1.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Approach 1: Hash Set Cycle Detection -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: HashSet Tracking</h2>
+                <p class="text-slate-600 mt-2">The most straightforward method. We keep track of every sum we calculate. If we ever see the same sum twice, we've hit a cycle and the number isn't happy.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-8">
+                    <div id="set-sequence" class="flex flex-wrap justify-center gap-4 min-h-[100px]"></div>
+                    <div class="w-full max-w-md">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">HashSet (Seen Sums)</p>
+                        <div id="set-history" class="bg-slate-50 p-4 rounded-xl border flex flex-wrap gap-2 min-h-[60px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetSet()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepSet()" id="btn-set" class="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition">Transform Digit</button>
+                </div>
+                <div id="set-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to calculate...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-800">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isHappy</span>(<span class="type">int</span> number) {
+    <span class="type">Set</span>&lt;<span class="type">Integer</span>&gt; seenNumbers = <span class="keyword">new</span> <span class="type">HashSet</span>&lt;&gt;();
+    
+    <span class="keyword">while</span> (number != 1) {
+        <span class="keyword">if</span> (seenNumbers.<span class="method">contains</span>(number)) {
+            <span class="keyword">return false</span>; <span class="comment">// Cycle detected!</span>
+        }
+        seenNumbers.<span class="method">add</span>(number);
+        number = <span class="method">getNextSumOfSquares</span>(number);
+    }
+    
+    <span class="keyword">return true</span>;
+}
+
+<span class="keyword">private int</span> <span class="method">getNextSumOfSquares</span>(<span class="type">int</span> n) {
+    <span class="type">int</span> totalSum = 0;
+    <span class="keyword">while</span> (n &gt; 0) {
+        <span class="type">int</span> digit = n % 10;
+        totalSum += digit * digit;
+        n /= 10;
+    }
+    <span class="keyword">return</span> totalSum;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(log N)</b>. Calculating digit squares for a number N takes log N steps. The total number of steps in the sequence is small (even for 2^31-1, the next step is only 730).</p>
+                    <p><b>Space Complexity:</b> <b>O(log N)</b> to store seen values in the HashSet.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Intuitive and easy to debug. Directly implements the cycle detection rule.</p>
+                    <p><b>Cons:</b> Uses extra memory. Not the most space-efficient for competitive programming.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Floyd's Tortoise and Hare -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-purple-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Floyd's Cycle-Finding Algorithm</h2>
+                <p class="text-slate-600 mt-2">The "Tortoise and Hare" trick. One pointer moves through the sequence at 1x speed, the other at 2x speed. If they collide at a number other than 1, there is a cycle.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-12">
+                    <div id="floyd-sequence" class="flex flex-wrap justify-center gap-6 min-h-[120px] pt-8"></div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetFloyd()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepFloyd()" id="btn-floyd" class="px-6 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition">Advance Pointers</button>
+                </div>
+                <div id="floyd-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Waiting to start race...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-800">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isHappy</span>(<span class="type">int</span> n) {
+    <span class="type">int</span> slowRunner = n;
+    <span class="type">int</span> fastRunner = <span class="method">getNext</span>(n);
+    
+    <span class="keyword">while</span> (fastRunner != 1 &amp;&amp; slowRunner != fastRunner) {
+        slowRunner = <span class="method">getNext</span>(slowRunner);      <span class="comment">// 1 step</span>
+        fastRunner = <span class="method">getNext</span>(<span class="method">getNext</span>(fastRunner)); <span class="comment">// 2 steps</span>
+    }
+    
+    <span class="keyword">return</span> fastRunner == 1;
+}
+
+<span class="keyword">private int</span> <span class="method">getNext</span>(<span class="type">int</span> n) {
+    <span class="type">int</span> totalSum = 0;
+    <span class="keyword">while</span> (n &gt; 0) {
+        <span class="type">int</span> d = n % 10;
+        totalSum += d * d;
+        n /= 10;
+    }
+    <span class="keyword">return</span> totalSum;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <h4 class="font-bold text-purple-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(log N)</b>. Similar to the HashSet method, but potentially more steps until the fast pointer catches the slow one.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. We only use two integer pointers. <b>Memory Optimal.</b></p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Constant space. Extremely common interview pattern for cycle detection.</p>
+                    <p><b>Cons:</b> Can be slightly harder to visualize logic-wise compared to a HashSet.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Hardcoded Cycle Detection -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Mathematical Cycle Observation</h2>
+                <p class="text-slate-600 mt-2">Mathematical proofs show that any number that isn't happy <b>always</b> eventually enters the specific cycle: <b>4 → 16 → 37 → 58 → 89 → 145 → 42 → 20 → 4</b>. We can just check for these numbers!</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="grid grid-cols-4 gap-4" id="math-grid">
+                        <div class="number-node border-emerald-500 bg-emerald-50" title="Cycle Start">4</div>
+                        <div class="number-node border-slate-200">16</div>
+                        <div class="number-node border-slate-200">37</div>
+                        <div class="number-node border-slate-200">58</div>
+                        <div class="number-node border-slate-200">89</div>
+                        <div class="number-node border-slate-200">145</div>
+                        <div class="number-node border-slate-200">42</div>
+                        <div class="number-node border-slate-200">20</div>
+                    </div>
+                    <div class="calculation-box w-full max-w-sm text-center">
+                        <p class="text-xs uppercase text-slate-500 font-bold mb-2">Current Probe</p>
+                        <div id="math-probe" class="text-2xl font-bold text-emerald-600">-</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetMath()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepMath()" id="btn-math" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="math-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Checking against known cycle...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-800">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isHappy</span>(<span class="type">int</span> n) {
+    <span class="comment">// Any number that isn't happy will eventually hit 4 and stay in that cycle</span>
+    <span class="keyword">while</span> (n != 1 &amp;&amp; n != 4) {
+        n = <span class="method">getNext</span>(n);
+    }
+    <span class="keyword">return</span> n == 1;
+}
+
+<span class="keyword">private int</span> <span class="method">getNext</span>(<span class="type">int</span> n) {
+    <span class="type">int</span> sum = 0;
+    <span class="keyword">while</span> (n &gt; 0) {
+        <span class="type">int</span> d = n % 10;
+        sum += d * d;
+        n /= 10;
+    }
+    <span class="keyword">return</span> sum;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(log N)</b>. This is the fastest practical simulation because it stops as soon as it hits any part of the cycle.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. No auxiliary structures needed.</p>
+                </div>
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <h4 class="font-bold text-amber-800 mb-2">Critical Context</h4>
+                    <p><b>Note:</b> In an interview, you should explain <i>why</i> you chose 4 (as the representative of the cycle). It shows deep mathematical preparation but is less "generic" than Floyd's algorithm.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Efficiency Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Robustness</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 font-medium">HashSet</td>
+                            <td class="p-4 text-slate-500">O(log N)</td>
+                            <td class="p-4 text-red-500 font-bold">O(log N)</td>
+                            <td class="p-4 text-emerald-600">Highest</td>
+                        </tr>
+                        <tr class="bg-emerald-50/20">
+                            <td class="p-4 font-bold text-emerald-700">Floyd's Pointers</td>
+                            <td class="p-4 text-slate-500">O(log N)</td>
+                            <td class="p-4 text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 text-emerald-600">High</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium">Math Observation</td>
+                            <td class="p-4 text-emerald-600 font-bold">O(log N)</td>
+                            <td class="p-4 text-emerald-600 font-bold">O(1)</td>
+                            <td class="p-4 text-amber-600">Medium (Problem Specific)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Takeaways -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Mastery Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Key Takeaways</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• This problem is fundamentally about <b>Cycle Detection</b> in a sequence.</li>
+                        <li>• The "Happy Number" sequence is guaranteed to either hit 1 or enter a loop.</li>
+                        <li>• For any number N, the next sum drops quickly (9^2 * 10 digits = 810). This means the space searched is always finite and small.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Corner Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>n = 1</b>: Already happy.</li>
+                        <li>• <b>n = Large Integer</b>: log N handles the scale automatically.</li>
+                        <li>• <b>n = 7</b>: A happy number that takes several steps (49, 97, 130, 10, 1).</li>
+                        <li>• <b>n = 4</b>: The base cycle entry point.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400 text-sm">
+            Interactive Learning Artifact - Mastery of Digit Manipulation and Cycle Detection.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- HELPERS ---
+        function getNext(n) {
+            let totalSum = 0;
+            while (n > 0) {
+                let d = n % 10;
+                totalSum += d * d;
+                n = Math.floor(n / 10);
+            }
+            return totalSum;
+        }
+
+        // --- APPROACH 1: SET ---
+        let setN = 19; // Target happy example
+        let setHistory = [];
+        let setSeen = new Set();
+        let setDone = false;
+
+        function renderSet() {
+            const seqEl = document.getElementById('set-sequence');
+            const histEl = document.getElementById('set-history');
+            
+            seqEl.innerHTML = setHistory.map((v, i) => `
+                <div class="flex items-center gap-2">
+                    <div class="number-node ${i === setHistory.length - 1 ? 'active-node' : ''} ${v === 1 ? 'happy-node' : ''}">${v}</div>
+                    ${i < setHistory.length - 1 ? '<span class="text-slate-300 text-2xl">→</span>' : ''}
+                </div>
+            `).join('');
+
+            histEl.innerHTML = Array.from(setSeen).map(v => `
+                <div class="px-3 py-1 bg-white border border-blue-200 rounded text-sm font-bold text-blue-700">${v}</div>
+            `).join('');
+        }
+
+        function stepSet() {
+            if (setDone) return;
+            if (setHistory.length === 0) {
+                setHistory.push(setN);
+            } else {
+                let last = setHistory[setHistory.length - 1];
+                if (last === 1) {
+                    setDone = true;
+                    document.getElementById('set-status').innerHTML = "<span class='text-emerald-600 font-bold'>Success! Reached 1. Happy Number.</span>";
+                    document.getElementById('btn-set').disabled = true;
+                    renderSet();
+                    return;
+                }
+                if (setSeen.has(last)) {
+                    setDone = true;
+                    document.getElementById('set-status').innerHTML = "<span class='text-red-600 font-bold'>Cycle Found! Already saw " + last + ". Not Happy.</span>";
+                    document.getElementById('btn-set').disabled = true;
+                    renderSet();
+                    return;
+                }
+                setSeen.add(last);
+                let next = getNext(last);
+                setHistory.push(next);
+                document.getElementById('set-status').innerText = "Calculating next sum: " + next;
+            }
+            renderSet();
+        }
+
+        function resetSet() {
+            setN = 19; setHistory = []; setSeen = new Set(); setDone = false;
+            document.getElementById('btn-set').disabled = false;
+            document.getElementById('set-status').innerText = "Ready to calculate...";
+            renderSet();
+        }
+
+        // --- APPROACH 2: FLOYD ---
+        let slow = 2; // Unhappy start example
+        let fast = getNext(2);
+        let floydHistory = [2];
+        let fStep = 0;
+        let floydDone = false;
+
+        function renderFloyd() {
+            const seqEl = document.getElementById('floyd-sequence');
+            seqEl.innerHTML = floydHistory.map((v, i) => {
+                let tags = "";
+                const isSlow = i === fStep;
+                const isFast = i === fStep * 2 + 1; // Simplified visual mapping
+                
+                if (isSlow) tags += '<div class="pointer-tag tag-slow">Tortoise</div>';
+                if (isFast) tags += '<div class="pointer-tag tag-fast" style="top: -55px">Hare</div>';
+
+                return `
+                    <div class="flex items-center gap-2">
+                        <div class="number-node ${isSlow || isFast ? 'active-node' : ''} ${v === 1 ? 'happy-node' : ''}">
+                            ${tags}
+                            ${v}
+                        </div>
+                        ${i < floydHistory.length - 1 ? '<span class="text-slate-300 text-xl">→</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function stepFloyd() {
+            if (floydDone) return;
+            
+            fStep++;
+            // Simulate sequence growth
+            while (floydHistory.length < fStep * 2 + 2) {
+                let last = floydHistory[floydHistory.length - 1];
+                floydHistory.push(getNext(last));
+            }
+
+            let sVal = floydHistory[fStep];
+            let fVal = floydHistory[fStep * 2 + 1];
+
+            if (fVal === 1) {
+                floydDone = true;
+                document.getElementById('floyd-status').innerHTML = "<span class='text-emerald-600 font-bold'>Hare reached 1! Happy Number.</span>";
+                document.getElementById('btn-floyd').disabled = true;
+            } else if (sVal === fVal) {
+                floydDone = true;
+                document.getElementById('floyd-status').innerHTML = `<span class="text-red-600 font-bold">COLLISION! Slow and Fast met at ${sVal}. Not Happy.</span>`;
+                document.getElementById('btn-floyd').disabled = true;
+            } else {
+                document.getElementById('floyd-status').innerText = `Slow at ${sVal}, Fast at ${fVal}`;
+            }
+            renderFloyd();
+        }
+
+        function resetFloyd() {
+            slow = 2; fast = getNext(2); floydHistory = [2]; fStep = 0; floydDone = false;
+            document.getElementById('btn-floyd').disabled = false;
+            document.getElementById('floyd-status').innerText = "Waiting to start race...";
+            renderFloyd();
+        }
+
+        // --- APPROACH 3: MATH ---
+        let mathN = 7;
+        const knownCycle = [4, 16, 37, 58, 89, 145, 42, 20];
+        let mathDone = false;
+
+        function renderMath() {
+            const grid = document.getElementById('math-grid');
+            grid.innerHTML = knownCycle.map(v => `
+                <div class="number-node ${mathN === v ? 'unhappy-node scale-110 shadow-lg' : 'border-slate-200 opacity-60'}">${v}</div>
+            `).join('');
+            document.getElementById('math-probe').innerText = mathN;
+        }
+
+        function stepMath() {
+            if (mathDone) return;
+            
+            if (mathN === 1) {
+                mathDone = true;
+                document.getElementById('math-status').innerHTML = "<span class='text-emerald-600 font-bold'>Reached 1. Happy!</span>";
+                document.getElementById('btn-math').disabled = true;
+            } else if (knownCycle.includes(mathN)) {
+                mathDone = true;
+                document.getElementById('math-status').innerHTML = "<span class='text-red-600 font-bold'>Hit the cycle value (" + mathN + "). Not Happy.</span>";
+                document.getElementById('btn-math').disabled = true;
+            } else {
+                mathN = getNext(mathN);
+                document.getElementById('math-status').innerText = "Stepping to " + mathN;
+            }
+            renderMath();
+        }
+
+        function resetMath() {
+            mathN = 7; mathDone = false;
+            document.getElementById('btn-math').disabled = false;
+            document.getElementById('math-status').innerText = "Checking against known cycle...";
+            renderMath();
+        }
+
+        window.onload = () => {
+            renderSet();
+            renderFloyd();
+            renderMath();
+        };
+    </script>
+</body>
+</html>

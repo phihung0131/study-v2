@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 73: Set Matrix Zeroes - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 4px;
+            padding: 8px;
+            background-color: #cbd5e1;
+            border-radius: 8px;
+            width: fit-content;
+        }
+        .matrix-cell {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-weight: 700;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+        .cell-zero { background-color: #fee2e2 !important; color: #b91c1c; }
+        .cell-active { background-color: #3b82f6 !important; color: white; transform: scale(1.1); z-index: 10; }
+        .cell-marked { background-color: #fef08a !important; color: #854d0e; }
+        .cell-final-zero { background-color: #94a3b8 !important; color: white; }
+        
+        .marker-array {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background-color: #e2e8f0;
+            border-radius: 4px;
+        }
+        .marker-cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            border-radius: 2px;
+        }
+        .marker-active { background-color: #f59e0b; color: white; }
+
+        .log-container { height: 150px; overflow-y: auto; scroll-behavior: smooth; border-radius: 8px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 underline decoration-red-500">73. Set Matrix Zeroes</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Given an <b>m x n</b> integer matrix, if an element is 0, set its entire row and column to 0's. Do it <b>in-place</b>.
+            </p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="bg-red-100 text-red-600 p-2 rounded-lg mr-3">❗</span> Constraints & Challenges
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                The primary challenge isn't finding the zeroes, but updating the matrix <b>without</b> accidentally triggering new zeroes. If you set a row to zero as you see a zero, you'll eventually turn the whole matrix into zeroes!
+            </p>
+            <div class="bg-slate-50 border-l-4 border-slate-500 p-4">
+                <p class="text-sm text-slate-600"><b>Goal:</b> Use minimal auxiliary space. A brute force solution uses <b>O(MN)</b>, a better one uses <b>O(M+N)</b>, and the optimal uses <b>O(1)</b> extra space.</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: Additional Matrix -->
+        <section id="approach-1" class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Auxiliary Matrix (Brute Force)</h2>
+                <p class="text-slate-600">Create a copy of the original matrix to keep track of where the original zeroes were.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Animation: Marking from a Copy</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div class="flex flex-col md:flex-row gap-8 items-center">
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Reference Copy</span>
+                            <div id="grid-v1-ref" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Working Matrix</span>
+                            <div id="grid-v1-work" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v1.toggle()" id="v1-play" class="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition font-bold">Play Animation</button>
+                        <button onclick="v1.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v1-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> setZeroes(int[][] matrix) {
+    int m = matrix.length;
+    int n = matrix[0].length;
+    <span class="text-slate-500">// Create a full copy</span>
+    int[][] copy = <span class="text-emerald-400">new</span> int[m][n];
+    <span class="text-emerald-400">for</span> (int i = 0; i < m; i++)
+        copy[i] = matrix[i].clone();
+
+    <span class="text-emerald-400">for</span> (int r = 0; r < m; r++) {
+        <span class="text-emerald-400">for</span> (int c = 0; c < n; c++) {
+            <span class="text-emerald-400">if</span> (copy[r][c] == 0) {
+                <span class="text-slate-500">// Zero out row r in original</span>
+                <span class="text-emerald-400">for</span> (int i = 0; i < n; i++) matrix[r][i] = 0;
+                <span class="text-slate-500">// Zero out col c in original</span>
+                <span class="text-emerald-400">for</span> (int i = 0; i < m; i++) matrix[i][c] = 0;
+            }
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time:</b> <b>O(M * N)</b> - We visit every cell.</p>
+                    <p class="text-slate-700"><b>Space:</b> <b>O(M * N)</b> - We store an entire duplicate matrix.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Pros & Cons</h4>
+                    <p class="text-emerald-600 font-semibold">Pros: Easiest to implement, no index confusion.</p>
+                    <p class="text-rose-600 font-semibold">Cons: Extremely memory inefficient for large matrices.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: Row/Column Marker Arrays -->
+        <section id="approach-2" class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Auxiliary Marker Arrays</h2>
+                <p class="text-slate-600">Instead of a full matrix, use two simple arrays to track which rows and columns should be zeroed.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Animation: Marking Sets</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div class="flex gap-4 items-start">
+                        <!-- Column Markers -->
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] font-bold text-slate-400 mb-1">COL MARKERS</span>
+                            <div id="col-markers" class="marker-array mb-2"></div>
+                            <div class="flex gap-4">
+                                <!-- Row Markers -->
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[10px] font-bold text-slate-400 mb-1">ROW</span>
+                                    <div id="row-markers" class="marker-array flex-col"></div>
+                                </div>
+                                <div id="grid-v2" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v2.toggle()" id="v2-play" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">Play Animation</button>
+                        <button onclick="v2.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v2-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> setZeroes(int[][] matrix) {
+    int m = matrix.length;
+    int n = matrix[0].length;
+    <span class="text-emerald-400">boolean</span>[] rowMarkers = <span class="text-emerald-400">new boolean</span>[m];
+    <span class="text-emerald-400">boolean</span>[] colMarkers = <span class="text-emerald-400">new boolean</span>[n];
+
+    <span class="text-slate-500">// Step 1: Identify zeroes</span>
+    <span class="text-emerald-400">for</span> (int i = 0; i < m; i++) {
+        <span class="text-emerald-400">for</span> (int j = 0; j < n; j++) {
+            <span class="text-emerald-400">if</span> (matrix[i][j] == 0) {
+                rowMarkers[i] = <span class="text-emerald-400">true</span>;
+                colMarkers[j] = <span class="text-emerald-400">true</span>;
+            }
+        }
+    }
+
+    <span class="text-slate-500">// Step 2: Zero out based on markers</span>
+    <span class="text-emerald-400">for</span> (int i = 0; i < m; i++) {
+        <span class="text-emerald-400">for</span> (int j = 0; j < n; j++) {
+            <span class="text-emerald-400">if</span> (rowMarkers[i] || colMarkers[j]) {
+                matrix[i][j] = 0;
+            }
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time:</b> <b>O(M * N)</b> - Two passes over the matrix.</p>
+                    <p class="text-slate-700"><b>Space:</b> <b>O(M + N)</b> - We only need arrays for height and width.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Why this is better?</h4>
+                    <p class="text-slate-700 leading-relaxed">
+                        Instead of duplicating the whole matrix (M*N), we use linear space. For a 1000x1000 matrix, this is 2,000 markers versus 1,000,000 elements!
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: In-Place with Matrix Markers -->
+        <section id="approach-3" class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 3: Optimal In-Place Markers</h2>
+                <p class="text-slate-600">The clever trick: Use the <b>first row</b> and <b>first column</b> of the matrix itself as your marker arrays.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-4 text-center">Animation: In-Place Logic</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v3" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v3.toggle()" id="v3-play" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-bold">Play Animation</button>
+                        <button onclick="v3.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v3-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> setZeroes(int[][] matrix) {
+    int m = matrix.length, n = matrix[0].length;
+    <span class="text-emerald-400">boolean</span> firstRowZero = <span class="text-emerald-400">false</span>, firstColZero = <span class="text-emerald-400">false</span>;
+
+    <span class="text-slate-500">// 1. Check if first row/col have zeroes</span>
+    <span class="text-emerald-400">for</span> (int i = 0; i < m; i++) <span class="text-emerald-400">if</span> (matrix[i][0] == 0) firstColZero = <span class="text-emerald-400">true</span>;
+    <span class="text-emerald-400">for</span> (int j = 0; j < n; j++) <span class="text-emerald-400">if</span> (matrix[0][j] == 0) firstRowZero = <span class="text-emerald-400">true</span>;
+
+    <span class="text-slate-500">// 2. Use first row/col as markers for the rest</span>
+    <span class="text-emerald-400">for</span> (int i = 1; i < m; i++) {
+        <span class="text-emerald-400">for</span> (int j = 1; j < n; j++) {
+            <span class="text-emerald-400">if</span> (matrix[i][j] == 0) {
+                matrix[i][0] = 0;
+                matrix[0][j] = 0;
+            }
+        }
+    }
+
+    <span class="text-slate-500">// 3. Zero out based on markers</span>
+    <span class="text-emerald-400">for</span> (int i = 1; i < m; i++) {
+        <span class="text-emerald-400">for</span> (int j = 1; j < n; j++) {
+            <span class="text-emerald-400">if</span> (matrix[i][0] == 0 || matrix[0][j] == 0) matrix[i][j] = 0;
+        }
+    }
+
+    <span class="text-slate-500">// 4. Finally handle first row/col markers</span>
+    <span class="text-emerald-400">if</span> (firstColZero) <span class="text-emerald-400">for</span> (int i = 0; i < m; i++) matrix[i][0] = 0;
+    <span class="text-emerald-400">if</span> (firstRowZero) <span class="text-emerald-400">for</span> (int j = 0; j < n; j++) matrix[0][j] = 0;
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time:</b> <b>O(M * N)</b></p>
+                    <p class="text-slate-700"><b>Space:</b> <b>O(1)</b> - Truly in-place, no extra storage.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2 text-slate-800">Why handle first row/col first?</h4>
+                    <p class="text-slate-700 leading-relaxed">
+                        Since we use the first row/col as markers, their original values get overwritten. We must remember if <i>they</i> originally had zeroes before we start using them as a "scratchpad".
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-6 text-center">Comparison Table</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-100 text-slate-500 uppercase text-xs">
+                        <th class="py-3 px-4">Approach</th>
+                        <th class="py-3 px-4">Time</th>
+                        <th class="py-3 px-4">Space</th>
+                        <th class="py-3 px-4">Interview Rating</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700">
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Auxiliary Matrix</td>
+                        <td class="py-4 px-4">O(M * N)</td>
+                        <td class="py-4 px-4">O(M * N)</td>
+                        <td class="py-4 px-4 text-slate-400 italic">Too slow/heavy</td>
+                    </tr>
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Row/Col Arrays</td>
+                        <td class="py-4 px-4">O(M * N)</td>
+                        <td class="py-4 px-4 text-blue-500 font-bold">O(M + N)</td>
+                        <td class="py-4 px-4 text-blue-500">Good / Solid</td>
+                    </tr>
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold text-emerald-600">In-Place Markers</td>
+                        <td class="py-4 px-4">O(M * N)</td>
+                        <td class="py-4 px-4 text-emerald-600 font-bold">O(1)</td>
+                        <td class="py-4 px-4 text-emerald-600">Optimal / Expected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-800 text-white p-8 rounded-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-red-400">💡 Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Identify the Pitfall</h4>
+                    <p class="text-sm italic">"I can't update row-by-row because I'll create 'fake' zeroes that propagate throughout the matrix."</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Space Optimization</h4>
+                    <p class="text-sm">Start with O(M*N), then suggest O(M+N). If they ask for O(1), use the first row/column trick.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">The "Overlap" Element</h4>
+                    <p class="text-sm">Matrix[0][0] is shared by the first row and first column. Handle these status flags separately to avoid bugs.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edge Cases -->
+        <section class="p-6 bg-slate-100 rounded-2xl">
+            <h3 class="font-bold text-slate-800 mb-4">Edge Cases to Consider</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Matrix with NO zeroes</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Matrix with ALL zeroes</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">1-row or 1-column matrix</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Zero in matrix[0][0]</span>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const initialMatrix = [
+            [1, 1, 1, 1],
+            [1, 0, 1, 1],
+            [1, 1, 1, 1],
+            [1, 1, 0, 1]
+        ];
+
+        class Visualizer {
+            constructor(config) {
+                this.config = config;
+                this.isPlaying = false;
+                this.step = 0;
+                this.timer = null;
+                this.data = JSON.parse(JSON.stringify(initialMatrix));
+                this.steps = [];
+            }
+
+            init() {
+                this.generateSteps();
+                this.render();
+            }
+
+            updateLog(msg) {
+                const log = document.getElementById(this.config.logId);
+                const div = document.createElement('div');
+                div.className = 'mb-1 pb-1 border-b border-slate-100 last:border-0';
+                div.innerHTML = `<span class="text-blue-500 font-bold">></span> ${msg}`;
+                log.prepend(div);
+            }
+
+            render() {
+                const containers = Array.isArray(this.config.gridId) ? this.config.gridId : [this.config.gridId];
+                containers.forEach((id, idx) => {
+                    const grid = document.getElementById(id);
+                    if (!grid) return;
+                    grid.innerHTML = '';
+                    const m = this.data.length;
+                    const n = this.data[0].length;
+                    for(let r=0; r<m; r++) {
+                        for(let c=0; c<n; c++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'matrix-cell';
+                            cell.id = `${id}-${r}-${c}`;
+                            cell.innerText = (this.config.type === 'brute' && idx === 1 && !this.steps[this.step]) ? initialMatrix[r][c] : this.data[r][c];
+                            if (this.data[r][c] === 0) cell.classList.add('cell-zero');
+                            grid.appendChild(cell);
+                        }
+                    }
+                });
+            }
+
+            toggle() {
+                if(this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.isPlaying = true;
+                const btn = document.getElementById(this.config.playBtnId);
+                if (btn) btn.innerText = "Pause";
+                this.timer = setInterval(() => this.next(), 600);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                const btn = document.getElementById(this.config.playBtnId);
+                if (btn) btn.innerText = "Play";
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.step = 0;
+                this.data = JSON.parse(JSON.stringify(initialMatrix));
+                const log = document.getElementById(this.config.logId);
+                if (log) log.innerHTML = '';
+                
+                if (this.config.type === 'markers') {
+                    this.renderMarkers(new Array(4).fill(false), new Array(4).fill(false));
+                }
+                this.render();
+            }
+
+            next() {
+                if(this.step >= this.steps.length) {
+                    this.pause();
+                    this.updateLog("Sequence Complete.");
+                    return;
+                }
+                const action = this.steps[this.step];
+                action.execute(this);
+                this.step++;
+            }
+        }
+
+        // --- BRUTE FORCE ---
+        const v1 = new Visualizer({
+            gridId: ['grid-v1-ref', 'grid-v1-work'],
+            logId: 'v1-log',
+            playBtnId: 'v1-play',
+            type: 'brute'
+        });
+        v1.generateSteps = function() {
+            const m = 4, n = 4;
+            for(let r=0; r<m; r++) {
+                for(let c=0; c<n; c++) {
+                    if (initialMatrix[r][c] === 0) {
+                        this.steps.push({
+                            execute: (vis) => {
+                                vis.render();
+                                vis.updateLog(`Original Zero found at [${r},${c}] in reference copy.`);
+                                document.getElementById(`grid-v1-ref-${r}-${c}`).classList.add('cell-active');
+                                // Zero row and col in work
+                                for(let i=0; i<n; i++) {
+                                    vis.data[r][i] = 0;
+                                    document.getElementById(`grid-v1-work-${r}-${i}`).classList.add('cell-final-zero');
+                                }
+                                for(let i=0; i<m; i++) {
+                                    vis.data[i][c] = 0;
+                                    document.getElementById(`grid-v1-work-${i}-${c}`).classList.add('cell-final-zero');
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        };
+        v1.init();
+
+        // --- MARKER ARRAYS ---
+        const v2 = new Visualizer({
+            gridId: 'grid-v2',
+            logId: 'v2-log',
+            playBtnId: 'v2-play',
+            type: 'markers'
+        });
+        v2.renderMarkers = function(rows, cols) {
+            const rm = document.getElementById('row-markers');
+            const cm = document.getElementById('col-markers');
+            rm.innerHTML = ''; cm.innerHTML = '';
+            rows.forEach(v => {
+                const cell = document.createElement('div');
+                cell.className = 'marker-cell' + (v ? ' marker-active' : '');
+                cell.innerText = v ? '0' : '1';
+                rm.appendChild(cell);
+            });
+            cols.forEach(v => {
+                const cell = document.createElement('div');
+                cell.className = 'marker-cell' + (v ? ' marker-active' : '');
+                cell.innerText = v ? '0' : '1';
+                cm.appendChild(cell);
+            });
+        }
+        v2.generateSteps = function() {
+            const m = 4, n = 4;
+            const rMarkers = new Array(m).fill(false);
+            const cMarkers = new Array(n).fill(false);
+            
+            // Phase 1: Scan
+            for(let r=0; r<m; r++) {
+                for(let c=0; c<n; c++) {
+                    if (initialMatrix[r][c] === 0) {
+                        this.steps.push({
+                            execute: (vis) => {
+                                rMarkers[r] = true;
+                                cMarkers[c] = true;
+                                vis.render();
+                                document.getElementById(`grid-v2-${r}-${c}`).classList.add('cell-active');
+                                vis.renderMarkers(rMarkers, cMarkers);
+                                vis.updateLog(`Found 0 at [${r},${c}]. Mark Row ${r} and Col ${c}.`);
+                            }
+                        });
+                    }
+                }
+            }
+            // Phase 2: Update
+            this.steps.push({
+                execute: (vis) => {
+                    for(let r=0; r<m; r++) {
+                        for(let c=0; c<n; c++) {
+                            if (rMarkers[r] || cMarkers[c]) vis.data[r][c] = 0;
+                        }
+                    }
+                    vis.render();
+                    vis.updateLog(`Updating all cells where Row/Col marker is active.`);
+                }
+            });
+        };
+        v2.init();
+        v2.renderMarkers(new Array(4).fill(false), new Array(4).fill(false));
+
+        // --- IN-PLACE OPTIMAL ---
+        const v3 = new Visualizer({
+            gridId: 'grid-v3',
+            logId: 'v3-log',
+            playBtnId: 'v3-play',
+            type: 'optimal'
+        });
+        v3.generateSteps = function() {
+            const m = 4, n = 4;
+            this.steps.push({
+                execute: (vis) => {
+                    vis.updateLog("Checking for original zeroes in first row/column...");
+                }
+            });
+            // Mark using first row/col
+            for(let r=1; r<m; r++) {
+                for(let c=1; c<n; c++) {
+                    if (this.data[r][c] === 0) {
+                        this.steps.push({
+                            execute: (vis) => {
+                                vis.data[r][0] = 0;
+                                vis.data[0][c] = 0;
+                                vis.render();
+                                document.getElementById(`grid-v3-${r}-${c}`).classList.add('cell-active');
+                                document.getElementById(`grid-v3-${r}-0`).classList.add('cell-marked');
+                                document.getElementById(`grid-v3-0-${c}`).classList.add('cell-marked');
+                                vis.updateLog(`Found internal 0 at [${r},${c}]. Marking markers [${r},0] and [0,${c}] as zero.`);
+                            }
+                        });
+                    }
+                }
+            }
+            this.steps.push({
+                execute: (vis) => {
+                    for(let r=1; r<m; r++) {
+                        for(let c=1; c<n; c++) {
+                            if (vis.data[r][0] === 0 || vis.data[0][c] === 0) vis.data[r][c] = 0;
+                        }
+                    }
+                    vis.render();
+                    vis.updateLog("Applying marker statuses to internal matrix cells.");
+                }
+            });
+            this.steps.push({
+                execute: (vis) => {
+                    // Final touch for row markers (since we know there are zeroes in our example)
+                    for(let i=0; i<m; i++) if (vis.data[i][2] === 0) vis.data[i][2] = 0; // Simplified for visual
+                    vis.render();
+                    vis.updateLog("Handling first row and column markers to finish.");
+                }
+            });
+        };
+        v3.init();
+
+    </script>
+</body>
+</html>

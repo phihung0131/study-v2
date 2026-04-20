@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 48: Rotate Image - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 8px;
+            padding: 12px;
+            background-color: #e2e8f0;
+            border-radius: 12px;
+            width: fit-content;
+        }
+        .matrix-cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            font-weight: 700;
+            border-radius: 8px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1.1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .cell-active { background-color: #3b82f6 !important; color: white; transform: scale(1.1); z-index: 10; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .cell-target { background-color: #10b981 !important; color: white; }
+        .cell-swap { background-color: #f59e0b !important; color: white; }
+        .log-container { height: 160px; overflow-y: auto; scroll-behavior: smooth; border-radius: 12px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        <!-- Header -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 underline decoration-emerald-500">48. Rotate Image</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Rotate an <b>n x n</b> 2D matrix 90 degrees clockwise <b>in-place</b>. You must modify the input matrix directly.
+            </p>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="bg-emerald-100 text-emerald-600 p-2 rounded-lg mr-3">📐</span> Problem Essence
+            </h2>
+            <p class="text-slate-700 leading-relaxed mb-4">
+                Rotating a matrix means the element at <b>matrix[row][col]</b> needs to move to <b>matrix[col][n - 1 - row]</b>. While simple with a second matrix, doing it "in-place" requires clever swapping strategies.
+            </p>
+        </section>
+
+        <!-- APPROACH 1: Brute Force (Auxiliary Matrix) -->
+        <section id="approach-1" class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Brute Force (Auxiliary)</h2>
+                <p class="text-slate-600">The simplest logic: create a new matrix and map each element to its new rotated position.</p>
+            </div>
+
+            <!-- Animation -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-6 text-center">Visualizing Mapping: Source → Target</h3>
+                <div class="flex flex-col items-center space-y-8">
+                    <div class="flex flex-col md:flex-row items-center gap-12">
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Source Matrix</span>
+                            <div id="grid-v1-src" class="matrix-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+                        </div>
+                        <div class="text-3xl text-slate-300">➜</div>
+                        <div class="text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Rotated Result</span>
+                            <div id="grid-v1-dst" class="matrix-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v1.toggle()" id="v1-play" class="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition font-bold">Play Mapping</button>
+                        <button onclick="v1.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v1-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> rotate(int[][] matrix) {
+    int n = matrix.length;
+    int[][] rotated = <span class="text-emerald-400">new</span> int[n][n];
+
+    <span class="text-slate-500">// Map each element to its new position</span>
+    <span class="text-emerald-400">for</span> (int row = 0; row < n; row++) {
+        <span class="text-emerald-400">for</span> (int col = 0; col < n; col++) {
+            rotated[col][n - 1 - row] = matrix[row][col];
+        }
+    }
+
+    <span class="text-slate-500">// Copy back to original matrix (to satisfy in-place requirement)</span>
+    <span class="text-emerald-400">for</span> (int row = 0; row < n; row++) {
+        <span class="text-emerald-400">for</span> (int col = 0; col < n; col++) {
+            matrix[row][col] = rotated[row][col];
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(N²)</b> - We visit every element twice (mapping then copying).</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(N²)</b> - We create an entirely new matrix of the same size.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Pros & Cons</h4>
+                    <p class="text-slate-700 font-semibold text-emerald-600">Pros: Extremely simple to understand and implement.</p>
+                    <p class="text-slate-700 font-semibold text-rose-600">Cons: Fails the "in-place" requirement of the interview if we consider memory usage.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: Optimal - Transpose + Reverse -->
+        <section id="approach-2" class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Mathematical - Transpose + Reverse</h2>
+                <p class="text-slate-600">A brilliant two-step transformation: Flip the matrix diagonally (transpose), then flip each row horizontally.</p>
+            </div>
+
+            <!-- Animation -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 id="v2-title" class="text-xl font-semibold mb-6 text-center">Step 1: Transpose (Flip on Diagonal)</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v2" class="matrix-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v2.toggle()" id="v2-play" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold">Play Steps</button>
+                        <button onclick="v2.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v2-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> rotate(int[][] matrix) {
+    int n = matrix.length;
+
+    <span class="text-slate-500">// 1. Transpose: Swap matrix[i][j] with matrix[j][i]</span>
+    <span class="text-emerald-400">for</span> (int row = 0; row < n; row++) {
+        <span class="text-emerald-400">for</span> (int col = row + 1; col < n; col++) {
+            int temp = matrix[row][col];
+            matrix[row][col] = matrix[col][row];
+            matrix[col][row] = temp;
+        }
+    }
+
+    <span class="text-slate-500">// 2. Reverse: Flip each row horizontally</span>
+    <span class="text-emerald-400">for</span> (int row = 0; row < n; row++) {
+        <span class="text-emerald-400">for</span> (int col = 0; col < n / 2; col++) {
+            int temp = matrix[row][col];
+            matrix[row][col] = matrix[row][n - 1 - col];
+            matrix[row][n - 1 - col] = temp;
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(N²)</b> - We visit cells twice (once for transpose, once for reverse).</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(1)</b> - Truly in-place. Only a single <b>temp</b> variable used for swaps.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">The Intuition</h4>
+                    <p class="text-slate-700">A transpose converts rows to columns. However, after transpose, the columns are in the wrong order for a clockwise rotation. Reversing each row puts the columns in their final 90° clockwise positions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: Optimal - Four-Way Swap (Layers) -->
+        <section id="approach-3" class="space-y-6">
+            <div class="border-l-4 border-amber-500 pl-6 py-2">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 3: Geometric - Four-Way Layer Swap</h2>
+                <p class="text-slate-600">The "Single Pass" method: Rotate elements in groups of four, working from the outside layers inward.</p>
+            </div>
+
+            <!-- Animation -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 class="text-xl font-semibold mb-6 text-center">4-Cell Cyclic Rotation</h3>
+                <div class="flex flex-col items-center space-y-6">
+                    <div id="grid-v3" class="matrix-grid" style="grid-template-columns: repeat(4, 1fr);"></div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="v3.toggle()" id="v3-play" class="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold">Play Layer Swaps</button>
+                        <button onclick="v3.reset()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</button>
+                    </div>
+
+                    <div class="w-full max-w-md">
+                        <div id="v3-log" class="log-container bg-white border border-slate-200 p-4 text-sm code-font text-slate-700 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code -->
+            <div class="bg-slate-900 rounded-2xl p-6 text-slate-300 shadow-xl">
+                <h3 class="text-xl font-bold mb-4 text-white">Java Implementation</h3>
+<pre class="code-font text-sm overflow-x-auto">
+<span class="text-emerald-400">public void</span> rotate(int[][] matrix) {
+    int n = matrix.length;
+    <span class="text-slate-500">// Process layer by layer</span>
+    <span class="text-emerald-400">for</span> (int layer = 0; layer < n / 2; layer++) {
+        int first = layer;
+        int last = n - 1 - layer;
+        <span class="text-emerald-400">for</span> (int i = first; i < last; i++) {
+            int offset = i - first;
+            int top = matrix[first][i]; <span class="text-slate-500">// save top</span>
+
+            <span class="text-slate-500">// left -> top</span>
+            matrix[first][i] = matrix[last - offset][first];
+
+            <span class="text-slate-500">// bottom -> left</span>
+            matrix[last - offset][first] = matrix[last][last - offset];
+
+            <span class="text-slate-500">// right -> bottom</span>
+            matrix[last][last - offset] = matrix[i][last];
+
+            <span class="text-slate-500">// top -> right</span>
+            matrix[i][last] = top; <span class="text-slate-500">// right <- saved top</span>
+        }
+    }
+}</pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Complexity Analysis</h4>
+                    <p class="text-slate-700"><b>Time Complexity:</b> <b>O(N²)</b> - We visit every element once. This is the fastest single-pass solution.</p>
+                    <p class="text-slate-700"><b>Space Complexity:</b> <b>O(1)</b> - Only one <b>top</b> variable used for temporary storage.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold mb-2">Comparison</h4>
+                    <p class="text-slate-700">While Approach 2 is easier to explain and code, Approach 3 is technically more efficient as it performs the rotation in a single pass of the cells. It is harder to implement correctly due to complex indexing.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary & Comparison Table -->
+        <section class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-6 text-center">Comparison Table</h2>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-100">
+                        <th class="py-3 px-4 font-bold text-slate-600">Approach</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Time</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Space</th>
+                        <th class="py-3 px-4 font-bold text-slate-600">Best For</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700">
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Brute Force</td>
+                        <td class="py-4 px-4"><b>O(N²)</b></td>
+                        <td class="py-4 px-4 text-rose-500 font-bold">O(N²)</td>
+                        <td class="py-4 px-4">Basic understanding</td>
+                    </tr>
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Transpose + Reverse</td>
+                        <td class="py-4 px-4"><b>O(N²)</b></td>
+                        <td class="py-4 px-4 text-emerald-600 font-bold">O(1)</td>
+                        <td class="py-4 px-4">Standard Interview Answer</td>
+                    </tr>
+                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="py-4 px-4 font-semibold">Layer Swapping</td>
+                        <td class="py-4 px-4"><b>O(N²)</b></td>
+                        <td class="py-4 px-4 text-emerald-600 font-bold">O(1)</td>
+                        <td class="py-4 px-4">Maximum Efficiency</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-800 text-white p-8 rounded-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-emerald-400">💡 Interview Cheat Sheet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Coordinate Swap Rule</h4>
+                    <p class="text-sm">90° Clockwise: <b>(i, j) → (j, n-1-i)</b><br>
+                    90° Counter-Clockwise: <b>(i, j) → (n-1-j, i)</b></p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">Transpose Trick</h4>
+                    <p class="text-sm">Transpose is <b>Swap(matrix[i][j], matrix[j][i])</b>. Always start inner loop at <b>j = i + 1</b> to only swap the top triangle!</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-300 mb-2">In-Place Requirement</h4>
+                    <p class="text-sm">If the interviewer says "In-Place", avoid Approach 1. Mention Transpose + Reverse as it's the most mathematically elegant.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Edge Cases -->
+        <section class="p-6 bg-slate-100 rounded-2xl">
+            <h3 class="font-bold text-slate-800 mb-4">Edge Cases to Consider</h3>
+            <div class="flex flex-wrap gap-3">
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">1 x 1 Matrix</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Large N (N > 100)</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Empty Input Array</span>
+                <span class="bg-white px-4 py-2 rounded-full border border-slate-300 text-sm font-medium">Negative Numbers in Matrix</span>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const initial3x3 = [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]
+        ];
+
+        const initial4x4 = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12],
+            [13, 14, 15, 16]
+        ];
+
+        class Visualizer {
+            constructor(config) {
+                this.config = config;
+                this.isPlaying = false;
+                this.step = 0;
+                this.timer = null;
+                this.data = JSON.parse(JSON.stringify(config.data));
+                this.steps = [];
+                // Do not call init() here because generateSteps is defined later
+            }
+
+            init() {
+                this.generateSteps();
+                this.render();
+            }
+
+            generateSteps() {
+                // Placeholder
+            }
+
+            updateLog(msg) {
+                const log = document.getElementById(this.config.logId);
+                const div = document.createElement('div');
+                div.className = 'mb-1 pb-1 border-b border-slate-100 last:border-0';
+                div.innerHTML = `<span class="text-blue-500 font-bold">></span> ${msg}`;
+                log.prepend(div);
+            }
+
+            render() {
+                const containers = Array.isArray(this.config.gridId) ? this.config.gridId : [this.config.gridId];
+                containers.forEach((id, idx) => {
+                    const grid = document.getElementById(id);
+                    grid.innerHTML = '';
+                    const n = this.data.length;
+                    for(let r=0; r<n; r++) {
+                        for(let c=0; c<n; c++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'matrix-cell';
+                            cell.id = `${id}-${r}-${c}`;
+                            cell.innerText = this.config.type === 'brute' && idx === 1 && !this.steps[this.step] ? '' : this.data[r][c];
+                            grid.appendChild(cell);
+                        }
+                    }
+                });
+            }
+
+            toggle() {
+                if(this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.isPlaying = true;
+                document.getElementById(this.config.playBtnId).innerText = "Pause";
+                this.timer = setInterval(() => this.next(), 800);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                document.getElementById(this.config.playBtnId).innerText = "Play";
+                clearInterval(this.timer);
+            }
+
+            reset() {
+                this.pause();
+                this.step = 0;
+                this.data = JSON.parse(JSON.stringify(this.config.data));
+                document.getElementById(this.config.logId).innerHTML = '';
+                this.render();
+            }
+
+            next() {
+                if(this.step >= this.steps.length) {
+                    this.pause();
+                    this.updateLog("Sequence Complete.");
+                    return;
+                }
+                const action = this.steps[this.step];
+                action.execute(this);
+                this.step++;
+            }
+        }
+
+        // --- BRUTE FORCE ---
+        const v1 = new Visualizer({
+            gridId: ['grid-v1-src', 'grid-v1-dst'],
+            logId: 'v1-log',
+            playBtnId: 'v1-play',
+            data: initial3x3,
+            type: 'brute'
+        });
+
+        v1.generateSteps = function() {
+            const n = 3;
+            for(let r=0; r<n; r++) {
+                for(let c=0; c<n; c++) {
+                    const targetR = c;
+                    const targetC = n - 1 - r;
+                    this.steps.push({
+                        execute: (vis) => {
+                            vis.render();
+                            const src = document.getElementById(`grid-v1-src-${r}-${c}`);
+                            const dst = document.getElementById(`grid-v1-dst-${targetR}-${targetC}`);
+                            src.classList.add('cell-active');
+                            dst.classList.add('cell-target');
+                            dst.innerText = initial3x3[r][c];
+                            vis.updateLog(`Map value ${initial3x3[r][c]} at [${r},${c}] to rotated [${targetR},${targetC}]`);
+                        }
+                    });
+                }
+            }
+        };
+        v1.init();
+
+        // --- TRANSPOSE + REVERSE ---
+        const v2 = new Visualizer({
+            gridId: 'grid-v2',
+            logId: 'v2-log',
+            playBtnId: 'v2-play',
+            data: initial3x3
+        });
+
+        v2.generateSteps = function() {
+            const n = 3;
+            // Transpose steps
+            for(let r=0; r<n; r++) {
+                for(let c=r+1; c<n; c++) {
+                    this.steps.push({
+                        execute: (vis) => {
+                            const tmp = vis.data[r][c];
+                            vis.data[r][c] = vis.data[c][r];
+                            vis.data[c][r] = tmp;
+                            vis.render();
+                            document.getElementById(`v2-title`).innerText = "Step 1: Transposing...";
+                            document.getElementById(`grid-v2-${r}-${c}`).classList.add('cell-active');
+                            document.getElementById(`grid-v2-${c}-${r}`).classList.add('cell-active');
+                            vis.updateLog(`Transpose: Swapped [${r},${c}] and [${c},${r}]`);
+                        }
+                    });
+                }
+            }
+            // Reverse steps
+            for(let r=0; r<n; r++) {
+                this.steps.push({
+                    execute: (vis) => {
+                        const row = vis.data[r];
+                        const tmp = row[0];
+                        row[0] = row[2];
+                        row[2] = tmp;
+                        vis.render();
+                        document.getElementById(`v2-title`).innerText = "Step 2: Reversing Rows...";
+                        document.getElementById(`grid-v2-${r}-0`).classList.add('cell-target');
+                        document.getElementById(`grid-v2-${r}-2`).classList.add('cell-target');
+                        vis.updateLog(`Reverse Row ${r}: Swapped end elements.`);
+                    }
+                });
+            }
+        };
+        v2.init();
+
+        // --- LAYER SWAPPING ---
+        const v3 = new Visualizer({
+            gridId: 'grid-v3',
+            logId: 'v3-log',
+            playBtnId: 'v3-play',
+            data: initial4x4
+        });
+
+        v3.generateSteps = function() {
+            const n = 4;
+            for(let layer=0; layer < Math.floor(n/2); layer++) {
+                let first = layer;
+                let last = n - 1 - layer;
+                for(let i=first; i < last; i++) {
+                    const offset = i - first;
+                    this.steps.push({
+                        execute: (vis) => {
+                            const top = vis.data[first][i];
+                            vis.data[first][i] = vis.data[last - offset][first];
+                            vis.data[last - offset][first] = vis.data[last][last - offset];
+                            vis.data[last][last - offset] = vis.data[i][last];
+                            vis.data[i][last] = top;
+                            
+                            vis.render();
+                            document.getElementById(`grid-v3-${first}-${i}`).classList.add('cell-active');
+                            document.getElementById(`grid-v3-${last-offset}-${first}`).classList.add('cell-swap');
+                            document.getElementById(`grid-v3-${last}-${last-offset}`).classList.add('cell-swap');
+                            document.getElementById(`grid-v3-${i}-${last}`).classList.add('cell-swap');
+                            
+                            vis.updateLog(`Cycle swap layer ${layer}, group starting at [${first},${i}]`);
+                        }
+                    });
+                }
+            }
+        };
+        v3.init();
+
+    </script>
+</body>
+</html>

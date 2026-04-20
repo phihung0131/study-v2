@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>209. Minimum Size Subarray Sum - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pointer-label { font-weight: bold; font-size: 0.75rem; }
+        .cell { transition: all 0.3s ease; }
+        .active-window { background-color: #fef08a; border-color: #eab308; }
+        .found-window { background-color: #bbf7d0; border-color: #22c55e; }
+        .code-keyword { color: #d97706; font-weight: bold; }
+        .code-comment { color: #6b7280; font-style: italic; }
+        .code-func { color: #2563eb; }
+        .code-var { color: #dc2626; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        
+        <!-- HEADER SECTION -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">209. Minimum Size Subarray Sum</h1>
+            <div class="flex justify-center gap-2">
+                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold border border-yellow-200">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold border border-blue-200">Array</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold border border-purple-200">Sliding Window</span>
+            </div>
+            <div class="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-slate-200 text-left">
+                <h2 class="text-lg font-bold mb-2">Problem Description</h2>
+                <p class="mb-4">Given an array of positive integers <b>nums</b> and a positive integer <b>target</b>, return the minimal length of a subarray whose sum is greater than or equal to <b>target</b>. If there is no such subarray, return 0 instead.</p>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <p><b>Example 1:</b></p>
+                    <p>Input: target = 7, nums = [2, 3, 1, 2, 4, 3]</p>
+                    <p>Output: 2 (Subarray [4, 3] has length 2)</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force</h2>
+                <p class="text-slate-600 mt-2 italic">The "Check Everything" Strategy</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>The simplest way is to check every single possible subarray within the input. For every starting index, we iterate through all possible ending indices, calculate the sum, and check if it meets the target. We keep track of the minimum length found.</p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="brute-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex gap-2" id="brute-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Current Sum</span>
+                                <span id="brute-sum" class="text-2xl font-mono">0</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Target</span>
+                                <span class="text-2xl font-mono text-yellow-400">7</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Min Length</span>
+                                <span id="brute-min-len" class="text-2xl font-mono text-green-400">∞</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="bruteViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="bruteViz.toggle()" id="brute-play-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition">Play</button>
+                            <button onclick="bruteViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="bruteViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Brute Force)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> minSubArrayLen(<span class="code-keyword">int</span> target, <span class="code-keyword">int</span>[] nums) {
+    <span class="code-keyword">int</span> n = nums.length;
+    <span class="code-keyword">int</span> minLength = Integer.MAX_VALUE;
+
+    <span class="code-comment">// Iterate through every possible starting point</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> startIdx = 0; startIdx < n; startIdx++) {
+        <span class="code-keyword">int</span> currentSum = 0;
+        <span class="code-comment">// Iterate through every possible ending point</span>
+        <span class="code-keyword">for</span> (<span class="code-keyword">int</span> endIdx = startIdx; endIdx < n; endIdx++) {
+            currentSum += nums[endIdx];
+            <span class="code-comment">// Check if current subarray sum satisfies target</span>
+            <span class="code-keyword">if</span> (currentSum >= target) {
+                minLength = Math.min(minLength, endIdx - startIdx + 1);
+                <span class="code-keyword">break</span>; <span class="code-comment">// Optimizing slightly: stop early if target met</span>
+            }
+        }
+    }
+
+    <span class="code-keyword">return</span> (minLength == Integer.MAX_VALUE) ? 0 : minLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-red-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n²)</b> - Two nested loops. In the worst case, we check all pairs.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> - No extra data structures used.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Very easy to implement and understand.</p>
+                        <p class="text-sm text-red-600">❌ Inefficient for large arrays (n > 10,000).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: BINARY SEARCH -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-400 pl-6">
+                <h2 class="text-3xl font-bold">Approach 2: Prefix Sums + Binary Search</h2>
+                <p class="text-slate-600 mt-2 italic">The "Math-Heavy" Strategy</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>Since all numbers are positive, the <b>Prefix Sums</b> array will be strictly increasing. We can calculate `sums[i]` (sum from 0 to i). Then, for each `sums[i]`, we need to find the smallest index `j` such that `sums[j] - sums[i-1] >= target`. Since `sums` is sorted, we can use <b>Binary Search</b> to find `j` in <b>O(log n)</b> time.</p>
+
+                <!-- Java Code Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Binary Search)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> minSubArrayLen(<span class="code-keyword">int</span> target, <span class="code-keyword">int</span>[] nums) {
+    <span class="code-keyword">int</span> n = nums.length;
+    <span class="code-keyword">if</span> (n == 0) <span class="code-keyword">return</span> 0;
+    <span class="code-keyword">int</span> minLength = Integer.MAX_VALUE;
+    <span class="code-keyword">int</span>[] sums = <span class="code-keyword">new int</span>[n + 1];
+    
+    <span class="code-comment">// Precompute Prefix Sums: O(n)</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = 1; i <= n; i++) sums[i] = sums[i - 1] + nums[i - 1];
+
+    <span class="code-comment">// For each i, find j such that sums[j] >= sums[i-1] + target</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = 1; i <= n; i++) {
+        <span class="code-keyword">int</span> toFind = target + sums[i - 1];
+        <span class="code-keyword">int</span> bound = Arrays.binarySearch(sums, toFind);
+        <span class="code-comment">// binarySearch returns -(insertionPoint) - 1 if not found</span>
+        <span class="code-keyword">if</span> (bound < 0) bound = -bound - 1;
+        <span class="code-keyword">if</span> (bound <= n) {
+            minLength = Math.min(minLength, bound - (i - 1));
+        }
+    }
+    <span class="code-keyword">return</span> (minLength == Integer.MAX_VALUE) ? 0 : minLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 text-sm">
+                    <div>
+                        <h4 class="font-bold text-blue-600">Complexity Analysis</h4>
+                        <p><b>Time:</b> <b>O(n log n)</b> - We iterate `n` times and perform a binary search inside each iteration.</p>
+                        <p><b>Space:</b> <b>O(n)</b> - Storing the prefix sums array.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Good complexity, uses interesting properties of sorted data.</p>
+                        <p class="text-sm text-red-600">❌ Requires O(n) extra space. More complex to code correctly.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: SLIDING WINDOW (OPTIMAL) -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-green-500 pl-6">
+                <h2 class="text-3xl font-bold">Approach 3: Sliding Window</h2>
+                <p class="text-slate-600 mt-2 italic">The "Caterpillar" Strategy (Most Efficient)</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>Imagine a window that stretches as we move the <b>right pointer</b> to add elements. Once the sum hits the target, we try to shrink the window from the <b>left</b> to find the absolute minimum size that still satisfies the condition. This ensures we never process the same element twice with the same pointer.</p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="sliding-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex gap-2" id="sliding-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Sum</span>
+                                <span id="sliding-sum" class="text-2xl font-mono">0</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Target</span>
+                                <span class="text-2xl font-mono text-yellow-400">7</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Min Len</span>
+                                <span id="sliding-min-len" class="text-2xl font-mono text-green-400">∞</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="slidingViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="slidingViz.toggle()" id="sliding-play-btn" class="px-8 py-2 bg-green-600 hover:bg-green-500 rounded font-bold transition">Play</button>
+                            <button onclick="slidingViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="slidingViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                        <div id="sliding-msg" class="text-sm font-mono text-slate-400 h-6">Ready...</div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Sliding Window)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> minSubArrayLen(<span class="code-keyword">int</span> target, <span class="code-keyword">int</span>[] nums) {
+    <span class="code-keyword">int</span> leftPointer = 0;
+    <span class="code-keyword">int</span> runningSum = 0;
+    <span class="code-keyword">int</span> minLength = Integer.MAX_VALUE;
+
+    <span class="code-comment">// rightPointer expands the window</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> rightPointer = 0; rightPointer < nums.length; rightPointer++) {
+        runningSum += nums[rightPointer];
+
+        <span class="code-comment">// Shrink window as much as possible while sum >= target</span>
+        <span class="code-keyword">while</span> (runningSum >= target) {
+            minLength = Math.min(minLength, rightPointer - leftPointer + 1);
+            runningSum -= nums[leftPointer];
+            leftPointer++; <span class="code-comment">// Shift left boundary right</span>
+        }
+    }
+
+    <span class="code-keyword">return</span> (minLength == Integer.MAX_VALUE) ? 0 : minLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-green-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b> - Each element is visited at most twice (once by right, once by left pointer).</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(1)</b> - No extra space proportional to input size.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Optimal performance in both time and space.</p>
+                        <p class="text-sm text-red-600">❌ Logic is trickier (requires careful handling of pointer boundaries).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARISON TABLE -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold text-center">Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-4">Approach</th>
+                            <th class="px-6 py-4 text-center">Time</th>
+                            <th class="px-6 py-4 text-center">Space</th>
+                            <th class="px-6 py-4">Key Characteristic</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-6 py-4 font-bold">Brute Force</td>
+                            <td class="px-6 py-4 text-center text-red-600 font-mono"><b>O(n²)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono"><b>O(1)</b></td>
+                            <td class="px-6 py-4">Simple nested iteration. Slow for large N.</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-6 py-4 font-bold">Binary Search</td>
+                            <td class="px-6 py-4 text-center text-blue-600 font-mono"><b>O(n log n)</b></td>
+                            <td class="px-6 py-4 text-center text-red-600 font-mono"><b>O(n)</b></td>
+                            <td class="px-6 py-4">Relies on sorted prefix sums property.</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 transition bg-green-50/30">
+                            <td class="px-6 py-4 font-bold text-green-700">Sliding Window</td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(n)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(1)</b></td>
+                            <td class="px-6 py-4">Optimal. Single pass with two pointers.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <div class="bg-blue-600 text-white p-8 rounded-3xl shadow-xl space-y-6">
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.382 0z"></path></svg>
+                Cheat Sheet: When to use Sliding Window?
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <ul class="space-y-3">
+                        <li class="flex gap-2">
+                            <span class="text-blue-200">✔</span>
+                            <span>Problem asks for <b>Minimum/Maximum Subarray</b>.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="text-blue-200">✔</span>
+                            <span>The data is linear (Array or String).</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-blue-700 p-4 rounded-xl border border-blue-500">
+                    <h3 class="font-bold mb-2">💡 Quick Hint</h3>
+                    <p class="text-sm opacity-90">If the array contains negative numbers, standard Sliding Window <b>doesn't work</b> because adding an element could decrease the sum. In that case, use Prefix Sums + HashMap.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-slate-400 text-sm pb-8">
+            <p>Interactive LeetCode Learning Canvas - 209. Minimum Size Subarray Sum</p>
+        </footer>
+    </div>
+
+    <script>
+        const nums = [2, 3, 1, 2, 4, 3];
+        const target = 7;
+
+        class Visualizer {
+            constructor(containerId, arrayId, sumId, minLenId, playBtnId, msgId) {
+                this.container = document.getElementById(containerId);
+                this.arrayEl = document.getElementById(arrayId);
+                this.sumEl = document.getElementById(sumId);
+                this.minLenEl = document.getElementById(minLenId);
+                this.playBtn = document.getElementById(playBtnId);
+                this.msgEl = document.getElementById(msgId);
+                this.states = [];
+                this.index = 0;
+                this.timer = null;
+                this.init();
+            }
+
+            init() {
+                this.renderArray();
+            }
+
+            renderArray() {
+                this.arrayEl.innerHTML = nums.map((n, i) => `
+                    <div id="cell-${this.arrayEl.id}-${i}" class="cell w-12 h-12 flex flex-col items-center justify-center border-2 border-slate-700 rounded-lg text-lg font-bold bg-slate-800 transition-all duration-300">
+                        ${n}
+                        <div class="pointer-label text-[10px] absolute -top-5 hidden" id="ptr-${this.arrayEl.id}-${i}"></div>
+                    </div>
+                `).join('');
+            }
+
+            updateUI(state) {
+                const cells = this.arrayEl.querySelectorAll('.cell');
+                cells.forEach((cell, i) => {
+                    cell.className = 'cell w-12 h-12 flex flex-col items-center justify-center border-2 border-slate-700 rounded-lg text-lg font-bold bg-slate-800 relative';
+                    const ptr = document.getElementById(`ptr-${this.arrayEl.id}-${i}`);
+                    ptr.classList.add('hidden');
+                    ptr.innerText = '';
+                    
+                    if (i >= state.start && i <= state.end) {
+                        cell.classList.add(state.sum >= target ? 'found-window' : 'active-window');
+                        cell.classList.remove('bg-slate-800');
+                        cell.classList.add('text-slate-900');
+                    }
+
+                    if (state.pointers) {
+                        state.pointers.forEach(p => {
+                            if (p.idx === i) {
+                                ptr.classList.remove('hidden');
+                                ptr.innerText += (ptr.innerText ? ' & ' : '') + p.label;
+                                ptr.style.color = p.color;
+                            }
+                        });
+                    }
+                });
+
+                this.sumEl.innerText = state.sum;
+                this.minLenEl.innerText = state.minLen === Infinity ? '∞' : state.minLen;
+                if (this.msgEl) this.msgEl.innerText = state.msg || '';
+            }
+
+            next() {
+                if (this.index < this.states.length - 1) {
+                    this.index++;
+                    this.updateUI(this.states[this.index]);
+                } else {
+                    this.pause();
+                }
+            }
+
+            prev() {
+                if (this.index > 0) {
+                    this.index--;
+                    this.updateUI(this.states[this.index]);
+                }
+            }
+
+            toggle() {
+                if (this.timer) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.playBtn.innerText = 'Pause';
+                this.timer = setInterval(() => this.next(), 800);
+            }
+
+            pause() {
+                this.playBtn.innerText = 'Play';
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+
+            reset() {
+                this.pause();
+                this.index = 0;
+                this.updateUI(this.states[0]);
+            }
+        }
+
+        // Generate states for Brute Force
+        const generateBruteStates = () => {
+            const states = [{ start: -1, end: -1, sum: 0, minLen: Infinity }];
+            let minLen = Infinity;
+            for (let i = 0; i < nums.length; i++) {
+                let currentSum = 0;
+                for (let j = i; j < nums.length; j++) {
+                    currentSum += nums[j];
+                    const state = { 
+                        start: i, 
+                        end: j, 
+                        sum: currentSum, 
+                        minLen,
+                        pointers: [{idx: i, label: 'S', color: '#ef4444'}, {idx: j, label: 'E', color: '#3b82f6'}]
+                    };
+                    if (currentSum >= target) {
+                        minLen = Math.min(minLen, j - i + 1);
+                        state.minLen = minLen;
+                        states.push(state);
+                        break; 
+                    }
+                    states.push(state);
+                }
+            }
+            return states;
+        };
+
+        // Generate states for Sliding Window
+        const generateSlidingStates = () => {
+            const states = [{ start: -1, end: -1, sum: 0, minLen: Infinity, msg: 'Initial state' }];
+            let minLen = Infinity;
+            let left = 0;
+            let sum = 0;
+            for (let right = 0; right < nums.length; right++) {
+                sum += nums[right];
+                states.push({ 
+                    start: left, end: right, sum, minLen, msg: `Add nums[${right}]: ${nums[right]}`,
+                    pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                });
+                
+                while (sum >= target) {
+                    minLen = Math.min(minLen, right - left + 1);
+                    states.push({ 
+                        start: left, end: right, sum, minLen, msg: `Target met! MinLen updated to ${minLen}`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+                    sum -= nums[left];
+                    left++;
+                    states.push({ 
+                        start: left, end: right, sum, minLen, msg: `Shrinking window from left`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+                }
+            }
+            return states;
+        };
+
+        const bruteViz = new Visualizer('brute-viz-container', 'brute-array', 'brute-sum', 'brute-min-len', 'brute-play-btn');
+        bruteViz.states = generateBruteStates();
+
+        const slidingViz = new Visualizer('sliding-viz-container', 'sliding-array', 'sliding-sum', 'sliding-min-len', 'sliding-play-btn', 'sliding-msg');
+        slidingViz.states = generateSlidingStates();
+        
+        window.onload = () => {
+            bruteViz.updateUI(bruteViz.states[0]);
+            slidingViz.updateUI(slidingViz.states[0]);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 205: Isomorphic Strings Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .cell {
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 700;
+            background: white;
+            font-size: 1.25rem;
+        }
+
+        .active-cell {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.1);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+
+        .mapping-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .match-bg { background-color: #dcfce7; border-color: #22c55e; }
+        .mismatch-bg { background-color: #fee2e2; border-color: #ef4444; }
+
+        .arrow {
+            color: #94a3b8;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">205. Isomorphic Strings</h1>
+            <p class="text-lg text-slate-600">Checking for character mapping consistency between two strings.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Table</span>
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold">String Pattern</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4">Two strings <b>s</b> and <b>t</b> are <b>isomorphic</b> if the characters in <b>s</b> can be replaced to get <b>t</b>.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                <p><b>Rules:</b></p>
+                <ul class="list-disc ml-5 space-y-1 text-slate-700">
+                    <li>All occurrences of a character must be replaced with another character.</li>
+                    <li>The order of characters must be preserved.</li>
+                    <li>No two characters in <b>s</b> may map to the same character in <b>t</b>.</li>
+                    <li>A character may map to itself.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Approach 1: Double Mapping -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Double Character Mapping</h2>
+                <p class="text-slate-600 mt-2">Use two maps to ensure a <b>one-to-one</b> relationship. Map 1 handles <b>s → t</b>, and Map 2 handles <b>t → s</b>.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-8">
+                    <div class="flex gap-12 justify-center items-center">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">String S</p>
+                            <div id="map-s-container" class="flex gap-2"></div>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">String T</p>
+                            <div id="map-t-container" class="flex gap-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 w-full max-w-lg">
+                        <div>
+                            <p class="text-sm font-bold text-blue-600 mb-2">Map S → T</p>
+                            <div id="map-st-list" class="space-y-2 min-h-[100px]"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-blue-600 mb-2">Map T → S</p>
+                            <div id="map-ts-list" class="space-y-2 min-h-[100px]"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetMap()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepMap()" id="btn-map" class="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="map-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to map characters...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isIsomorphic</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="type">Map</span>&lt;<span class="type">Character</span>, <span class="type">Character</span>&gt; sToTMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    <span class="type">Map</span>&lt;<span class="type">Character</span>, <span class="type">Character</span>&gt; tToSMap = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; s.<span class="method">length</span>(); i++) {
+        <span class="type">char</span> charS = s.<span class="method">charAt</span>(i);
+        <span class="type">char</span> charT = t.<span class="method">charAt</span>(i);
+
+        <span class="comment">// Rule 1: Check if s character is already mapped to a different t character</span>
+        <span class="keyword">if</span> (sToTMap.<span class="method">containsKey</span>(charS) &amp;&amp; sToTMap.<span class="method">get</span>(charS) != charT) <span class="keyword">return false</span>;
+        
+        <span class="comment">// Rule 2: Check if t character is already mapped to a different s character</span>
+        <span class="keyword">if</span> (tToSMap.<span class="method">containsKey</span>(charT) &amp;&amp; tToSMap.<span class="method">get</span>(charT) != charS) <span class="keyword">return false</span>;
+
+        sToTMap.<span class="method">put</span>(charS, charT);
+        tToSMap.<span class="method">put</span>(charT, charS);
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <!-- Analysis Zone -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b> where N is the length of the string. We perform a single pass.</p>
+                    <p><b>Space Complexity:</b> <b>O(K)</b> where K is the number of unique characters (max 256 for ASCII).</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Intuitive logic; directly implements the "one-to-one" mapping rule.</p>
+                    <p><b>Cons:</b> Higher memory overhead due to <b>HashMap</b> object creation and boxing.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Last Seen Index -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Last Seen Index (Array Optimized)</h2>
+                <p class="text-slate-600 mt-2">Instead of characters, map the <b>last seen position</b> of each character. If characters at the same position in both strings weren't seen at the same time last, the mapping is broken.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-8">
+                    <div class="grid grid-cols-1 gap-6 w-full">
+                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg">
+                            <div id="index-s-cells" class="flex gap-2"></div>
+                            <div class="text-sm font-bold text-slate-400">INDEX (S)</div>
+                        </div>
+                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg">
+                            <div id="index-t-cells" class="flex gap-2"></div>
+                            <div class="text-sm font-bold text-slate-400">INDEX (T)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center bg-blue-50 p-4 rounded-xl w-full max-w-sm">
+                        <p class="text-xs font-bold text-blue-400 mb-1">CURRENT POINTER i</p>
+                        <div id="index-current-val" class="text-2xl font-bold text-blue-600">0</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetIndex()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepIndex()" id="btn-index" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="index-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Initializing index trackers...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isIsomorphic</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="comment">// Use 256 for Extended ASCII range</span>
+    <span class="type">int</span>[] lastSeenS = <span class="keyword">new</span> <span class="type">int</span>[256];
+    <span class="type">int</span>[] lastSeenT = <span class="keyword">new</span> <span class="type">int</span>[256];
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; s.<span class="method">length</span>(); i++) {
+        <span class="comment">// If current character indices don't match, mapping is inconsistent</span>
+        <span class="keyword">if</span> (lastSeenS[s.<span class="method">charAt</span>(i)] != lastSeenT[t.<span class="method">charAt</span>(i)]) {
+            <span class="keyword">return false</span>;
+        }
+        
+        <span class="comment">// Update with current index + 1 (avoiding default 0 value collision)</span>
+        lastSeenS[s.<span class="method">charAt</span>(i)] = i + 1;
+        lastSeenT[t.<span class="method">charAt</span>(i)] = i + 1;
+    }
+    <span class="keyword">return true</span>;
+}
+                </div>
+            </div>
+
+            <!-- Analysis Zone -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b>. Single pass, O(1) array access.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. Arrays are fixed size (256) regardless of string length.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Fast, cache-friendly, and very memory-efficient (O(1) space).</p>
+                    <p><b>Cons:</b> Requires manual handling of the index (using <i>i+1</i>) to distinguish "seen at index 0" from "not seen".</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Pattern Normalization -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-purple-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Pattern Normalization</h2>
+                <p class="text-slate-600 mt-2">Convert both strings into a "canonical" numerical form. For example, "paper" becomes "0-1-0-2-3". If the generated patterns are identical, the strings are isomorphic.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col gap-6 items-center">
+                    <div class="w-full space-y-4">
+                        <div class="flex flex-col items-center">
+                            <div id="norm-s" class="flex gap-2 mb-2"></div>
+                            <div id="norm-s-pattern" class="flex gap-1 text-purple-600 font-mono text-sm bg-purple-50 px-3 py-1 rounded">Pattern S: []</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div id="norm-t" class="flex gap-2 mb-2"></div>
+                            <div id="norm-t-pattern" class="flex gap-1 text-purple-600 font-mono text-sm bg-purple-50 px-3 py-1 rounded">Pattern T: []</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetNorm()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepNorm()" id="btn-norm" class="px-6 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="norm-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Generating normalized patterns...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">isIsomorphic</span>(<span class="type">String</span> s, <span class="type">String</span> t) {
+    <span class="keyword">return</span> <span class="method">getPattern</span>(s).<span class="method">equals</span>(<span class="method">getPattern</span>(t));
+}
+
+<span class="keyword">private</span> <span class="type">String</span> <span class="method">getPattern</span>(<span class="type">String</span> str) {
+    <span class="type">Map</span>&lt;<span class="type">Character</span>, <span class="type">Integer</span>&gt; charToFirstIndex = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    <span class="type">StringBuilder</span> patternBuilder = <span class="keyword">new</span> <span class="type">StringBuilder</span>();
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; str.<span class="method">length</span>(); i++) {
+        <span class="type">char</span> currentChar = str.<span class="method">charAt</span>(i);
+        <span class="comment">// Record first occurrence if not already present</span>
+        charToFirstIndex.<span class="method">putIfAbsent</span>(currentChar, i);
+        <span class="comment">// Append the index of the first occurrence as the "ID"</span>
+        patternBuilder.<span class="method">append</span>(charToFirstIndex.<span class="method">get</span>(currentChar)).<span class="method">append</span>(<span class="string">","</span>);
+    }
+    <span class="keyword">return</span> patternBuilder.<span class="method">toString</span>();
+}
+                </div>
+            </div>
+
+            <!-- Analysis Zone -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <h4 class="font-bold text-purple-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(N)</b>. We traverse both strings and construct the builder.</p>
+                    <p><b>Space Complexity:</b> <b>O(N)</b>. To store the generated pattern strings.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Decouples the two strings. You can pre-calculate or store patterns in a database for lookups.</p>
+                    <p><b>Cons:</b> String concatenation and building patterns is slower and uses more memory than raw index checks.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Comparison -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Comparison Matrix</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Key Insight</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 font-medium">Double Mapping</td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4"><b>O(K)</b></td>
+                            <td class="p-4 text-slate-500">Bi-directional validation</td>
+                        </tr>
+                        <tr class="bg-emerald-50/30">
+                            <td class="p-4 font-bold text-emerald-700">Last Seen Index</td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4"><b>O(1)</b></td>
+                            <td class="p-4 text-slate-700">Array optimized tracking</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium">Normalization</td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4"><b>O(N)</b></td>
+                            <td class="p-4 text-slate-500">Pattern serialization</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Takeaways -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Checklist</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• Are both strings the same length? (Constraint: 1 &le; s.length)</li>
+                        <li>• Is the mapping 1-to-1? (No collisions)</li>
+                        <li>• Is the character range ASCII or Unicode?</li>
+                        <li>• If memory is tight, choose <b>int[256]</b>.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Edge Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>"aa", "ab"</b>: Fails mapping t to s.</li>
+                        <li>• <b>"ab", "aa"</b>: Fails mapping s to t.</li>
+                        <li>• <b>"a", "a"</b>: Trivial pass.</li>
+                        <li>• <b>"badc", "baba"</b>: Mapping collision 'd' and 'b'.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400">
+            Algorithm Visualizer - Mastery through Visualization
+        </footer>
+
+    </div>
+
+    <script>
+        // --- APPROACH 1 LOGIC ---
+        let mapS = "paper";
+        let mapT = "title";
+        let mapIdx = 0;
+        let sToT = {};
+        let tToS = {};
+
+        function renderMap() {
+            const sc = document.getElementById('map-s-container');
+            const tc = document.getElementById('map-t-container');
+            const stList = document.getElementById('map-st-list');
+            const tsList = document.getElementById('map-ts-list');
+
+            sc.innerHTML = mapS.split('').map((c, i) => `<div class="cell ${i === mapIdx ? 'active-cell' : ''}">${c}</div>`).join('');
+            tc.innerHTML = mapT.split('').map((c, i) => `<div class="cell ${i === mapIdx ? 'active-cell' : ''}">${c}</div>`).join('');
+
+            stList.innerHTML = Object.entries(sToT).map(([k,v]) => `<div class="mapping-card"><span>${k}</span><span class="arrow">→</span><span>${v}</span></div>`).join('');
+            tsList.innerHTML = Object.entries(tToS).map(([k,v]) => `<div class="mapping-card"><span>${k}</span><span class="arrow">→</span><span>${v}</span></div>`).join('');
+        }
+
+        function stepMap() {
+            if (mapIdx >= mapS.length) return;
+
+            const charS = mapS[mapIdx];
+            const charT = mapT[mapIdx];
+
+            if (sToT[charS] && sToT[charS] !== charT) {
+                document.getElementById('map-status').innerHTML = `<span class="text-red-600 font-bold">FAIL: '${charS}' is already mapped to '${sToT[charS]}', cannot map to '${charT}'!</span>`;
+                document.getElementById('btn-map').disabled = true;
+                return;
+            }
+            if (tToS[charT] && tToS[charT] !== charS) {
+                document.getElementById('map-status').innerHTML = `<span class="text-red-600 font-bold">FAIL: '${charT}' is already mapped back to '${tToS[charT]}', cannot map to '${charS}'!</span>`;
+                document.getElementById('btn-map').disabled = true;
+                return;
+            }
+
+            sToT[charS] = charT;
+            tToS[charT] = charS;
+            document.getElementById('map-status').innerText = `Mapping: ${charS} ⟷ ${charT}`;
+            mapIdx++;
+            renderMap();
+
+            if (mapIdx === mapS.length) {
+                document.getElementById('map-status').innerHTML = `<span class="text-emerald-600 font-bold">RESULT: TRUE. All characters map uniquely.</span>`;
+                document.getElementById('btn-map').disabled = true;
+            }
+        }
+
+        function resetMap() {
+            mapIdx = 0; sToT = {}; tToS = {};
+            document.getElementById('map-status').innerText = "Ready to map characters...";
+            document.getElementById('btn-map').disabled = false;
+            renderMap();
+        }
+
+        // --- APPROACH 2 LOGIC ---
+        let idxSStr = "foo";
+        let idxTStr = "bar";
+        let idxStep = 0;
+        let lastS = new Array(256).fill(0);
+        let lastT = new Array(256).fill(0);
+
+        function renderIndex() {
+            const sc = document.getElementById('index-s-cells');
+            const tc = document.getElementById('index-t-cells');
+            sc.innerHTML = idxSStr.split('').map((c, i) => `<div class="cell ${i === idxStep ? 'active-cell' : ''}">${c}</div>`).join('');
+            tc.innerHTML = idxTStr.split('').map((c, i) => `<div class="cell ${i === idxStep ? 'active-cell' : ''}">${c}</div>`).join('');
+            document.getElementById('index-current-val').innerText = idxStep + 1;
+        }
+
+        function stepIndex() {
+            if (idxStep >= idxSStr.length) return;
+
+            const cS = idxSStr.charCodeAt(idxStep);
+            const cT = idxTStr.charCodeAt(idxStep);
+
+            if (lastS[cS] !== lastT[cT]) {
+                document.getElementById('index-status').innerHTML = `<span class="text-red-600 font-bold">MISMATCH: '${idxSStr[idxStep]}' last seen @ ${lastS[cS]}, but '${idxTStr[idxStep]}' last seen @ ${lastT[cT]}!</span>`;
+                document.getElementById('btn-index').disabled = true;
+                return;
+            }
+
+            lastS[cS] = idxStep + 1;
+            lastT[cT] = idxStep + 1;
+            document.getElementById('index-status').innerText = `Sync: Both characters were last seen at index ${lastS[cS]-1}. Updating to ${idxStep+1}.`;
+            idxStep++;
+            renderIndex();
+
+            if (idxStep === idxSStr.length) {
+                document.getElementById('index-status').innerHTML = `<span class="text-emerald-600 font-bold">RESULT: TRUE. All indices stayed in sync.</span>`;
+                document.getElementById('btn-index').disabled = true;
+            }
+        }
+
+        function resetIndex() {
+            idxStep = 0; lastS.fill(0); lastT.fill(0);
+            document.getElementById('index-status').innerText = "Initializing index trackers...";
+            document.getElementById('btn-index').disabled = false;
+            renderIndex();
+        }
+
+        // --- APPROACH 3 LOGIC ---
+        let normSStr = "egg";
+        let normTStr = "add";
+        let normStep = 0;
+        let sPattern = [];
+        let tPattern = [];
+        let sFirst = {};
+        let tFirst = {};
+
+        function renderNorm() {
+            document.getElementById('norm-s').innerHTML = normSStr.split('').map((c, i) => `<div class="cell ${i === normStep ? 'active-cell' : ''}">${c}</div>`).join('');
+            document.getElementById('norm-t').innerHTML = normTStr.split('').map((c, i) => `<div class="cell ${i === normStep ? 'active-cell' : ''}">${c}</div>`).join('');
+            document.getElementById('norm-s-pattern').innerText = `Pattern S: [${sPattern.join(', ')}]`;
+            document.getElementById('norm-t-pattern').innerText = `Pattern T: [${tPattern.join(', ')}]`;
+        }
+
+        function stepNorm() {
+            if (normStep >= normSStr.length) return;
+
+            const cS = normSStr[normStep];
+            const cT = normTStr[normStep];
+
+            if (!(cS in sFirst)) sFirst[cS] = normStep;
+            if (!(cT in tFirst)) tFirst[cT] = normStep;
+
+            sPattern.push(sFirst[cS]);
+            tPattern.push(tFirst[cT]);
+
+            document.getElementById('norm-status').innerText = `Appending first-seen indices: ${sFirst[cS]} and ${tFirst[cT]}`;
+            normStep++;
+            renderNorm();
+
+            if (normStep === normSStr.length) {
+                const match = sPattern.every((v, i) => v === tPattern[i]);
+                if (match) {
+                    document.getElementById('norm-status').innerHTML = `<span class="text-emerald-600 font-bold">MATCH: Patterns are identical! Strings are isomorphic.</span>`;
+                } else {
+                    document.getElementById('norm-status').innerHTML = `<span class="text-red-600 font-bold">FAIL: Patterns differ. Not isomorphic.</span>`;
+                }
+                document.getElementById('btn-norm').disabled = true;
+            }
+        }
+
+        function resetNorm() {
+            normStep = 0; sPattern = []; tPattern = []; sFirst = {}; tFirst = {};
+            document.getElementById('norm-status').innerText = "Generating normalized patterns...";
+            document.getElementById('btn-norm').disabled = false;
+            renderNorm();
+        }
+
+        window.onload = () => {
+            renderMap();
+            renderIndex();
+            renderNorm();
+        };
+    </script>
+</body>
+</html>

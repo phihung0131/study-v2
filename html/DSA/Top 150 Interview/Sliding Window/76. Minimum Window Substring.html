@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>76. Minimum Window Substring - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pointer-label { font-weight: bold; font-size: 0.75rem; }
+        .cell { transition: all 0.2s ease; border-width: 2px; }
+        .active-window { background-color: #fef08a; border-color: #eab308; color: #854d0e; }
+        .valid-window { background-color: #bbf7d0; border-color: #22c55e; color: #166534; }
+        .required-char { background-color: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+        .code-keyword { color: #d97706; font-weight: bold; }
+        .code-comment { color: #6b7280; font-style: italic; }
+        .code-func { color: #2563eb; }
+        .code-var { color: #dc2626; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        
+        <!-- HEADER SECTION -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">76. Minimum Window Substring</h1>
+            <div class="flex justify-center gap-2">
+                <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold border border-red-200">Hard</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold border border-blue-200">Hash Table</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold border border-purple-200">Sliding Window</span>
+            </div>
+            <div class="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-slate-200 text-left">
+                <h2 class="text-lg font-bold mb-2">Problem Description</h2>
+                <p class="mb-4">Given two strings <b>s</b> and <b>t</b> of lengths <b>m</b> and <b>n</b> respectively, return the <b>minimum window substring</b> of <b>s</b> such that every character in <b>t</b> (including duplicates) is included in the window.</p>
+                <p class="mb-4">If there is no such substring, return the empty string "". The test cases will be generated such that the answer is unique.</p>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <p><b>Example:</b></p>
+                    <p>Input: s = "ADOBECODEBANC", t = "ABC"</p>
+                    <p>Output: "BANC"</p>
+                    <p class="text-sm text-slate-500 italic mt-2">Explanation: The minimum window "BANC" includes 'A', 'B', and 'C' from string t.</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force</h2>
+                <p class="text-slate-600 mt-2 italic">Generating all possible windows.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>The simplest approach is to check every possible substring of <b>s</b>. For each substring, we check if it contains all characters of <b>t</b> with the required frequencies. We keep track of the smallest such substring found.</p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white overflow-hidden">
+                    <div id="brute-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex flex-wrap justify-center gap-1" id="brute-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Target (t)</span>
+                                <span class="text-xl font-mono text-blue-300">"ABC"</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Min Found</span>
+                                <span id="brute-min-str" class="text-2xl font-mono text-green-400">""</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="bruteViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="bruteViz.toggle()" id="brute-play-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition">Play</button>
+                            <button onclick="bruteViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="bruteViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                        <div id="brute-msg" class="text-sm font-mono text-slate-400 h-6 italic">Ready to scan all substrings...</div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Brute Force)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public String</span> minWindow(String s, String t) {
+    String minWindow = <span class="code-keyword">""</span>;
+    <span class="code-keyword">int</span> minLength = Integer.MAX_VALUE;
+
+    <span class="code-comment">// Check every possible start and end index</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> startIdx = 0; startIdx < s.length(); startIdx++) {
+        <span class="code-keyword">for</span> (<span class="code-keyword">int</span> endIdx = startIdx; endIdx < s.length(); endIdx++) {
+            String sub = s.substring(startIdx, endIdx + 1);
+            
+            <span class="code-keyword">if</span> (containsAll(sub, t)) {
+                <span class="code-keyword">if</span> (sub.length() < minLength) {
+                    minLength = sub.length();
+                    minWindow = sub;
+                }
+            }
+        }
+    }
+    <span class="code-keyword">return</span> minWindow;
+}
+
+<span class="code-keyword">private boolean</span> containsAll(String sub, String t) {
+    Map&lt;Character, Integer&gt; counts = <span class="code-keyword">new</span> HashMap&lt;&gt;();
+    <span class="code-keyword">for</span> (<span class="code-keyword">char</span> c : t.toCharArray()) counts.put(c, counts.getOrDefault(c, 0) + 1);
+    
+    <span class="code-keyword">for</span> (<span class="code-keyword">char</span> c : sub.toCharArray()) {
+        <span class="code-keyword">if</span> (counts.containsKey(c)) {
+            counts.put(c, counts.get(c) - 1);
+        }
+    }
+    
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> count : counts.values()) {
+        <span class="code-keyword">if</span> (count > 0) <span class="code-keyword">return false</span>;
+    }
+    <span class="code-keyword">return true</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-red-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(N³)</b>. We generate O(N²) substrings and for each, we scan it in O(N) time.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(K)</b> where K is the size of the character set in string t.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Mathematically exhaustive; easy to reason about.</p>
+                        <p class="text-sm text-red-600">❌ Time Limit Exceeded (TLE) for even small inputs in LeetCode.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: SLIDING WINDOW -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-green-500 pl-6">
+                <h2 class="text-3xl font-bold">Approach 2: Sliding Window (Optimal)</h2>
+                <p class="text-slate-600 mt-2 italic">Expanding and contracting to find the sweet spot.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>We use two pointers, <b>leftPointer</b> and <b>rightPointer</b>. First, we move <b>rightPointer</b> to expand the window until it contains all characters from <b>t</b>. Once the window is "valid", we move <b>leftPointer</b> to shrink the window as much as possible while keeping it valid. This "contracting" phase helps us find the minimal length.</p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="opt-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex flex-wrap justify-center gap-1" id="opt-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Match Progress</span>
+                                <span id="opt-match-count" class="text-2xl font-mono text-blue-300">0 / 3</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Current Window Freq</span>
+                                <span id="opt-window-map" class="text-xl font-mono text-green-300 h-8">{}</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Min Length</span>
+                                <span id="opt-min-len" class="text-2xl font-mono text-yellow-400">∞</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="optViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="optViz.toggle()" id="opt-play-btn" class="px-8 py-2 bg-green-600 hover:bg-green-500 rounded font-bold transition">Play</button>
+                            <button onclick="optViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="optViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                        <div id="opt-msg" class="text-sm font-mono text-slate-400 h-6">Ready to slide...</div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Sliding Window)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public String</span> minWindow(String s, String t) {
+    <span class="code-keyword">if</span> (s.length() == 0 || t.length() == 0) <span class="code-keyword">return</span> "";
+
+    <span class="code-comment">// Dictionary which keeps a count of all the unique characters in t.</span>
+    Map&lt;Character, Integer&gt; targetFreq = <span class="code-keyword">new</span> HashMap&lt;&gt;();
+    <span class="code-keyword">for</span> (<span class="code-keyword">char</span> c : t.toCharArray()) targetFreq.put(c, targetFreq.getOrDefault(c, 0) + 1);
+
+    <span class="code-keyword">int</span> requiredMatches = targetFreq.size();
+    <span class="code-keyword">int</span> leftPointer = 0, rightPointer = 0, formedMatches = 0;
+
+    <span class="code-comment">// Dictionary which keeps a count of all the unique characters in the current window.</span>
+    Map&lt;Character, Integer&gt; windowFreq = <span class="code-keyword">new</span> HashMap&lt;&gt;();
+
+    <span class="code-comment">// ans list of the form {window length, left, right}</span>
+    <span class="code-keyword">int</span>[] ans = {-1, 0, 0};
+
+    <span class="code-keyword">while</span> (rightPointer < s.length()) {
+        <span class="code-keyword">char</span> c = s.charAt(rightPointer);
+        windowFreq.put(c, windowFreq.getOrDefault(c, 0) + 1);
+
+        <span class="code-comment">// If the frequency of current char matches desired freq in t, increment match count.</span>
+        <span class="code-keyword">if</span> (targetFreq.containsKey(c) && windowFreq.get(c).intValue() == targetFreq.get(c).intValue()) {
+            formedMatches++;
+        }
+
+        <span class="code-comment">// Try and contract the window till the point where it ceases to be 'desirable'.</span>
+        <span class="code-keyword">while</span> (leftPointer <= rightPointer && formedMatches == requiredMatches) {
+            c = s.charAt(leftPointer);
+
+            <span class="code-comment">// Save the smallest window until now.</span>
+            <span class="code-keyword">if</span> (ans[0] == -1 || rightPointer - leftPointer + 1 < ans[0]) {
+                ans[0] = rightPointer - leftPointer + 1;
+                ans[1] = leftPointer;
+                ans[2] = rightPointer;
+            }
+
+            <span class="code-comment">// The character at the position pointed by the `leftPointer` is no longer a part of the window.</span>
+            windowFreq.put(c, windowFreq.get(c) - 1);
+            <span class="code-keyword">if</span> (targetFreq.containsKey(c) && windowFreq.get(c) < targetFreq.get(c)) {
+                formedMatches--;
+            }
+
+            <span class="code-keyword">leftPointer++</span>;
+        }
+
+        <span class="code-keyword">rightPointer++</span>;
+    }
+
+    <span class="code-keyword">return</span> ans[0] == -1 ? "" : s.substring(ans[1], ans[2] + 1);
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-green-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(N + M)</b>. We traverse string <b>s</b> once and <b>t</b> once. Each character in <b>s</b> is processed at most twice.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(K)</b>. Map size is proportional to the number of unique characters.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Optimal performance; scales to very large strings.</p>
+                        <p class="text-sm text-red-600">❌ Harder to implement; requires keeping track of frequency logic and pointer state.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SUMMARY TABLE -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold text-center">Efficiency Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-4">Approach</th>
+                            <th class="px-6 py-4 text-center">Time</th>
+                            <th class="px-6 py-4 text-center">Space</th>
+                            <th class="px-6 py-4">Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr>
+                            <td class="px-6 py-4 font-bold">Naive Brute Force</td>
+                            <td class="px-6 py-4 text-center text-red-600 font-mono"><b>O(N³)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono"><b>O(1)</b></td>
+                            <td class="px-6 py-4">Simple but unusable for large data.</td>
+                        </tr>
+                        <tr class="bg-green-50/30">
+                            <td class="px-6 py-4 font-bold text-green-700">Sliding Window</td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(N)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(K)</b></td>
+                            <td class="px-6 py-4 font-bold">Standard algorithm for substring window problems.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <div class="bg-slate-800 text-white p-8 rounded-3xl shadow-xl space-y-6 border border-slate-700">
+            <h2 class="text-2xl font-bold flex items-center gap-2 text-yellow-400">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM5.884 6.68a1 1 0 10-1.415-1.414l.707-.707a1 1 0 001.415 1.414l-.707.707zm11.312 0l-1.414-1.414-.707.707a1 1 0 001.414 1.415l.707-.708zM5 11a1 1 0 110-2h1a1 1 0 110 2H5zm12 0a1 1 0 110-2h1a1 1 0 110 2h-1zM8 11a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zM5.884 14.728l-.707.707a1 1 0 11-1.415-1.414l.707-.707a1 1 0 111.415 1.414zm11.312 0l-1.415-1.414.707-.707a1 1 0 111.414 1.415l-.706.706z"></path></svg>
+                Key Takeaways: Sliding Window Patterns
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm opacity-90">
+                <ul class="space-y-3 list-disc pl-5">
+                    <li><b>Expand until Valid:</b> Move the right boundary until the condition (e.g., "contains all chars") is satisfied.</li>
+                    <li><b>Shrink to Optimize:</b> Move the left boundary as long as the condition remains satisfied.</li>
+                    <li><b>State Management:</b> Use counters (`formedMatches`) and target counts (`requiredMatches`) to avoid repeated map scanning inside the loop.</li>
+                    <li><b>Characters vs Strings:</b> In Java, `Map<Character, Integer>` is easy to explain, but `int[128]` (frequency array) is faster.</li>
+                </ul>
+                <div class="bg-slate-700 p-4 rounded-xl border border-slate-600 flex items-center justify-center italic text-center">
+                    "Find the smallest window that contains everything. Think of it as a caterpillar: stretching its head forward, then pulling its tail behind it."
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-slate-400 text-sm pb-8">
+            <p>Interactive LeetCode Learning Canvas - 76. Minimum Window Substring</p>
+        </footer>
+    </div>
+
+    <script>
+        const s = "ADOBECODEBANC";
+        const t = "ABC";
+
+        class Visualizer {
+            constructor(containerId, arrayId, val1Id, val2Id, playBtnId, msgId, type) {
+                this.container = document.getElementById(containerId);
+                this.arrayEl = document.getElementById(arrayId);
+                this.val1El = document.getElementById(val1Id); 
+                this.val2El = document.getElementById(val2Id); 
+                this.playBtn = document.getElementById(playBtnId);
+                this.msgEl = document.getElementById(msgId);
+                this.type = type;
+                this.states = [];
+                this.index = 0;
+                this.timer = null;
+                this.init();
+            }
+
+            init() {
+                this.renderArray();
+            }
+
+            renderArray() {
+                this.arrayEl.innerHTML = s.split('').map((char, i) => `
+                    <div id="cell-${this.arrayEl.id}-${i}" class="cell w-8 h-8 flex items-center justify-center border-slate-700 rounded text-sm font-mono bg-slate-800 relative transition-all duration-300">
+                        ${char}
+                        <div class="pointer-label text-[9px] absolute -top-5 hidden" id="ptr-${this.arrayEl.id}-${i}"></div>
+                    </div>
+                `).join('');
+            }
+
+            updateUI(state) {
+                const cells = this.arrayEl.querySelectorAll('.cell');
+                cells.forEach((cell, i) => {
+                    cell.className = 'cell w-8 h-8 flex items-center justify-center border-slate-700 rounded text-sm font-mono bg-slate-800 relative';
+                    const ptr = document.getElementById(`ptr-${this.arrayEl.id}-${i}`);
+                    ptr.classList.add('hidden');
+                    ptr.innerText = '';
+                    
+                    if (i >= state.start && i <= state.end) {
+                        cell.classList.add(state.valid ? 'valid-window' : 'active-window');
+                        cell.classList.remove('bg-slate-800');
+                    }
+
+                    if (state.pointers) {
+                        state.pointers.forEach(p => {
+                            if (p.idx === i) {
+                                ptr.classList.remove('hidden');
+                                ptr.innerText += (ptr.innerText ? '&' : '') + p.label;
+                                ptr.style.color = p.color;
+                            }
+                        });
+                    }
+                });
+
+                if (this.type === 'brute') {
+                    this.val1El.innerText = `"${state.minWindow || ''}"`;
+                } else {
+                    this.val1El.innerText = `${state.formedMatches} / 3`;
+                    this.val2El.innerText = state.windowFreq ? JSON.stringify(state.windowFreq) : '{}';
+                    document.getElementById('opt-min-len').innerText = state.minLen === Infinity ? '∞' : state.minLen;
+                }
+                
+                if (this.msgEl) this.msgEl.innerText = state.msg || '';
+            }
+
+            next() {
+                if (this.index < this.states.length - 1) {
+                    this.index++;
+                    this.updateUI(this.states[this.index]);
+                } else {
+                    this.pause();
+                }
+            }
+
+            prev() {
+                if (this.index > 0) {
+                    this.index--;
+                    this.updateUI(this.states[this.index]);
+                }
+            }
+
+            toggle() {
+                if (this.timer) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.playBtn.innerText = 'Pause';
+                this.timer = setInterval(() => this.next(), 600);
+            }
+
+            pause() {
+                this.playBtn.innerText = 'Play';
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+
+            reset() {
+                this.pause();
+                this.index = 0;
+                this.updateUI(this.states[0]);
+            }
+        }
+
+        const genBruteStates = () => {
+            const states = [{ start: -1, end: -1, msg: 'Starting brute force...', minWindow: '' }];
+            const tFreq = { A: 1, B: 1, C: 1 };
+            let minWin = "";
+            let minLen = Infinity;
+
+            for (let i = 0; i < 5; i++) { // Capping brute force animation for brevity
+                for (let j = i; j < s.length; j++) {
+                    const sub = s.substring(i, j + 1);
+                    const currentFreq = {};
+                    for (const char of sub) currentFreq[char] = (currentFreq[char] || 0) + 1;
+                    
+                    const isValid = t.split('').every(c => (currentFreq[c] || 0) >= tFreq[c]);
+                    if (isValid && sub.length < minLen) {
+                        minLen = sub.length;
+                        minWin = sub;
+                    }
+
+                    states.push({
+                        start: i, end: j, valid: isValid, msg: `Checking substring: "${sub}"`,
+                        minWindow: minWin,
+                        pointers: [{idx: i, label: 'S', color: '#ef4444'}, {idx: j, label: 'E', color: '#3b82f6'}]
+                    });
+                    if (isValid) break;
+                }
+            }
+            states.push({ start: -1, end: -1, msg: "...and so on for all 90+ substrings", minWindow: minWin });
+            return states;
+        };
+
+        const genOptStates = () => {
+            const states = [{ start: -1, end: -1, formedMatches: 0, windowFreq: {}, minLen: Infinity, msg: 'Initializing counters...' }];
+            const targetFreq = { A: 1, B: 1, C: 1 };
+            let left = 0, formed = 0, minLen = Infinity;
+            const windowFreq = {};
+
+            for (let right = 0; right < s.length; right++) {
+                const char = s[right];
+                windowFreq[char] = (windowFreq[char] || 0) + 1;
+                
+                if (targetFreq[char] && windowFreq[char] === targetFreq[char]) formed++;
+                
+                states.push({
+                    start: left, end: right, formedMatches: formed, windowFreq: {...windowFreq}, minLen,
+                    msg: `Added '${char}', formed matches: ${formed}`,
+                    pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                });
+
+                while (left <= right && formed === 3) {
+                    const winSize = right - left + 1;
+                    if (winSize < minLen) minLen = winSize;
+
+                    states.push({
+                        start: left, end: right, formedMatches: formed, windowFreq: {...windowFreq}, minLen, valid: true,
+                        msg: `VALID window! Length: ${winSize}. Updating minLen.`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+
+                    const leftChar = s[left];
+                    windowFreq[leftChar]--;
+                    if (targetFreq[leftChar] && windowFreq[leftChar] < targetFreq[leftChar]) formed--;
+                    left++;
+
+                    states.push({
+                        start: left, end: right, formedMatches: formed, windowFreq: {...windowFreq}, minLen,
+                        msg: `Shrinking: Removed '${leftChar}'. Matches: ${formed}`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+                }
+            }
+            return states;
+        };
+
+        const bruteViz = new Visualizer('brute-viz-container', 'brute-array', 'brute-min-str', null, 'brute-play-btn', 'brute-msg', 'brute');
+        bruteViz.states = genBruteStates();
+
+        const optViz = new Visualizer('opt-viz-container', 'opt-array', 'opt-match-count', 'opt-window-map', 'opt-play-btn', 'opt-msg', 'opt');
+        optViz.states = genOptStates();
+
+        window.onload = () => {
+            bruteViz.updateUI(bruteViz.states[0]);
+            optViz.updateUI(optViz.states[0]);
+        };
+    </script>
+</body>
+</html>

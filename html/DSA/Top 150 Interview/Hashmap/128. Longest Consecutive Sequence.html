@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 128: Longest Consecutive Sequence Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.85rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .cell {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-weight: 700;
+            background: white;
+            position: relative;
+        }
+
+        .active-cell { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-4px); }
+        .match-cell { border-color: #22c55e; background-color: #dcfce7; color: #166534; }
+        .search-cell { border-color: #f59e0b; background-color: #fffbeb; }
+
+        .pointer-label {
+            position: absolute;
+            top: -28px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .set-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            gap: 8px;
+            padding: 1rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .set-item {
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .set-item-check { background-color: #fef08a; border-color: #eab308; }
+        .set-item-start { background-color: #dcfce7; border-color: #22c55e; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">128. Longest Consecutive Sequence</h1>
+            <p class="text-lg text-slate-600">Finding the longest streak of consecutive integers in an unsorted array.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Set</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Array</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4 text-slate-700">Given an unsorted array of integers <b>nums</b>, return the length of the longest consecutive elements sequence.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                <p><b>Constraints:</b> You must write an algorithm that runs in <b>O(n)</b> time.</p>
+                <p><b>Example:</b> Input: [100, 4, 200, 1, 3, 2] &rarr; Output: 4 (Sequence: [1, 2, 3, 4])</p>
+            </div>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force Search</h2>
+                <p class="text-slate-600 mt-2">For each number <b>x</b> in the array, try to find <b>x+1</b>, <b>x+2</b>, etc., by scanning the entire array for each increment.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-12 pt-8">
+                    <div class="flex gap-3 justify-center" id="brute-array"></div>
+                    <div class="grid grid-cols-2 gap-4 w-full max-w-md text-center">
+                        <div class="bg-slate-50 p-3 rounded-xl border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Current Streak</p>
+                            <div id="brute-streak" class="text-xl font-bold text-blue-600">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Max Streak</p>
+                            <div id="brute-max" class="text-xl font-bold text-emerald-600">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetBrute()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepBrute()" id="btn-brute" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="brute-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to scan...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span> <span class="method">longestConsecutive</span>(<span class="type">int</span>[] nums) {
+    <span class="type">int</span> maxStreak = 0;
+
+    <span class="keyword">for</span> (<span class="type">int</span> num : nums) {
+        <span class="type">int</span> currentNum = num;
+        <span class="type">int</span> currentStreak = 1;
+
+        <span class="comment">// Repeatedly check if the next number exists in the array</span>
+        <span class="keyword">while</span> (<span class="method">arrayContains</span>(nums, currentNum + 1)) {
+            currentNum += 1;
+            currentStreak += 1;
+        }
+
+        maxStreak = <span class="type">Math</span>.<span class="method">max</span>(maxStreak, currentStreak);
+    }
+    <span class="keyword">return</span> maxStreak;
+}
+
+<span class="keyword">private boolean</span> <span class="method">arrayContains</span>(<span class="type">int</span>[] arr, <span class="type">int</span> target) {
+    <span class="keyword">for</span> (<span class="type">int</span> x : arr) <span class="keyword">if</span> (x == target) <span class="keyword">return true</span>;
+    <span class="keyword">return false</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n³)</b>. Outer loop runs <i>n</i> times. The <i>while</i> loop can run <i>n</i> times. The <i>arrayContains</i> search is <b>O(n)</b>.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. No extra data structures used.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> No extra space, simple logic.</p>
+                    <p><b>Cons:</b> Extremely inefficient. Multiple redundant scans of the same values.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Sorting -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Sorting and Linear Scan</h2>
+                <p class="text-slate-600 mt-2">Sort the array first. Consecutive numbers will now be adjacent, allowing us to find streaks in a single pass.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-10">
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">Sorted Array</p>
+                        <div id="sort-array" class="flex gap-2 justify-center flex-wrap"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 w-full max-w-md text-center">
+                        <div class="bg-indigo-50 p-3 rounded-xl border">
+                            <p class="text-xs font-bold text-indigo-400 uppercase">Current Streak</p>
+                            <div id="sort-streak" class="text-xl font-bold text-indigo-600">1</div>
+                        </div>
+                        <div class="bg-indigo-50 p-3 rounded-xl border">
+                            <p class="text-xs font-bold text-indigo-400 uppercase">Max Streak</p>
+                            <div id="sort-max" class="text-xl font-bold text-emerald-600">1</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetSort()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepSort()" id="btn-sort" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="sort-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Initializing sort...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span> <span class="method">longestConsecutive</span>(<span class="type">int</span>[] nums) {
+    <span class="keyword">if</span> (nums.length == 0) <span class="keyword">return</span> 0;
+
+    <span class="type">Arrays</span>.<span class="method">sort</span>(nums);
+
+    <span class="type">int</span> maxStreak = 1;
+    <span class="type">int</span> currentStreak = 1;
+
+    <span class="keyword">for</span> (<span class="type">int</span> i = 1; i &lt; nums.length; i++) {
+        <span class="keyword">if</span> (nums[i] != nums[i - 1]) {
+            <span class="keyword">if</span> (nums[i] == nums[i - 1] + 1) {
+                currentStreak += 1;
+            } <span class="keyword">else</span> {
+                maxStreak = <span class="type">Math</span>.<span class="method">max</span>(maxStreak, currentStreak);
+                currentStreak = 1;
+            }
+        }
+    }
+
+    <span class="keyword">return</span> <span class="type">Math</span>.<span class="method">max</span>(maxStreak, currentStreak);
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n log n)</b> due to sorting. The subsequent scan is O(n).</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b> or O(n) depending on the sorting implementation's recursion stack.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Key Detail</h4>
+                    <p>Must handle <b>duplicates</b>. If <code>nums[i] == nums[i-1]</code>, we ignore it and continue without breaking the streak.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Hash Set Optimal -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Hash Set (Optimal O(n))</h2>
+                <p class="text-slate-600 mt-2">Store all numbers in a Set for <b>O(1)</b> lookups. Only start building a sequence from a number that is the <b>actual start</b> of a sequence (i.e., <code>num - 1</code> is not in the Set).</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="grid md:grid-cols-2 gap-8 pt-4">
+                    <div class="space-y-4">
+                        <p class="text-xs font-bold text-emerald-600 uppercase text-center">Hash Set Contents</p>
+                        <div id="set-viz" class="set-container"></div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center gap-6 bg-slate-50 p-6 rounded-2xl border">
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-slate-400 uppercase">Checking Number</p>
+                            <div id="set-current-num" class="text-3xl font-bold text-slate-800">-</div>
+                        </div>
+                        <div class="w-full space-y-3">
+                            <div class="flex justify-between text-sm">
+                                <span>Is Start? (num-1 missing)</span>
+                                <span id="set-is-start" class="font-bold">-</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>Streak Found</span>
+                                <span id="set-streak" class="font-bold text-blue-600">0</span>
+                            </div>
+                            <div class="flex justify-between text-sm border-t pt-2">
+                                <span>Global Max</span>
+                                <span id="set-max" class="font-bold text-emerald-600">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetSet()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepSet()" id="btn-set" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Number</button>
+                </div>
+                <div id="set-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Waiting to build Set...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-800">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public int</span> <span class="method">longestConsecutive</span>(<span class="type">int</span>[] nums) {
+    Set&lt;Integer&gt; numSet = <span class="keyword">new</span> HashSet&lt;&gt;();
+    <span class="keyword">for</span> (<span class="type">int</span> num : nums) numSet.add(num);
+
+    <span class="type">int</span> maxStreak = 0;
+
+    <span class="keyword">for</span> (<span class="type">int</span> num : numSet) {
+        <span class="comment">// Only check for sequence if 'num' is the start of a sequence</span>
+        <span class="keyword">if</span> (!numSet.contains(num - 1)) {
+            <span class="type">int</span> currentNum = num;
+            <span class="type">int</span> currentStreak = 1;
+
+            <span class="keyword">while</span> (numSet.contains(currentNum + 1)) {
+                currentNum += 1;
+                currentStreak += 1;
+            }
+
+            maxStreak = Math.max(maxStreak, currentStreak);
+        }
+    }
+
+    <span class="keyword">return</span> maxStreak;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n)</b>. Although there is a nested loop, each number is visited only a constant number of times (twice: once in the outer loop, and once inside the <i>while</i> loop across all iterations).</p>
+                    <p><b>Space Complexity:</b> <b>O(n)</b> to store all numbers in the Hash Set.</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Why is it O(n)?</h4>
+                    <p>The <code>while</code> loop only triggers for the <b>first</b> element of a streak. Every element in the array is "processed" by the while loop at most once in the entire execution.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Approach Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Constraint Check</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4">Brute Force</td>
+                            <td class="p-4 text-red-600">O(n³)</td>
+                            <td class="p-4 text-emerald-600">O(1)</td>
+                            <td class="p-4 text-red-500 font-medium">Fails</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4">Sorting</td>
+                            <td class="p-4 text-amber-600">O(n log n)</td>
+                            <td class="p-4 text-emerald-600">O(1)</td>
+                            <td class="p-4 text-amber-500 font-medium">Slow</td>
+                        </tr>
+                        <tr class="bg-emerald-50/30">
+                            <td class="p-4 font-bold text-emerald-700">Hash Set</td>
+                            <td class="p-4 text-emerald-600 font-bold">O(n)</td>
+                            <td class="p-4 text-red-600">O(n)</td>
+                            <td class="p-4 font-bold text-emerald-700">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Key Pattern</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• "Consecutive" problems usually benefit from <b>Sorting</b> or <b>Sets</b>.</li>
+                        <li>• To reach O(n) in sequence problems, look for a way to identify the <b>start of the sequence</b>.</li>
+                        <li>• <code>Set.contains(x-1)</code> is a common "is this the start?" check.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3 underline decoration-blue-500">Edge Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>Empty Array</b>: Handle separately (return 0).</li>
+                        <li>• <b>Single Element</b>: Should return 1.</li>
+                        <li>• <b>Duplicate Elements</b>: Sorting must ignore them; Set handles them automatically.</li>
+                        <li>• <b>Negative Values</b>: Handled naturally by comparison/Set.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400 text-sm">
+            Interactive Learning Artifact - Mastering consecutive sequence logic.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const nums = [100, 4, 200, 1, 3, 2];
+        const sortedNums = [1, 2, 3, 4, 100, 200];
+        
+        // --- BRUTE FORCE ---
+        let bIdx = 0;
+        let bSubIdx = -1;
+        let bCurrentStreak = 0;
+        let bMaxStreak = 0;
+        let bSearching = false;
+
+        function renderBrute() {
+            const container = document.getElementById('brute-array');
+            container.innerHTML = nums.map((n, idx) => {
+                let cls = '';
+                if (idx === bIdx) cls = 'active-cell';
+                if (bSearching && nums[idx] === (nums[bIdx] + bCurrentStreak)) cls = 'match-cell';
+                return `<div class="cell ${cls}">${n}</div>`;
+            }).join('');
+            document.getElementById('brute-streak').innerText = bCurrentStreak;
+            document.getElementById('brute-max').innerText = bMaxStreak;
+        }
+
+        function stepBrute() {
+            if (bIdx >= nums.length) return;
+
+            if (!bSearching) {
+                bSearching = true;
+                bCurrentStreak = 1;
+                document.getElementById('brute-status').innerText = `Checking sequence starting at ${nums[bIdx]}...`;
+            } else {
+                const target = nums[bIdx] + bCurrentStreak;
+                const found = nums.includes(target);
+                
+                if (found) {
+                    bCurrentStreak++;
+                    document.getElementById('brute-status').innerText = `Found ${target}! Current streak: ${bCurrentStreak}`;
+                } else {
+                    bMaxStreak = Math.max(bMaxStreak, bCurrentStreak);
+                    bIdx++;
+                    bSearching = false;
+                    if (bIdx < nums.length) {
+                        document.getElementById('brute-status').innerText = `No more for this streak. Moving to index ${bIdx}.`;
+                    } else {
+                        document.getElementById('brute-status').innerHTML = `<span class="text-emerald-600 font-bold">Scan Complete! Max: ${bMaxStreak}</span>`;
+                        document.getElementById('btn-brute').disabled = true;
+                    }
+                }
+            }
+            renderBrute();
+        }
+
+        function resetBrute() {
+            bIdx = 0; bCurrentStreak = 0; bMaxStreak = 0; bSearching = false;
+            document.getElementById('btn-brute').disabled = false;
+            document.getElementById('brute-status').innerText = "Ready to scan...";
+            renderBrute();
+        }
+
+        // --- SORTING ---
+        let sIdx = 0;
+        let sCurrentStreak = 1;
+        let sMaxStreak = 0;
+
+        function renderSort() {
+            const container = document.getElementById('sort-array');
+            container.innerHTML = sortedNums.map((n, idx) => {
+                let cls = (idx === sIdx) ? 'active-cell' : (idx < sIdx ? 'match-cell' : '');
+                return `<div class="cell ${cls}">${n}</div>`;
+            }).join('');
+            document.getElementById('sort-streak').innerText = sCurrentStreak;
+            document.getElementById('sort-max').innerText = sMaxStreak;
+        }
+
+        function stepSort() {
+            if (sIdx >= sortedNums.length - 1) {
+                sMaxStreak = Math.max(sMaxStreak, sCurrentStreak);
+                document.getElementById('sort-status').innerHTML = `<span class="text-emerald-600 font-bold">Sorted Scan Finished. Max: ${sMaxStreak}</span>`;
+                document.getElementById('btn-sort').disabled = true;
+                renderSort();
+                return;
+            }
+
+            sIdx++;
+            if (sortedNums[sIdx] === sortedNums[sIdx - 1] + 1) {
+                sCurrentStreak++;
+                document.getElementById('sort-status').innerText = `${sortedNums[sIdx]} follows ${sortedNums[sIdx-1]}. Streak: ${sCurrentStreak}`;
+            } else if (sortedNums[sIdx] === sortedNums[sIdx - 1]) {
+                document.getElementById('sort-status').innerText = `Duplicate ${sortedNums[sIdx]} ignored.`;
+            } else {
+                sMaxStreak = Math.max(sMaxStreak, sCurrentStreak);
+                sCurrentStreak = 1;
+                document.getElementById('sort-status').innerText = `Streak broken at ${sortedNums[sIdx]}. Reset streak.`;
+            }
+            renderSort();
+        }
+
+        function resetSort() {
+            sIdx = 0; sCurrentStreak = 1; sMaxStreak = 0;
+            document.getElementById('btn-sort').disabled = false;
+            document.getElementById('sort-status').innerText = "Initializing sort...";
+            renderSort();
+        }
+
+        // --- SET ---
+        let setArr = [100, 4, 200, 1, 3, 2];
+        let setIdx = 0;
+        let setStreak = 0;
+        let setMax = 0;
+        let setStage = 'check_start'; // 'check_start', 'expanding'
+        let setInternalVal = 0;
+
+        function renderSet() {
+            const viz = document.getElementById('set-viz');
+            const current = setArr[setIdx];
+            viz.innerHTML = setArr.map(n => {
+                let cls = '';
+                if (setStage === 'expanding' && n >= current && n <= setInternalVal) cls = 'set-item-start';
+                else if (n === current) cls = 'set-item-check';
+                return `<div class="set-item ${cls}">${n}</div>`;
+            }).join('');
+
+            document.getElementById('set-current-num').innerText = current || '-';
+            document.getElementById('set-max').innerText = setMax;
+            document.getElementById('set-streak').innerText = setStreak;
+        }
+
+        function stepSet() {
+            if (setIdx >= setArr.length) return;
+
+            const val = setArr[setIdx];
+            const hasPrev = setArr.includes(val - 1);
+
+            if (setStage === 'check_start') {
+                if (!hasPrev) {
+                    setStage = 'expanding';
+                    setStreak = 1;
+                    setInternalVal = val;
+                    document.getElementById('set-is-start').innerText = "YES";
+                    document.getElementById('set-is-start').className = "font-bold text-emerald-600";
+                    document.getElementById('set-status').innerText = `${val} is a start! Checking for ${val+1}...`;
+                } else {
+                    document.getElementById('set-is-start').innerText = "NO";
+                    document.getElementById('set-is-start').className = "font-bold text-red-600";
+                    document.getElementById('set-status').innerText = `${val} is not a start (${val-1} exists). Skip.`;
+                    setIdx++;
+                }
+            } else {
+                // Expanding
+                if (setArr.includes(setInternalVal + 1)) {
+                    setInternalVal++;
+                    setStreak++;
+                    document.getElementById('set-status').innerText = `Found ${setInternalVal}! Streak: ${setStreak}`;
+                } else {
+                    setMax = Math.max(setMax, setStreak);
+                    setIdx++;
+                    setStage = 'check_start';
+                    document.getElementById('set-status').innerText = `Streak ended. Moving to next number.`;
+                    document.getElementById('set-is-start').innerText = "-";
+                    document.getElementById('set-is-start').className = "font-bold";
+                    setStreak = 0;
+                }
+            }
+
+            renderSet();
+
+            if (setIdx >= setArr.length) {
+                document.getElementById('set-status').innerHTML = `<span class="text-emerald-600 font-bold">Optimal Search Complete! Result: ${setMax}</span>`;
+                document.getElementById('btn-set').disabled = true;
+            }
+        }
+
+        function resetSet() {
+            setIdx = 0; setStreak = 0; setMax = 0; setStage = 'check_start';
+            document.getElementById('btn-set').disabled = false;
+            document.getElementById('set-status').innerText = "Waiting to build Set...";
+            document.getElementById('set-is-start').innerText = "-";
+            renderSet();
+        }
+
+        window.onload = () => {
+            renderBrute();
+            renderSort();
+            renderSet();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 167: Two Sum II - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        
+        pre, code {
+            font-family: 'Fira+Code', monospace;
+        }
+
+        .array-container {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        .cell {
+            width: 3.5rem;
+            height: 4rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.5rem;
+            background-color: white;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .cell-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .cell-index {
+            font-size: 0.75rem;
+            color: #64748b;
+            position: absolute;
+            bottom: -1.5rem;
+        }
+
+        .active-pointer {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: translateY(-5px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .match-found {
+            background-color: #22c55e !important;
+            border-color: #16a34a !important;
+            color: white !important;
+        }
+
+        .search-range {
+            background-color: #fef9c3;
+            border-color: #facc15;
+        }
+
+        .pointer-label {
+            position: absolute;
+            top: -2rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="max-w-5xl mx-auto space-y-16">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-5xl font-extrabold text-slate-900 tracking-tight">167. Two Sum II - Input Array Is Sorted</h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto">
+                Find two numbers in a 1-indexed, non-decreasingly sorted array that add up to a <b>target</b>. You must use <b>O(1)</b> extra space.
+            </p>
+            <div class="flex justify-center gap-3">
+                <span class="px-4 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-bold border border-yellow-200">Medium</span>
+                <span class="px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold border border-blue-200">Array</span>
+                <span class="px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold border border-green-200">Two Pointers</span>
+            </div>
+        </header>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Brute Force (Nested Loops)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    The most basic strategy: Check every possible pair of numbers. We ignore the "sorted" property entirely.
+                </p>
+            </div>
+
+            <!-- Animation Zone 1 -->
+            <div class="p-8 bg-slate-50">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div class="text-center md:text-left">
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Input Array</div>
+                        <div class="text-2xl font-bold text-slate-700">target = 9</div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app1.next()" id="app1-next" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app1.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div id="app1-array" class="array-container mb-12">
+                    <!-- Cells rendered via JS -->
+                </div>
+
+                <div id="app1-msg" class="h-12 text-center text-xl font-semibold text-blue-600"></div>
+            </div>
+
+            <!-- Code Zone 1 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public int[]</span> twoSum(<span class="text-blue-400">int[]</span> numbers, <span class="text-blue-400">int</span> target) {
+    <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> outerPointer = 0; outerPointer < numbers.length; outerPointer++) {
+        <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> innerPointer = outerPointer + 1; innerPointer < numbers.length; innerPointer++) {
+            <span class="text-blue-400">int</span> currentSum = numbers[outerPointer] + numbers[innerPointer];
+            
+            <span class="text-pink-400">if</span> (currentSum == target) {
+                <span class="text-pink-400">return new int[]</span>{outerPointer + 1, innerPointer + 1};
+            }
+        }
+    }
+    <span class="text-pink-400">return new int[]</span>{-1, -1};
+}</code></pre>
+                </div>
+
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li><b>Time Complexity:</b> <b>O(n²)</b> - We use nested loops to visit every pair.</li>
+                            <li><b>Space Complexity:</b> <b>O(1)</b> - No extra space used besides pointers.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-red-500 w-fit mb-4">The Verdict</h4>
+                        <p class="text-slate-600">
+                            Extremely inefficient for large arrays. It fails to utilize the fact that the input is already <b>sorted</b>, which is a massive hint for optimization.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 2: Binary Search -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Binary Search</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    Better optimization: For each number <b>x</b>, search for <b>target - x</b> using Binary Search.
+                </p>
+            </div>
+
+            <!-- Animation Zone 2 -->
+            <div class="p-8 bg-slate-50">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="text-2xl font-bold text-slate-700">target = 22</div>
+                    <div class="flex gap-3">
+                        <button onclick="app2.next()" id="app2-next" class="px-6 py-3 bg-yellow-600 text-white rounded-xl font-bold hover:bg-yellow-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app2.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div id="app2-array" class="array-container mb-12">
+                    <!-- Cells rendered via JS -->
+                </div>
+
+                <div id="app2-msg" class="h-12 text-center text-xl font-semibold text-yellow-600"></div>
+            </div>
+
+            <!-- Code Zone 2 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public int[]</span> twoSum(<span class="text-blue-400">int[]</span> numbers, <span class="text-blue-400">int</span> target) {
+    <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> i = 0; i < numbers.length; i++) {
+        <span class="text-blue-400">int</span> complement = target - numbers[i];
+        <span class="text-blue-400">int</span> low = i + 1, high = numbers.length - 1;
+        
+        <span class="text-pink-400">while</span> (low <= high) {
+            <span class="text-blue-400">int</span> mid = low + (high - low) / 2;
+            <span class="text-pink-400">if</span> (numbers[mid] == complement) <span class="text-pink-400">return new int[]</span>{i + 1, mid + 1};
+            <span class="text-pink-400">if</span> (numbers[mid] < complement) low = mid + 1;
+            <span class="text-pink-400">else</span> high = mid - 1;
+        }
+    }
+    <span class="text-pink-400">return new int[]</span>{-1, -1};
+}</code></pre>
+                </div>
+
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-yellow-500 w-fit mb-4">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li><b>Time Complexity:</b> <b>O(n log n)</b> - Loop through <b>n</b> elements and perform binary search on each.</li>
+                            <li><b>Space Complexity:</b> <b>O(1)</b> - No extra storage.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-slate-500 w-fit mb-4">When to use?</h4>
+                        <p class="text-slate-600">
+                            Useful if you are already comfortable with Binary Search, but for this specific problem, we can do even better with a linear scan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 3: Two Pointers (Optimal) -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 3: Two Pointers (Optimal)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    The Gold Standard: Place one pointer at the start and one at the end. Move them inward based on the current sum.
+                </p>
+            </div>
+
+            <!-- Animation Zone 3 -->
+            <div class="p-8 bg-slate-50">
+                <div class="flex justify-between items-center mb-8">
+                    <div class="text-2xl font-bold text-slate-700">target = 15</div>
+                    <div class="flex gap-3">
+                        <button onclick="app3.next()" id="app3-next" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app3.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div id="app3-array" class="array-container mb-12">
+                    <!-- Cells rendered via JS -->
+                </div>
+
+                <div id="app3-msg" class="h-12 text-center text-xl font-semibold text-green-600"></div>
+            </div>
+
+            <!-- Code Zone 3 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public int[]</span> twoSum(<span class="text-blue-400">int[]</span> numbers, <span class="text-blue-400">int</span> target) {
+    <span class="text-blue-400">int</span> leftPointer = 0;
+    <span class="text-blue-400">int</span> rightPointer = numbers.length - 1;
+
+    <span class="text-pink-400">while</span> (leftPointer < rightPointer) {
+        <span class="text-blue-400">int</span> currentSum = numbers[leftPointer] + numbers[rightPointer];
+
+        <span class="text-pink-400">if</span> (currentSum == target) {
+            <span class="text-pink-400">return new int[]</span>{leftPointer + 1, rightPointer + 1};
+        } <span class="text-pink-400">else if</span> (currentSum < target) {
+            leftPointer++; <span class="text-slate-500">// Need a larger sum, move left right</span>
+        } <span class="text-pink-400">else</span> {
+            rightPointer--; <span class="text-slate-500">// Need a smaller sum, move right left</span>
+        }
+    }
+    <span class="text-pink-400">return new int[]</span>{-1, -1};
+}</code></pre>
+                </div>
+
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-green-500 w-fit mb-4">Complexity Analysis</h4>
+                        <ul class="space-y-2">
+                            <li><b>Time Complexity:</b> <b>O(n)</b> - We traverse the array exactly once.</li>
+                            <li><b>Space Complexity:</b> <b>O(1)</b> - Only two pointers are used.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Intuition</h4>
+                        <p class="text-slate-600">
+                            Because the array is sorted, increasing <b>leftPointer</b> is guaranteed to increase the sum, and decreasing <b>rightPointer</b> is guaranteed to decrease it. This allows us to narrow down the search space linearly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Comparison Table</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="p-4 font-bold text-slate-700">Approach</th>
+                            <th class="p-4 font-bold text-slate-700">Time Complexity</th>
+                            <th class="p-4 font-bold text-slate-700">Space Complexity</th>
+                            <th class="p-4 font-bold text-slate-700">Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-slate-100">
+                            <td class="p-4">Brute Force</td>
+                            <td class="p-4 font-mono">O(n²)</td>
+                            <td class="p-4 font-mono">O(1)</td>
+                            <td class="p-4 text-red-500 font-bold">Slowest</td>
+                        </tr>
+                        <tr class="border-b border-slate-100">
+                            <td class="p-4">Binary Search</td>
+                            <td class="p-4 font-mono">O(n log n)</td>
+                            <td class="p-4 font-mono">O(1)</td>
+                            <td class="p-4 text-yellow-600 font-bold">Good</td>
+                        </tr>
+                        <tr class="bg-green-50/50">
+                            <td class="p-4 font-bold">Two Pointers</td>
+                            <td class="p-4 font-mono font-bold">O(n)</td>
+                            <td class="p-4 font-mono font-bold">O(1)</td>
+                            <td class="p-4 text-green-600 font-bold">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-blue-900 text-white rounded-3xl p-8 shadow-xl">
+                <h3 class="text-2xl font-bold mb-4">⚡ Quick Cheat Sheet</h3>
+                <ul class="space-y-4 text-blue-100">
+                    <li>• <b>Sorted Input?</b> Think Two Pointers or Binary Search immediately.</li>
+                    <li>• <b>Target Sum?</b> Consider the complement <code>(target - x)</code>.</li>
+                    <li>• <b>Two Sum II?</b> Different from Two Sum I (which usually needs a HashMap for O(1) space).</li>
+                    <li>• <b>1-Indexed?</b> Always add <code>+1</code> to your final indices.</li>
+                </ul>
+            </div>
+            <div class="bg-slate-800 text-white rounded-3xl p-8 shadow-xl">
+                <h3 class="text-2xl font-bold mb-4">🔍 Common Edge Cases</h3>
+                <ul class="space-y-4 text-slate-300">
+                    <li>• <b>Smallest Array:</b> Array of size 2 (minimum allowed).</li>
+                    <li>• <b>Negative Numbers:</b> Sorted order still applies (e.g., [-5, -2, 0, 3]).</li>
+                    <li>• <b>Duplicates:</b> The input may contain duplicate numbers, handle normally.</li>
+                    <li>• <b>Target Mismatch:</b> Problem usually guarantees exactly one solution.</li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Common state
+        const data1 = [2, 7, 11, 15];
+        const data2 = [2, 3, 5, 8, 11, 15, 18, 20];
+        const data3 = [1, 3, 4, 5, 8, 10, 11];
+
+        // --- Approach 1 Logic ---
+        const app1 = {
+            i: 0,
+            j: 1,
+            target: 9,
+            done: false,
+            render() {
+                const container = document.getElementById('app1-array');
+                container.innerHTML = data1.map((val, idx) => {
+                    let cls = "cell";
+                    if (idx === this.i || idx === this.j) cls += " active-pointer";
+                    if (this.done && (idx === this.i || idx === this.j)) cls += " match-found";
+                    
+                    return `
+                        <div class="${cls}">
+                            <div class="cell-value">${val}</div>
+                            <div class="cell-index">${idx + 1}</div>
+                            ${idx === this.i ? '<div class="pointer-label text-blue-600">i</div>' : ''}
+                            ${idx === this.j ? '<div class="pointer-label text-blue-600" style="top: -3rem">j</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            },
+            next() {
+                if (this.done) return;
+                const sum = data1[this.i] + data1[this.j];
+                const msg = document.getElementById('app1-msg');
+                msg.textContent = `Checking index ${this.i+1} and ${this.j+1}: ${data1[this.i]} + ${data1[this.j]} = ${sum}`;
+
+                if (sum === this.target) {
+                    this.done = true;
+                    msg.textContent = "Match found! Returning indices [1, 2]";
+                    msg.classList.replace('text-blue-600', 'text-green-600');
+                    this.render();
+                    return;
+                }
+
+                this.j++;
+                if (this.j >= data1.length) {
+                    this.i++;
+                    this.j = this.i + 1;
+                }
+                this.render();
+            },
+            reset() {
+                this.i = 0; this.j = 1; this.done = false;
+                document.getElementById('app1-msg').textContent = "";
+                document.getElementById('app1-msg').className = "h-12 text-center text-xl font-semibold text-blue-600";
+                this.render();
+            }
+        };
+
+        // --- Approach 2 Logic ---
+        const app2 = {
+            i: 0,
+            low: 1,
+            high: 7,
+            mid: -1,
+            target: 22,
+            stage: 'init', // init, mid, update
+            done: false,
+            render() {
+                const container = document.getElementById('app2-array');
+                container.innerHTML = data2.map((val, idx) => {
+                    let cls = "cell";
+                    if (idx === this.i) cls += " bg-blue-100 border-blue-500 shadow-lg scale-110 z-10";
+                    else if (idx >= this.low && idx <= this.high) cls += " search-range";
+                    if (idx === this.mid) cls += " ring-4 ring-yellow-400";
+                    if (this.done && (idx === this.i || idx === this.mid)) cls += " match-found";
+                    
+                    return `
+                        <div class="${cls}">
+                            <div class="cell-value">${val}</div>
+                            <div class="cell-index">${idx + 1}</div>
+                            ${idx === this.i ? '<div class="pointer-label text-blue-600">Fixed</div>' : ''}
+                            ${idx === this.mid ? '<div class="pointer-label text-yellow-600">Mid</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            },
+            next() {
+                if (this.done) return;
+                const msg = document.getElementById('app2-msg');
+                const comp = this.target - data2[this.i];
+
+                if (this.stage === 'init') {
+                    msg.textContent = `Fixed ${data2[this.i]}. Searching for ${comp} in range [${this.low+1}, ${this.high+1}]`;
+                    this.mid = Math.floor(this.low + (this.high - this.low) / 2);
+                    this.stage = 'check';
+                } else if (this.stage === 'check') {
+                    if (data2[this.mid] === comp) {
+                        this.done = true;
+                        msg.textContent = `Found! ${data2[this.i]} + ${data2[this.mid]} = 22`;
+                        msg.className = "h-12 text-center text-xl font-bold text-green-600";
+                    } else if (data2[this.mid] < comp) {
+                        msg.textContent = `${data2[this.mid]} < ${comp}, searching right half.`;
+                        this.low = this.mid + 1;
+                    } else {
+                        msg.textContent = `${data2[this.mid]} > ${comp}, searching left half.`;
+                        this.high = this.mid - 1;
+                    }
+                    
+                    if (!this.done) {
+                        if (this.low > this.high) {
+                            this.i++;
+                            this.low = this.i + 1;
+                            this.high = data2.length - 1;
+                            msg.textContent = "Not found in this range. Moving to next Fixed element.";
+                        }
+                        this.stage = 'init';
+                    }
+                    this.mid = -1;
+                }
+                this.render();
+            },
+            reset() {
+                this.i = 0; this.low = 1; this.high = 7; this.mid = -1; this.stage = 'init'; this.done = false;
+                document.getElementById('app2-msg').textContent = "";
+                document.getElementById('app2-msg').className = "h-12 text-center text-xl font-semibold text-yellow-600";
+                this.render();
+            }
+        };
+
+        // --- Approach 3 Logic ---
+        const app3 = {
+            left: 0,
+            right: 6,
+            target: 15,
+            done: false,
+            render() {
+                const container = document.getElementById('app3-array');
+                container.innerHTML = data3.map((val, idx) => {
+                    let cls = "cell";
+                    if (idx === this.left || idx === this.right) cls += " active-pointer";
+                    if (this.done && (idx === this.left || idx === this.right)) cls += " match-found";
+                    
+                    return `
+                        <div class="${cls}">
+                            <div class="cell-value">${val}</div>
+                            <div class="cell-index">${idx + 1}</div>
+                            ${idx === this.left ? '<div class="pointer-label text-blue-600 font-bold">Left</div>' : ''}
+                            ${idx === this.right ? '<div class="pointer-label text-red-600 font-bold">Right</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            },
+            next() {
+                if (this.done) return;
+                const sum = data3[this.left] + data3[this.right];
+                const msg = document.getElementById('app3-msg');
+                msg.textContent = `Current Sum: ${data3[this.left]} + ${data3[this.right]} = ${sum}`;
+
+                if (sum === this.target) {
+                    this.done = true;
+                    msg.textContent = "Perfect Match! Indices [2, 7]";
+                    msg.className = "h-12 text-center text-xl font-bold text-green-600";
+                } else if (sum < this.target) {
+                    msg.textContent += ` (Too low, moving Left pointer right)`;
+                    this.left++;
+                } else {
+                    msg.textContent += ` (Too high, moving Right pointer left)`;
+                    this.right--;
+                }
+                this.render();
+            },
+            reset() {
+                this.left = 0; this.right = 6; this.done = false;
+                document.getElementById('app3-msg').textContent = "";
+                document.getElementById('app3-msg').className = "h-12 text-center text-xl font-semibold text-green-600";
+                this.render();
+            }
+        };
+
+        // Initial render
+        window.onload = () => {
+            app1.render();
+            app2.render();
+            app3.render();
+        };
+    </script>
+</body>
+</html>

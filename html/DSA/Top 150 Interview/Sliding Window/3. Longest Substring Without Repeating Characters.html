@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3. Longest Substring Without Repeating Characters - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .pointer-label { font-weight: bold; font-size: 0.75rem; }
+        .cell { transition: all 0.2s ease; }
+        .active-window { background-color: #fef08a; border-color: #eab308; color: #854d0e; }
+        .duplicate-cell { background-color: #fecaca; border-color: #ef4444; color: #991b1b; }
+        .valid-window { background-color: #bbf7d0; border-color: #22c55e; color: #166534; }
+        .code-keyword { color: #d97706; font-weight: bold; }
+        .code-comment { color: #6b7280; font-style: italic; }
+        .code-func { color: #2563eb; }
+        .code-var { color: #dc2626; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        
+        <!-- HEADER SECTION -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">3. Longest Substring Without Repeating Characters</h1>
+            <div class="flex justify-center gap-2">
+                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold border border-yellow-200">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold border border-blue-200">Hash Table</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold border border-purple-200">Sliding Window</span>
+            </div>
+            <div class="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm border border-slate-200 text-left">
+                <h2 class="text-lg font-bold mb-2">Problem Description</h2>
+                <p class="mb-4">Given a string <b>s</b>, find the length of the longest <b>substring</b> without repeating characters.</p>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <p><b>Example 1:</b></p>
+                    <p>Input: s = "abcabcbb"</p>
+                    <p>Output: 3 (The answer is "abc", with the length of 3)</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- APPROACH 1: BRUTE FORCE -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-6">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force</h2>
+                <p class="text-slate-600 mt-2 italic">The "Verify All" Strategy</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>Check every single possible substring. For each substring, use a helper method to verify if all characters are unique. This is simple but computationally expensive because we re-check the same characters over and over.</p>
+
+                <!-- Animation Zone 1 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="brute-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex gap-2" id="brute-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Current Substring</span>
+                                <span id="brute-sub" class="text-2xl font-mono h-8">""</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Max Length</span>
+                                <span id="brute-max-len" class="text-2xl font-mono text-green-400">0</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="bruteViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="bruteViz.toggle()" id="brute-play-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition">Play</button>
+                            <button onclick="bruteViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="bruteViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 1 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Brute Force)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> lengthOfLongestSubstring(String inputString) {
+    <span class="code-keyword">int</span> maxLength = 0;
+    <span class="code-keyword">int</span> n = inputString.length();
+
+    <span class="code-comment">// Try every starting index</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> startIdx = 0; startIdx < n; startIdx++) {
+        <span class="code-comment">// Try every ending index</span>
+        <span class="code-keyword">for</span> (<span class="code-keyword">int</span> endIdx = startIdx + 1; endIdx <= n; endIdx++) {
+            <span class="code-keyword">if</span> (allUnique(inputString, startIdx, endIdx)) {
+                maxLength = Math.max(maxLength, endIdx - startIdx);
+            }
+        }
+    }
+    <span class="code-keyword">return</span> maxLength;
+}
+
+<span class="code-keyword">private boolean</span> allUnique(String s, <span class="code-keyword">int</span> start, <span class="code-keyword">int</span> end) {
+    Set&lt;Character&gt; set = <span class="code-keyword">new</span> HashSet&lt;&gt;();
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> i = start; i < end; i++) {
+        <span class="code-keyword">if</span> (set.contains(s.charAt(i))) <span class="code-keyword">return false</span>;
+        set.add(s.charAt(i));
+    }
+    <span class="code-keyword">return true</span>;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-red-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n³)</b> - We iterate through O(n²) substrings, and for each, we iterate O(n) characters to check uniqueness.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(min(n, m))</b> - Where m is the size of the character set.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Very simple to verify small strings.</p>
+                        <p class="text-sm text-red-600">❌ Extremely slow for long strings (n > 1,000).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: SLIDING WINDOW (SET) -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-400 pl-6">
+                <h2 class="text-3xl font-bold">Approach 2: Sliding Window (HashSet)</h2>
+                <p class="text-slate-600 mt-2 italic">The "Dynamic Window" Strategy</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>Instead of re-checking everything, we use two pointers to define a window. We move the <b>right pointer</b> to add characters. If we hit a duplicate, we move the <b>left pointer</b> forward, removing characters from our set until the duplicate is gone. This "slides" the window across the string.</p>
+
+                <!-- Animation Zone 2 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="set-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex gap-2" id="set-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">HashSet</span>
+                                <span id="set-contents" class="text-xl font-mono text-blue-300 h-8">{}</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Max Length</span>
+                                <span id="set-max-len" class="text-2xl font-mono text-green-400">0</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="setViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="setViz.toggle()" id="set-play-btn" class="px-8 py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition">Play</button>
+                            <button onclick="setViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="setViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                        <div id="set-msg" class="text-sm font-mono text-slate-400 h-6">Ready...</div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 2 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (HashSet)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> lengthOfLongestSubstring(String inputString) {
+    <span class="code-keyword">int</span> n = inputString.length();
+    Set&lt;Character&gt; uniqueChars = <span class="code-keyword">new</span> HashSet&lt;&gt;();
+    <span class="code-keyword">int</span> maxLength = 0, leftPointer = 0, rightPointer = 0;
+
+    <span class="code-keyword">while</span> (rightPointer < n) {
+        <span class="code-keyword">if</span> (!uniqueChars.contains(inputString.charAt(rightPointer))) {
+            <span class="code-comment">// Character is unique, expand the window</span>
+            uniqueChars.add(inputString.charAt(rightPointer));
+            rightPointer++;
+            maxLength = Math.max(maxLength, rightPointer - leftPointer);
+        } <span class="code-keyword">else</span> {
+            <span class="code-comment">// Duplicate found, shrink from the left</span>
+            uniqueChars.remove(inputString.charAt(leftPointer));
+            leftPointer++;
+        }
+    }
+    <span class="code-keyword">return</span> maxLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 text-sm">
+                    <div>
+                        <h4 class="font-bold text-blue-600">Complexity Analysis</h4>
+                        <p><b>Time:</b> <b>O(2n) = O(n)</b> - In the worst case, each character is visited twice (once by right, once by left).</p>
+                        <p><b>Space:</b> <b>O(min(n, m))</b> - Size of the HashSet.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Highly efficient for most strings.</p>
+                        <p class="text-sm text-red-600">❌ Still potentially moves the left pointer many times incrementally.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: OPTIMIZED SLIDING WINDOW (MAP) -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-green-500 pl-6">
+                <h2 class="text-3xl font-bold">Approach 3: Optimized Sliding Window (HashMap)</h2>
+                <p class="text-slate-600 mt-2 italic">The "Fast Jump" Strategy</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-6">
+                <h3 class="text-xl font-semibold">Intuition</h3>
+                <p>Instead of shrinking the window one character at a time, we store the <b>last seen index</b> of each character in a Map (or an array). When we find a duplicate, we jump the <b>left pointer</b> directly to `index + 1` of the previous occurrence. This is the fastest possible way.</p>
+
+                <!-- Animation Zone 3 -->
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <div id="map-viz-container" class="flex flex-col items-center gap-8 py-8">
+                        <div class="flex gap-2" id="map-array"></div>
+                        <div class="flex gap-12 text-sm">
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Last Seen Map</span>
+                                <span id="map-contents" class="text-xl font-mono text-green-300 h-8">{}</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <span class="text-slate-400">Max Length</span>
+                                <span id="map-max-len" class="text-2xl font-mono text-green-400">0</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="mapViz.prev()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Prev</button>
+                            <button onclick="mapViz.toggle()" id="map-play-btn" class="px-8 py-2 bg-green-600 hover:bg-green-500 rounded font-bold transition">Play</button>
+                            <button onclick="mapViz.next()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded transition">Next</button>
+                            <button onclick="mapViz.reset()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded transition">Reset</button>
+                        </div>
+                        <div id="map-msg" class="text-sm font-mono text-slate-400 h-6">Ready...</div>
+                    </div>
+                </div>
+
+                <!-- Java Code Zone 3 -->
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-x-auto">
+                    <h4 class="font-bold mb-4 text-slate-700 uppercase tracking-widest text-xs">Java Implementation (Optimized Map)</h4>
+                    <pre class="font-mono text-sm leading-relaxed">
+<span class="code-keyword">public int</span> lengthOfLongestSubstring(String s) {
+    <span class="code-keyword">int</span> n = s.length(), maxLength = 0;
+    <span class="code-comment">// Map to store the LAST seen index + 1 for each character</span>
+    Map&lt;Character, Integer&gt; lastSeenMap = <span class="code-keyword">new</span> HashMap&lt;&gt;(); 
+
+    <span class="code-keyword">for</span> (<span class="code-keyword">int</span> right = 0, left = 0; right < n; right++) {
+        <span class="code-keyword">char</span> currentChar = s.charAt(right);
+        
+        <span class="code-keyword">if</span> (lastSeenMap.containsKey(currentChar)) {
+            <span class="code-comment">// Jump left to the position after the duplicate</span>
+            <span class="code-comment">// Must take Math.max to avoid moving left pointer backwards</span>
+            left = Math.max(lastSeenMap.get(currentChar), left);
+        }
+
+        maxLength = Math.max(maxLength, right - left + 1);
+        <span class="code-comment">// Store next valid starting point</span>
+        lastSeenMap.put(currentChar, right + 1);
+    }
+    <span class="code-keyword">return</span> maxLength;
+}</pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-green-600">Complexity Analysis</h4>
+                        <p class="text-sm"><b>Time:</b> <b>O(n)</b> - Only the right pointer moves from 0 to n. Left pointer jumps.</p>
+                        <p class="text-sm"><b>Space:</b> <b>O(min(m, n))</b> - Size of the Map.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">Pros & Cons</h4>
+                        <p class="text-sm text-green-600">✅ Absolutely optimal performance.</p>
+                        <p class="text-sm text-red-600">❌ Logic is slightly more subtle (Math.max is crucial).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARISON TABLE -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold text-center">Comparison</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-4">Approach</th>
+                            <th class="px-6 py-4 text-center">Time</th>
+                            <th class="px-6 py-4 text-center">Space</th>
+                            <th class="px-6 py-4">Efficiency Note</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr>
+                            <td class="px-6 py-4 font-bold">Brute Force</td>
+                            <td class="px-6 py-4 text-center text-red-600 font-mono"><b>O(n³)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono"><b>O(m)</b></td>
+                            <td class="px-6 py-4">Too slow for production.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-4 font-bold">Sliding Window (Set)</td>
+                            <td class="px-6 py-4 text-center text-blue-600 font-mono"><b>O(2n)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono"><b>O(m)</b></td>
+                            <td class="px-6 py-4">Standard solution.</td>
+                        </tr>
+                        <tr class="bg-green-50/30">
+                            <td class="px-6 py-4 font-bold text-green-700">Optimized Map</td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(n)</b></td>
+                            <td class="px-6 py-4 text-center text-green-600 font-mono font-bold"><b>O(m)</b></td>
+                            <td class="px-6 py-4 font-bold">Fastest. One pass only.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <div class="bg-slate-800 text-white p-8 rounded-3xl shadow-xl space-y-6 border border-slate-700">
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+                <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                Key Takeaways
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <h3 class="font-bold text-slate-300">The "Window" Habit</h3>
+                    <p class="text-sm opacity-80">Any "Longest/Shortest Subarray" problem on strings/arrays is usually a <b>Sliding Window</b> candidate.</p>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="font-bold text-slate-300">Set vs Map</h3>
+                    <p class="text-sm opacity-80">A <b>HashSet</b> tracks existence. A <b>HashMap</b> tracks "where did I see this before?". Use the Map to skip work.</p>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="font-bold text-slate-300">Why Math.max?</h3>
+                    <p class="text-sm opacity-80">Crucial for optimized window! When jumping `left`, you must ensure you don't jump backward to a duplicate that was already outside the current window.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-slate-400 text-sm pb-8">
+            <p>Interactive LeetCode Learning Canvas - 3. Longest Substring Without Repeating Characters</p>
+        </footer>
+    </div>
+
+    <script>
+        const testStr = "abcabcbb";
+
+        class Visualizer {
+            constructor(containerId, arrayId, val1Id, val2Id, playBtnId, msgId, type) {
+                this.container = document.getElementById(containerId);
+                this.arrayEl = document.getElementById(arrayId);
+                this.val1El = document.getElementById(val1Id); // Sum or Set/Map contents
+                this.val2El = document.getElementById(val2Id); // Max Length
+                this.playBtn = document.getElementById(playBtnId);
+                this.msgEl = document.getElementById(msgId);
+                this.type = type;
+                this.states = [];
+                this.index = 0;
+                this.timer = null;
+                this.init();
+            }
+
+            init() {
+                this.renderArray();
+            }
+
+            renderArray() {
+                this.arrayEl.innerHTML = testStr.split('').map((char, i) => `
+                    <div id="cell-${this.arrayEl.id}-${i}" class="cell w-10 h-10 flex flex-col items-center justify-center border-2 border-slate-700 rounded-lg text-lg font-bold bg-slate-800 relative transition-all duration-300">
+                        ${char}
+                        <div class="pointer-label text-[10px] absolute -top-5 hidden" id="ptr-${this.arrayEl.id}-${i}"></div>
+                    </div>
+                `).join('');
+            }
+
+            updateUI(state) {
+                const cells = this.arrayEl.querySelectorAll('.cell');
+                cells.forEach((cell, i) => {
+                    cell.className = 'cell w-10 h-10 flex flex-col items-center justify-center border-2 border-slate-700 rounded-lg text-lg font-bold bg-slate-800 relative';
+                    const ptr = document.getElementById(`ptr-${this.arrayEl.id}-${i}`);
+                    ptr.classList.add('hidden');
+                    ptr.innerText = '';
+                    
+                    if (i >= state.start && i <= state.end) {
+                        cell.classList.add(state.isDuplicate ? 'duplicate-cell' : 'active-window');
+                        cell.classList.remove('bg-slate-800');
+                    }
+
+                    if (state.pointers) {
+                        state.pointers.forEach(p => {
+                            if (p.idx === i) {
+                                ptr.classList.remove('hidden');
+                                ptr.innerText += (ptr.innerText ? ' & ' : '') + p.label;
+                                ptr.style.color = p.color;
+                            }
+                        });
+                    }
+                });
+
+                if (this.type === 'brute') {
+                    this.val1El.innerText = `"${testStr.substring(state.start, state.end + 1)}"`;
+                } else {
+                    this.val1El.innerText = state.collection || '{}';
+                }
+                
+                this.val2El.innerText = state.maxLen;
+                if (this.msgEl) this.msgEl.innerText = state.msg || '';
+            }
+
+            next() {
+                if (this.index < this.states.length - 1) {
+                    this.index++;
+                    this.updateUI(this.states[this.index]);
+                } else {
+                    this.pause();
+                }
+            }
+
+            prev() {
+                if (this.index > 0) {
+                    this.index--;
+                    this.updateUI(this.states[this.index]);
+                }
+            }
+
+            toggle() {
+                if (this.timer) this.pause();
+                else this.play();
+            }
+
+            play() {
+                this.playBtn.innerText = 'Pause';
+                this.timer = setInterval(() => this.next(), 600);
+            }
+
+            pause() {
+                this.playBtn.innerText = 'Play';
+                clearInterval(this.timer);
+                this.timer = null;
+            }
+
+            reset() {
+                this.pause();
+                this.index = 0;
+                this.updateUI(this.states[0]);
+            }
+        }
+
+        const genBrute = () => {
+            const states = [{ start: -1, end: -1, maxLen: 0 }];
+            let maxLen = 0;
+            for (let i = 0; i < testStr.length; i++) {
+                for (let j = i; j < testStr.length; j++) {
+                    const sub = testStr.substring(i, j+1);
+                    const isUnique = new Set(sub).size === sub.length;
+                    if (isUnique) maxLen = Math.max(maxLen, sub.length);
+                    states.push({ 
+                        start: i, end: j, maxLen, 
+                        isDuplicate: !isUnique,
+                        pointers: [{idx: i, label: 'S', color: '#ef4444'}, {idx: j, label: 'E', color: '#3b82f6'}]
+                    });
+                }
+            }
+            return states;
+        }
+
+        const genSet = () => {
+            const states = [{ start: -1, end: -1, maxLen: 0, collection: '{}', msg: 'Start' }];
+            let maxLen = 0, left = 0, right = 0;
+            const set = new Set();
+            while (right < testStr.length) {
+                if (!set.has(testStr[right])) {
+                    set.add(testStr[right]);
+                    right++;
+                    maxLen = Math.max(maxLen, right - left);
+                    states.push({
+                        start: left, end: right-1, maxLen, collection: `{${Array.from(set).join(', ')}}`,
+                        msg: `Add ${testStr[right-1]}`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right-1, label: 'R', color: '#3b82f6'}]
+                    });
+                } else {
+                    set.delete(testStr[left]);
+                    left++;
+                    states.push({
+                        start: left, end: right-1, maxLen, collection: `{${Array.from(set).join(', ')}}`,
+                        msg: `Duplicate! Remove ${testStr[left-1]} from left`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+                }
+            }
+            return states;
+        }
+
+        const genMap = () => {
+            const states = [{ start: -1, end: -1, maxLen: 0, collection: '{}', msg: 'Start' }];
+            let maxLen = 0, left = 0;
+            const map = new Map();
+            for (let right = 0; right < testStr.length; right++) {
+                const char = testStr[right];
+                if (map.has(char)) {
+                    const prevIdx = map.get(char);
+                    const oldLeft = left;
+                    left = Math.max(prevIdx, left);
+                    states.push({
+                        start: left, end: right, maxLen, 
+                        collection: `{${Array.from(map.entries()).map(e => e[0] + ':' + e[1]).join(', ')}}`,
+                        msg: left > oldLeft ? `Jump Left from ${oldLeft} to ${left}!` : `Already saw ${char}, but outside window`,
+                        pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                    });
+                }
+                map.set(char, right + 1);
+                maxLen = Math.max(maxLen, right - left + 1);
+                states.push({
+                    start: left, end: right, maxLen,
+                    collection: `{${Array.from(map.entries()).map(e => e[0] + ':' + e[1]).join(', ')}}`,
+                    msg: `Process ${char}`,
+                    pointers: [{idx: left, label: 'L', color: '#ef4444'}, {idx: right, label: 'R', color: '#3b82f6'}]
+                });
+            }
+            return states;
+        }
+
+        const bruteViz = new Visualizer('brute-viz-container', 'brute-array', 'brute-sub', 'brute-max-len', 'brute-play-btn', null, 'brute');
+        bruteViz.states = genBrute();
+
+        const setViz = new Visualizer('set-viz-container', 'set-array', 'set-contents', 'set-max-len', 'set-play-btn', 'set-msg', 'set');
+        setViz.states = genSet();
+
+        const mapViz = new Visualizer('map-viz-container', 'map-array', 'map-contents', 'map-max-len', 'map-play-btn', 'map-msg', 'map');
+        mapViz.states = genMap();
+
+        window.onload = () => {
+            bruteViz.updateUI(bruteViz.states[0]);
+            setViz.updateUI(setViz.states[0]);
+            mapViz.updateUI(mapViz.states[0]);
+        };
+    </script>
+</body>
+</html>

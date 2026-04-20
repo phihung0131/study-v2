@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 228: Summary Ranges - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .array-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .array-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .box-active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: translateY(-5px);
+        }
+        .box-range {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+        }
+        .pointer-label {
+            position: absolute;
+            top: -30px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #3b82f6;
+            text-transform: uppercase;
+        }
+        .result-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: #f1f5f9;
+            border-radius: 20px;
+            margin: 4px;
+            border: 1px solid #e2e8f0;
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">228. Summary Ranges</h1>
+            <div class="flex justify-center gap-4 text-sm mb-6">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Array</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Two Pointers</span>
+            </div>
+            <p class="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
+                Given a <b>sorted unique</b> integer array <i>nums</i>, return the smallest sorted list of ranges that cover all the numbers in the array exactly.
+            </p>
+        </header>
+
+        <!-- Problem Summary Section -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Problem Summary</h2>
+            <p class="text-slate-600 mb-4">
+                We need to group consecutive numbers together. For example, if we have <b>0, 1, 2</b>, they form the range <b>"0->2"</b>. If a number stands alone, like <b>4</b>, it is just <b>"4"</b>.
+            </p>
+            <div class="bg-slate-50 p-4 rounded-xl border-l-4 border-slate-400">
+                <p class="font-semibold text-slate-700">Example:</p>
+                <code class="block mt-2">Input: nums = [0,1,2,4,5,7]</code>
+                <code class="block text-blue-600 mt-1">Output: ["0->2", "4->5", "7"]</code>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: TWO POINTERS (ONE PASS) -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                <h2 class="text-3xl font-bold text-slate-800">Approach: The Two-Pointer Linear Scan</h2>
+            </div>
+
+            <!-- Intuition -->
+            <div class="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100">
+                <h3 class="text-xl font-semibold text-blue-800 mb-2">Intuition</h3>
+                <p class="text-blue-900 leading-relaxed">
+                    Since the array is <b>sorted</b> and contains <b>unique</b> values, any consecutive numbers will have a difference of exactly 1. We can maintain a <b>rangeStart</b> pointer and iterate through the array. As soon as we find a gap (where <code>nums[i+1] != nums[i] + 1</code>), we close the current range and start a new one.
+                </p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6 overflow-hidden">
+                <h3 class="text-lg font-bold text-slate-700 mb-6 text-center">Interactive Animation</h3>
+                
+                <div id="app1-array" class="array-container mb-12">
+                    <!-- Dynamic Array Elements -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app1-status" class="text-slate-600 font-medium h-8 italic text-center">
+                        Click "Start" to see the pointers in action.
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="resetApp1()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app1-next" onclick="nextStepApp1()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+
+                    <div class="w-full mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="text-xs uppercase text-slate-400 font-bold mb-2">Resulting Ranges</div>
+                        <div id="app1-results" class="flex flex-wrap gap-2 min-h-[40px]">
+                            <!-- Results will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-6 py-3 bg-slate-800">
+                    <span class="text-slate-300 text-sm font-medium">SummaryRanges.java</span>
+                    <span class="text-xs text-slate-500 uppercase">Java 17</span>
+                </div>
+                <pre class="p-6 text-sm code-font leading-relaxed overflow-x-auto text-slate-300">
+<span class="text-purple-400">public</span> List&lt;String&gt; <span class="text-yellow-400">summaryRanges</span>(<span class="text-purple-400">int</span>[] nums) {
+    List&lt;String&gt; resultList = <span class="text-purple-400">new</span> ArrayList&lt;&gt;();
+    <span class="text-purple-400">int</span> n = nums.length;
+    
+    <span class="text-green-500">// Traverse the array using a "rangeStart" pointer</span>
+    <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span> currentIdx = 0; currentIdx &lt; n; currentIdx++) {
+        <span class="text-purple-400">int</span> rangeStartValue = nums[currentIdx];
+        
+        <span class="text-green-500">// Keep moving currentIdx while the next element is consecutive</span>
+        <span class="text-purple-400">while</span> (currentIdx + 1 &lt; n && nums[currentIdx + 1] == nums[currentIdx] + 1) {
+            currentIdx++;
+        }
+        
+        <span class="text-green-500">// Form the string based on whether it's a single value or a range</span>
+        <span class="text-purple-400">if</span> (rangeStartValue != nums[currentIdx]) {
+            resultList.add(rangeStartValue + <span class="text-orange-300">"->"</span> + nums[currentIdx]);
+        } <span class="text-purple-400">else</span> {
+            resultList.add(String.valueOf(rangeStartValue));
+        }
+    }
+    
+    <span class="text-purple-400">return</span> resultList;
+}</pre>
+            </div>
+
+            <!-- Complexity & Explanation -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3">Step-by-Step Breakdown</h4>
+                    <ul class="space-y-2 text-slate-600 text-sm">
+                        <li>1. Initialize an empty <b>resultList</b>.</li>
+                        <li>2. Loop through the array using <b>currentIdx</b>.</li>
+                        <li>3. Store the value at <b>currentIdx</b> as the <b>rangeStartValue</b>.</li>
+                        <li>4. Increment <b>currentIdx</b> as long as <b>nums[i+1] == nums[i] + 1</b>.</li>
+                        <li>5. Compare <b>rangeStartValue</b> with the final <b>nums[currentIdx]</b> to decide the string format.</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-3">Complexity Analysis</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded font-mono text-xs font-bold uppercase">Time Complexity</span>
+                            <p class="text-slate-600 mt-1"><b>O(n)</b> where n is the length of the input array. Each element is visited exactly once by the pointer.</p>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded font-mono text-xs font-bold uppercase">Space Complexity</span>
+                            <p class="text-slate-600 mt-1"><b>O(1)</b> excluding the output list, as we only use a few integer variables for tracking pointers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARISON TABLE -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Efficiency Comparison</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200">
+                            <th class="py-4 font-bold text-slate-700">Approach</th>
+                            <th class="py-4 font-bold text-slate-700">Time</th>
+                            <th class="py-4 font-bold text-slate-700">Space</th>
+                            <th class="py-4 font-bold text-slate-700">Intuition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-slate-100">
+                            <td class="py-4 text-blue-600 font-semibold">Brute Force / Sub-intervals</td>
+                            <td class="py-4 text-slate-600 font-mono">O(n)</td>
+                            <td class="py-4 text-slate-600 font-mono">O(1)</td>
+                            <td class="py-4 text-slate-600">Checking every number independently.</td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 text-green-600 font-semibold text-lg">One Pass Two-Pointer</td>
+                            <td class="py-4 text-slate-600 font-mono font-bold">O(n)</td>
+                            <td class="py-4 text-slate-600 font-mono font-bold">O(1)</td>
+                            <td class="py-4 text-slate-600">Smart scanning by jumping to the end of each range.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-800 text-white p-8 rounded-3xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="text-yellow-400">💡</span> Key Takeaways
+                </h3>
+                <ul class="space-y-3 text-slate-300">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400 mt-1">✔</span> 
+                        <span>Sorted Input is Key: Always leverage the sort order for O(1) difference checks.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400 mt-1">✔</span> 
+                        <span>Pointer Management: A simple <b>while</b> loop inside a <b>for</b> loop can still be O(n) if the pointer only moves forward.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-400 mt-1">✔</span> 
+                        <span>String Concatenation: In Java, <code>+</code> is okay here, but <code>StringBuilder</code> is faster for massive strings.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 p-8 rounded-3xl">
+                <h3 class="text-xl font-bold text-amber-800 mb-4 flex items-center gap-2">
+                    <span class="text-amber-600">🚩</span> Edge Cases to Watch
+                </h3>
+                <ul class="space-y-3 text-amber-900">
+                    <li class="flex items-center gap-2">
+                        <span class="bg-amber-200 p-1 rounded">1</span>
+                        <span><b>Empty Array:</b> Ensure the method returns an empty list immediately.</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="bg-amber-200 p-1 rounded">2</span>
+                        <span><b>Single Element:</b> Array like [1] should return ["1"].</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="bg-amber-200 p-1 rounded">3</span>
+                        <span><b>No Ranges:</b> Array like [1, 3, 5, 7] should return ["1", "3", "5", "7"].</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="bg-amber-200 p-1 rounded">4</span>
+                        <span><b>All Consecutive:</b> Array like [1, 2, 3] should return ["1->3"].</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="text-center text-slate-400 text-sm pb-12">
+            Senior Java Engineer & Algorithm Visualizer Module &bull; 2024
+        </footer>
+    </div>
+
+    <script>
+        // --- Animation Logic for Approach 1 ---
+        const app1Data = [0, 1, 2, 4, 5, 7, 8, 10];
+        let app1State = {
+            currentIdx: -1,
+            rangeStart: 0,
+            step: 0,
+            results: [],
+            isFinished: false
+        };
+
+        function initApp1() {
+            const container = document.getElementById('app1-array');
+            container.innerHTML = '';
+            app1Data.forEach((val, i) => {
+                const box = document.createElement('div');
+                box.className = 'array-box';
+                box.id = `box-app1-${i}`;
+                box.innerText = val;
+                container.appendChild(box);
+            });
+        }
+
+        function resetApp1() {
+            app1State = {
+                currentIdx: -1,
+                rangeStart: 0,
+                step: 0,
+                results: [],
+                isFinished: false
+            };
+            initApp1();
+            document.getElementById('app1-results').innerHTML = '';
+            document.getElementById('app1-status').innerText = 'Ready to start.';
+            document.getElementById('app1-next').disabled = false;
+        }
+
+        function nextStepApp1() {
+            if (app1State.isFinished) return;
+
+            // Step 1: Start a new range
+            if (app1State.step === 0) {
+                app1State.currentIdx++;
+                if (app1State.currentIdx >= app1Data.length) {
+                    app1State.isFinished = true;
+                    document.getElementById('app1-status').innerText = 'Complete!';
+                    document.getElementById('app1-next').disabled = true;
+                    return;
+                }
+                
+                app1State.rangeStart = app1State.currentIdx;
+                highlightBox(app1State.currentIdx, 'box-active');
+                document.getElementById('app1-status').innerText = `Starting new range at index ${app1State.currentIdx} (Value: ${app1Data[app1State.currentIdx]})`;
+                app1State.step = 1;
+            } 
+            // Step 2: Check if next is consecutive
+            else if (app1State.step === 1) {
+                const nextIdx = app1State.currentIdx + 1;
+                if (nextIdx < app1Data.length && app1Data[nextIdx] === app1Data[app1State.currentIdx] + 1) {
+                    app1State.currentIdx = nextIdx;
+                    highlightBox(app1State.currentIdx, 'box-range');
+                    document.getElementById('app1-status').innerText = `Next element ${app1Data[nextIdx]} is consecutive. Extending range.`;
+                } else {
+                    document.getElementById('app1-status').innerText = `Gap detected or end reached. Closing range.`;
+                    app1State.step = 2;
+                }
+            } 
+            // Step 3: Close range and add to result
+            else if (app1State.step === 2) {
+                let rangeStr = "";
+                const startVal = app1Data[app1State.rangeStart];
+                const endVal = app1Data[app1State.currentIdx];
+                
+                if (startVal === endVal) {
+                    rangeStr = `${startVal}`;
+                } else {
+                    rangeStr = `${startVal}->${endVal}`;
+                }
+                
+                app1State.results.push(rangeStr);
+                addResultPill(rangeStr);
+                
+                // Clear highlights
+                for(let i = app1State.rangeStart; i <= app1State.currentIdx; i++) {
+                    const el = document.getElementById(`box-app1-${i}`);
+                    el.classList.remove('box-active', 'box-range');
+                    el.classList.add('bg-slate-100', 'border-slate-400');
+                }
+                
+                app1State.step = 0;
+                if (app1State.currentIdx >= app1Data.length - 1) {
+                    app1State.isFinished = true;
+                    document.getElementById('app1-status').innerText = 'Finished traversing the array.';
+                    document.getElementById('app1-next').disabled = true;
+                } else {
+                    document.getElementById('app1-status').innerText = `Range "${rangeStr}" saved. Moving to next possible range.`;
+                }
+            }
+        }
+
+        function highlightBox(idx, className) {
+            const el = document.getElementById(`box-app1-${idx}`);
+            if (el) {
+                el.classList.add(className);
+                // Add pointer label if it's the current one
+                if (className === 'box-active') {
+                    const label = document.createElement('div');
+                    label.className = 'pointer-label';
+                    label.innerText = 'Start';
+                    el.appendChild(label);
+                }
+            }
+        }
+
+        function addResultPill(text) {
+            const container = document.getElementById('app1-results');
+            const pill = document.createElement('div');
+            pill.className = 'result-pill text-blue-700 font-bold border-blue-200 bg-blue-50';
+            pill.innerText = `"${text}"`;
+            container.appendChild(pill);
+        }
+
+        // Initialize on load
+        window.onload = initApp1;
+    </script>
+</body>
+</html>

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 219: Contains Duplicate II Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.85rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .cell {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 55px;
+            height: 55px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 700;
+            background: white;
+            position: relative;
+        }
+
+        .active-i { border-color: #3b82f6; background-color: #eff6ff; transform: translateY(-4px); }
+        .active-j { border-color: #f59e0b; background-color: #fffbeb; transform: translateY(-4px); }
+        .found-match { border-color: #22c55e; background-color: #dcfce7; color: #166534; }
+        
+        .window-highlighter {
+            position: absolute;
+            height: 70px;
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 2px solid #3b82f6;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .map-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+        }
+
+        .pointer-label {
+            position: absolute;
+            top: -28px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">219. Contains Duplicate II</h1>
+            <p class="text-lg text-slate-600">Finding nearby duplicates within a fixed distance <b>k</b>.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Easy</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Array</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Sliding Window</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Overview</h2>
+            <p class="mb-4 text-slate-700">Given an integer array <b>nums</b> and an integer <b>k</b>, return <b>true</b> if there are two distinct indices <b>i</b> and <b>j</b> such that:</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 font-mono text-sm">
+                <p>1. nums[i] == nums[j]</p>
+                <p>2. abs(i - j) &lt;= k</p>
+            </div>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Nested Loops (Brute Force)</h2>
+                <p class="text-slate-600 mt-2">Check every pair <b>(i, j)</b>. To optimize slightly, we only check <b>j</b> in the range <b>[i+1, i+k]</b>.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-12 pt-8">
+                    <div class="flex gap-3 justify-center relative" id="brute-array"></div>
+                    <div class="bg-slate-50 p-4 rounded-xl border w-full max-w-md text-center">
+                        <p class="text-xs font-bold text-slate-400 mb-1 uppercase">Distance Check</p>
+                        <div id="brute-status" class="text-lg font-medium text-slate-700">Click Next to start</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetBrute()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepBrute()" id="btn-brute" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Next Step</button>
+                </div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">containsNearbyDuplicate</span>(<span class="type">int</span>[] nums, <span class="type">int</span> k) {
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; nums.length; i++) {
+        <span class="comment">// Only check indices within distance k</span>
+        <span class="keyword">for</span> (<span class="type">int</span> j = i + 1; j &lt;= i + k &amp;&amp; j &lt; nums.length; j++) {
+            <span class="keyword">if</span> (nums[i] == nums[j]) {
+                <span class="keyword">return true</span>;
+            }
+        }
+    }
+    <span class="keyword">return false</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n * k)</b>. In the worst case, we check k neighbors for every element.</p>
+                    <p><b>Space Complexity:</b> <b>O(1)</b>. No extra space used.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Verdict</h4>
+                    <p>Too slow if <b>k</b> is large (near <b>n</b>), resulting in <b>O(n²)</b> behavior. We need a way to "remember" previous indices.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Hash Map -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-blue-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Hash Map (Value → Last Index)</h2>
+                <p class="text-slate-600 mt-2">Traverse the array once. Store the <b>last seen index</b> of each value. If we see a value again, check the distance from its previous index.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="flex flex-col items-center">
+                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase">Input Array</p>
+                        <div id="map-array" class="flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">Hash Map (Num → Index)</p>
+                        <div id="map-viz" class="bg-white rounded-lg border min-h-[180px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetMap()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepMap()" id="btn-map" class="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="map-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to traverse...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">containsNearbyDuplicate</span>(<span class="type">int</span>[] nums, <span class="type">int</span> k) {
+    <span class="type">Map</span>&lt;<span class="type">Integer</span>, <span class="type">Integer</span>&gt; lastSeenIndex = <span class="keyword">new</span> <span class="type">HashMap</span>&lt;&gt;();
+    
+    <span class="keyword">for</span> (<span class="type">int</span> currentIndex = 0; currentIndex &lt; nums.length; currentIndex++) {
+        <span class="type">int</span> num = nums[currentIndex];
+        
+        <span class="keyword">if</span> (lastSeenIndex.<span class="method">containsKey</span>(num)) {
+            <span class="type">int</span> prevIndex = lastSeenIndex.<span class="method">get</span>(num);
+            <span class="keyword">if</span> (currentIndex - prevIndex &lt;= k) {
+                <span class="keyword">return true</span>;
+            }
+        }
+        
+        <span class="comment">// Always update to the most recent index for future checks</span>
+        lastSeenIndex.<span class="method">put</span>(num, currentIndex);
+    }
+    <span class="keyword">return false</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n)</b>. Single pass, Map operations are <b>O(1)</b>.</p>
+                    <p><b>Space Complexity:</b> <b>O(n)</b> to store up to n elements in the Map.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Key Detail</h4>
+                    <p>We <b>always update</b> the index in the map. Why? Because a later occurrence is more likely to be within distance <b>k</b> of the *next* occurrence.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Sliding Window -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Sliding Window (Hash Set)</h2>
+                <p class="text-slate-600 mt-2">Maintain a "window" of size <b>k</b> using a <b>Set</b>. If a number we're adding is already in the Set, it must be within distance <b>k</b>.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-12 pt-10">
+                    <div class="flex gap-3 justify-center relative" id="window-array">
+                        <div id="window-box" class="window-highlighter"></div>
+                    </div>
+                    <div class="w-full max-w-sm">
+                        <p class="text-xs font-bold text-emerald-600 mb-2 text-center uppercase">Hash Set (Current Window Content)</p>
+                        <div id="window-set" class="bg-slate-50 p-4 rounded-xl border flex flex-wrap gap-2 justify-center min-h-[60px]"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetWindow()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepWindow()" id="btn-window" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Step</button>
+                </div>
+                <div id="window-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Initializing window...</div>
+            </div>
+
+            <!-- Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-800">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public boolean</span> <span class="method">containsNearbyDuplicate</span>(<span class="type">int</span>[] nums, <span class="type">int</span> k) {
+    <span class="type">Set</span>&lt;<span class="type">Integer</span>&gt; window = <span class="keyword">new</span> <span class="type">HashSet</span>&lt;&gt;();
+    
+    <span class="keyword">for</span> (<span class="type">int</span> i = 0; i &lt; nums.length; i++) {
+        <span class="comment">// If window grows larger than k, remove the oldest element</span>
+        <span class="keyword">if</span> (i &gt; k) {
+            window.<span class="method">remove</span>(nums[i - k - 1]);
+        }
+        
+        <span class="comment">// add() returns false if the element was already present</span>
+        <span class="keyword">if</span> (!window.<span class="method">add</span>(nums[i])) {
+            <span class="keyword">return true</span>;
+        }
+    }
+    <span class="keyword">return false</span>;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity Analysis</h4>
+                    <p><b>Time Complexity:</b> <b>O(n)</b>. Single pass with constant-time Set operations.</p>
+                    <p><b>Space Complexity:</b> <b>O(min(n, k))</b>. The Set never holds more than k + 1 elements.</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Why Sliding Window?</h4>
+                    <p>If <b>k</b> is much smaller than <b>n</b>, this approach uses significantly less memory than a full HashMap because it automatically discards old entries.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Comparison Matrix</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Best Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4 font-medium">Brute Force</td>
+                            <td class="p-4 text-red-600">O(n * k)</td>
+                            <td class="p-4 text-emerald-600">O(1)</td>
+                            <td class="p-4 text-slate-500">Very small arrays/k</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium">Hash Map</td>
+                            <td class="p-4 text-emerald-600">O(n)</td>
+                            <td class="p-4 text-red-600">O(n)</td>
+                            <td class="p-4 text-slate-500">General purpose</td>
+                        </tr>
+                        <tr class="bg-emerald-50/30">
+                            <td class="p-4 font-bold text-emerald-700">Sliding Window</td>
+                            <td class="p-4 text-emerald-600">O(n)</td>
+                            <td class="p-4 text-blue-600">O(k)</td>
+                            <td class="p-4 font-bold text-emerald-700">Large n, small k</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Key Concept</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• "Duplicate in Window" = <b>Sliding Window + Set</b>.</li>
+                        <li>• Hash Map is safer for "Any Distance", but Sliding Window is memory-efficient for "Fixed Distance K".</li>
+                        <li>• Pay attention to <b>i > k</b> logic to remove elements from the window.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Edge Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>k = 0</b>: Always false (distinct indices i, j required).</li>
+                        <li>• <b>k >= n</b>: Becomes a standard "contains duplicate" problem.</li>
+                        <li>• <b>Empty/Single Array</b>: Always false.</li>
+                        <li>• <b>Negative Values</b>: Handled naturally by Maps/Sets.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400 text-sm">
+            Interactive Learning Artifact - Mastery through Visualization.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const bruteNums = [1, 2, 3, 1, 2];
+        const bruteK = 3;
+
+        const mapNums = [1, 0, 1, 1];
+        const mapK = 1;
+
+        const winNums = [1, 2, 3, 1, 2, 3];
+        const winK = 2;
+
+        // --- BRUTE FORCE ---
+        let bI = 0;
+        let bJ = 1;
+        let bDone = false;
+
+        function renderBrute() {
+            const container = document.getElementById('brute-array');
+            container.innerHTML = bruteNums.map((n, idx) => {
+                let cls = '';
+                if (idx === bI) cls = 'active-i';
+                if (idx === bJ && !bDone) cls = 'active-j';
+                if (bDone && (idx === bI || idx === bJ)) cls = 'found-match';
+                return `
+                    <div class="cell ${cls}">
+                        ${idx === bI ? '<span class="pointer-label text-blue-600">i</span>' : ''}
+                        ${idx === bJ && !bDone ? '<span class="pointer-label text-amber-600">j</span>' : ''}
+                        ${n}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function stepBrute() {
+            if (bDone) return;
+            if (bruteNums[bI] === bruteNums[bJ]) {
+                bDone = true;
+                document.getElementById('brute-status').innerHTML = `<span class="text-emerald-600 font-bold">MATCH! nums[${bI}] == nums[${bJ}] and dist ${bJ-bI} <= ${bruteK}</span>`;
+                document.getElementById('btn-brute').disabled = true;
+                renderBrute();
+                return;
+            }
+            bJ++;
+            if (bJ > bI + bruteK || bJ >= bruteNums.length) {
+                bI++;
+                bJ = bI + 1;
+            }
+            if (bI >= bruteNums.length - 1) {
+                document.getElementById('brute-status').innerText = "No duplicates within distance K.";
+                document.getElementById('btn-brute').disabled = true;
+                return;
+            }
+            document.getElementById('brute-status').innerText = `Checking nums[${bI}] vs nums[${bJ}] (Dist: ${bJ-bI})`;
+            renderBrute();
+        }
+
+        function resetBrute() {
+            bI = 0; bJ = 1; bDone = false;
+            document.getElementById('btn-brute').disabled = false;
+            document.getElementById('brute-status').innerText = "Click Next to start";
+            renderBrute();
+        }
+
+        // --- HASH MAP ---
+        let mIdx = 0;
+        let mLastSeen = {};
+        let mDone = false;
+
+        function renderMap() {
+            const arr = document.getElementById('map-array');
+            const mapViz = document.getElementById('map-viz');
+            
+            arr.innerHTML = mapNums.map((n, idx) => {
+                let cls = (idx === mIdx) ? 'active-i' : '';
+                if (mDone && idx === mIdx) cls = 'found-match';
+                return `<div class="cell ${cls}">${n}</div>`;
+            }).join('');
+
+            mapViz.innerHTML = Object.entries(mLastSeen).map(([k, v]) => `
+                <div class="map-entry">
+                    <span class="font-bold text-slate-500">Num: ${k}</span>
+                    <span class="text-blue-600">Last Idx: ${v}</span>
+                </div>
+            `).join('');
+        }
+
+        function stepMap() {
+            if (mDone || mIdx >= mapNums.length) return;
+            let n = mapNums[mIdx];
+            if (mLastSeen[n] !== undefined) {
+                let prev = mLastSeen[n];
+                if (mIdx - prev <= mapK) {
+                    mDone = true;
+                    document.getElementById('map-status').innerHTML = `<span class="text-emerald-600 font-bold">FOUND! ${n} was last at ${prev}. Diff ${mIdx-prev} <= ${mapK}</span>`;
+                    document.getElementById('btn-map').disabled = true;
+                    renderMap();
+                    return;
+                }
+            }
+            mLastSeen[n] = mIdx;
+            document.getElementById('map-status').innerText = `Checked ${n}. Updated Map index to ${mIdx}.`;
+            mIdx++;
+            if (mIdx === mapNums.length) {
+                document.getElementById('map-status').innerText = "Finished. No nearby duplicates.";
+            }
+            renderMap();
+        }
+
+        function resetMap() {
+            mIdx = 0; mLastSeen = {}; mDone = false;
+            document.getElementById('btn-map').disabled = false;
+            document.getElementById('map-status').innerText = "Ready to traverse...";
+            renderMap();
+        }
+
+        // --- SLIDING WINDOW ---
+        let wIdx = 0;
+        let wSet = new Set();
+        let wDone = false;
+
+        function renderWindow() {
+            const arr = document.getElementById('window-array');
+            const setViz = document.getElementById('window-set');
+            const box = document.getElementById('window-box');
+
+            arr.innerHTML = winNums.map((n, idx) => {
+                let cls = (idx === wIdx) ? 'active-i' : '';
+                if (wDone && idx === wIdx) cls = 'found-match';
+                return `<div class="cell ${cls}">${n}</div>`;
+            }).join('');
+
+            setViz.innerHTML = Array.from(wSet).map(n => `
+                <div class="px-3 py-1 bg-white border border-emerald-200 rounded text-sm font-bold text-emerald-700">${n}</div>
+            `).join('');
+
+            // Highlight the window [max(0, i-k), i-1]
+            let start = Math.max(0, wIdx - winK);
+            let width = Math.min(wIdx, winK) * 67; // 55px cell + 12px gap
+            if (wIdx === 0) width = 0;
+            box.style.width = (width > 0 ? width + 55 : 0) + 'px';
+            box.style.left = (start * 67) + 'px';
+            box.style.display = (wIdx === 0) ? 'none' : 'block';
+        }
+
+        function stepWindow() {
+            if (wDone || wIdx >= winNums.length) return;
+
+            if (wIdx > winK) {
+                let removed = winNums[wIdx - winK - 1];
+                wSet.delete(removed);
+                document.getElementById('window-status').innerText = `Window size exceeded K. Removing ${removed}.`;
+            }
+
+            let current = winNums[wIdx];
+            if (wSet.has(current)) {
+                wDone = true;
+                document.getElementById('window-status').innerHTML = `<span class="text-emerald-600 font-bold">SUCCESS! ${current} is already in the Set window.</span>`;
+                document.getElementById('btn-window').disabled = true;
+            } else {
+                wSet.add(current);
+                document.getElementById('window-status').innerText = `Adding ${current} to the window. No duplicate yet.`;
+                wIdx++;
+            }
+            
+            if (!wDone && wIdx === winNums.length) {
+                document.getElementById('window-status').innerText = "End of array. No nearby duplicates.";
+            }
+            renderWindow();
+        }
+
+        function resetWindow() {
+            wIdx = 0; wSet = new Set(); wDone = false;
+            document.getElementById('btn-window').disabled = false;
+            document.getElementById('window-status').innerText = "Initializing window...";
+            renderWindow();
+        }
+
+        window.onload = () => {
+            renderBrute();
+            renderMap();
+            renderWindow();
+        };
+    </script>
+</body>
+</html>

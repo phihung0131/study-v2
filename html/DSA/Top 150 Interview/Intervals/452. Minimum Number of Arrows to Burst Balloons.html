@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 452: Minimum Arrows - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .balloon {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .balloon:hover {
+            transform: scale(1.05);
+            z-index: 50;
+        }
+        .arrow-line {
+            position: absolute;
+            width: 2px;
+            background-color: #ef4444;
+            z-index: 100;
+            top: 0;
+            bottom: 0;
+            transition: left 0.5s ease;
+        }
+        .arrow-line::before {
+            content: '🏹';
+            position: absolute;
+            top: -25px;
+            left: -10px;
+            font-size: 20px;
+        }
+        .timeline-container {
+            position: relative;
+            height: 280px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            background-image: linear-gradient(#f1f5f9 1px, transparent 1px), linear-gradient(90deg, #f1f5f9 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .burst {
+            filter: grayscale(1) opacity(0.3);
+            transform: scale(0.8) rotate(5deg);
+        }
+        .active-balloon {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">452. Minimum Number of Arrows to Burst Balloons</h1>
+            <div class="flex justify-center gap-4 text-sm mb-6">
+                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full font-semibold">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Greedy</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Sorting</span>
+            </div>
+            <p class="text-slate-600 max-w-2xl mx-auto text-lg leading-relaxed">
+                Imagine balloons on a 1D wall. You shoot arrows vertically. One arrow bursts all balloons that overlap with its x-coordinate. What is the <b>minimum</b> number of arrows needed?
+            </p>
+        </header>
+
+        <!-- Problem Logic -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-12">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">The Greedy Core</h2>
+            <p class="text-slate-600 mb-4">
+                To minimize arrows, each arrow should burst as many balloons as possible. This happens when we shoot through the <b>intersection</b> of multiple intervals.
+            </p>
+            <div class="bg-slate-50 p-4 rounded-xl border-l-4 border-red-400">
+                <p class="font-semibold text-slate-700 text-sm italic">"Don't shoot a new arrow unless you absolutely have to."</p>
+            </div>
+        </section>
+
+        <!-- APPROACH 1: SORT BY START -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-slate-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                <h2 class="text-3xl font-bold text-slate-800">Greedy: Sort by Start Point</h2>
+            </div>
+
+            <div class="bg-slate-100 p-6 rounded-2xl mb-8 border border-slate-200">
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Intuition</h3>
+                <p class="text-slate-700 leading-relaxed">
+                    Sort by <b>points[i][0]</b>. As we iterate, we maintain a "common intersection" end point. If the next balloon starts after our current intersection ends, we must shoot a new arrow. If it overlaps, we <b>shrink</b> the intersection's end point to the minimum of current ends to ensure the arrow hits <i>all</i> balloons in that group.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <div id="app1-canvas" class="timeline-container">
+                    <!-- Balloons -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app1-status" class="text-slate-600 font-medium h-8 text-center italic">Ready to process sorted balloons.</div>
+                    <div class="flex gap-3">
+                        <button onclick="resetApp1()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app1-next" onclick="nextStepApp1()" class="px-6 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                    <div class="text-sm font-bold text-slate-500">Arrows Used: <span id="app1-count" class="text-red-500 text-xl">0</span></div>
+                </div>
+            </div>
+
+            <!-- Java Code 1 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <pre class="p-6 text-sm code-font leading-relaxed text-slate-300">
+<span class="text-purple-400">public int</span> <span class="text-yellow-400">findMinArrowShots</span>(<span class="text-purple-400">int</span>[][] points) {
+    Arrays.sort(points, (a, b) -> Integer.compare(a[0], b[0]));
+    <span class="text-purple-400">int</span> arrows = 1;
+    <span class="text-purple-400">int</span> currentEnd = points[0][1];
+
+    <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span> i = 1; i < points.length; i++) {
+        <span class="text-purple-400">if</span> (points[i][0] > currentEnd) {
+            arrows++;
+            currentEnd = points[i][1];
+        } <span class="text-purple-400">else</span> {
+            <span class="text-green-500">// Shrink intersection to hit both</span>
+            currentEnd = Math.min(currentEnd, points[i][1]);
+        }
+    }
+    <span class="text-purple-400">return</span> arrows;
+}</pre>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-white border border-slate-200 rounded-xl text-sm"><b>Time:</b> O(N log N) for sort.</div>
+                <div class="p-4 bg-white border border-slate-200 rounded-xl text-sm"><b>Space:</b> O(log N) for sort stack.</div>
+            </div>
+        </section>
+
+        <!-- APPROACH 2: SORT BY END (OPTIMAL/CLEANER) -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                <h2 class="text-3xl font-bold text-slate-800">Greedy: Sort by End Point (Optimal)</h2>
+            </div>
+
+            <div class="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-100">
+                <h3 class="text-xl font-semibold text-blue-800 mb-2">Intuition</h3>
+                <p class="text-blue-900 leading-relaxed">
+                    This is the standard approach. Sort by <b>points[i][1]</b>. Always shoot the arrow at the <b>very end</b> of the current balloon. Because we are sorted by end point, this arrow has the "maximum reach" to catch subsequent balloons that start before this end point. We don't need to shrink anything here!
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
+                <div id="app2-canvas" class="timeline-container">
+                    <!-- Balloons -->
+                </div>
+
+                <div class="flex flex-col items-center gap-6">
+                    <div id="app2-status" class="text-slate-600 font-medium h-8 text-center italic">Ready.</div>
+                    <div class="flex gap-3">
+                        <button onclick="resetApp2()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold transition">Reset</button>
+                        <button id="app2-next" onclick="nextStepApp2()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">Next Step</button>
+                    </div>
+                    <div class="text-sm font-bold text-slate-500">Arrows Used: <span id="app2-count" class="text-blue-600 text-xl">0</span></div>
+                </div>
+            </div>
+
+            <!-- Java Code 2 -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden mb-8">
+                <pre class="p-6 text-sm code-font leading-relaxed text-slate-300">
+<span class="text-purple-400">public int</span> <span class="text-yellow-400">findMinArrowShots</span>(<span class="text-purple-400">int</span>[][] points) {
+    <span class="text-green-500">// Sort by end point to maximize arrow reach</span>
+    Arrays.sort(points, (a, b) -> Integer.compare(a[1], b[1]));
+    
+    <span class="text-purple-400">int</span> arrows = 1;
+    <span class="text-purple-400">int</span> arrowPos = points[0][1];
+
+    <span class="text-purple-400">for</span> (<span class="text-purple-400">int</span> i = 1; i < points.length; i++) {
+        <span class="text-green-500">// If next balloon starts after current arrow, shoot new arrow</span>
+        <span class="text-purple-400">if</span> (points[i][0] > arrowPos) {
+            arrows++;
+            arrowPos = points[i][1];
+        }
+    }
+    <span class="text-purple-400">return</span> arrows;
+}</pre>
+            </div>
+        </section>
+
+        <!-- APPROACH 3: BRUTE FORCE (CONCEPTUAL) -->
+        <section class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 bg-amber-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                <h2 class="text-3xl font-bold text-slate-800">Why not Brute Force?</h2>
+            </div>
+
+            <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100 mb-8">
+                <p class="text-amber-900">
+                    A brute force approach would involve checking all possible permutations of arrows or trying to find the "Maximum Independent Set" (balloons that don't overlap at all). Without sorting, you'd spend <b>O(N²)</b> or worse trying to find groups of overlapping balloons.
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200">
+                <h4 class="font-bold text-slate-800 mb-4 uppercase text-xs">Comparison Table</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100">
+                                <th class="pb-3 text-slate-500">Approach</th>
+                                <th class="pb-3 text-slate-500">Logic</th>
+                                <th class="pb-3 text-slate-500">Time</th>
+                                <th class="pb-3 text-slate-500">Complexity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-slate-50">
+                                <td class="py-3 font-semibold">Sort by Start</td>
+                                <td class="py-3">Track shrinking intersection</td>
+                                <td class="py-3">O(N log N)</td>
+                                <td class="py-3 text-slate-400 italic font-mono">Moderate</td>
+                            </tr>
+                            <tr class="border-b border-slate-50">
+                                <td class="py-3 font-semibold text-blue-600">Sort by End</td>
+                                <td class="py-3">Always shoot at the boundary</td>
+                                <td class="py-3">O(N log N)</td>
+                                <td class="py-3 text-blue-400 italic font-mono">Optimal/Clean</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-semibold">Unsorted Greedy</td>
+                                <td class="py-3 text-red-500">Misses overlaps, wrong result</td>
+                                <td class="py-3">-</td>
+                                <td class="py-3 text-red-400 italic font-mono">Incorrect</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CHEAT SHEET -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-800 text-white p-8 rounded-3xl">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="text-yellow-400">💡</span> Pattern: Activity Selection
+                </h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    This problem is a variation of the <b>Activity Selection Problem</b>. Instead of picking the maximum non-overlapping tasks, we are picking the minimum arrows to cover all tasks. Sorting by <b>End Time</b> is almost always the "Magic Key" for these interval problems.
+                </p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 p-8 rounded-3xl">
+                <h3 class="text-xl font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                    <span class="text-emerald-600">🎯</span> Edge Cases
+                </h3>
+                <ul class="space-y-2 text-emerald-900 text-sm">
+                    <li>• <b>Integer Overflow:</b> <code>[[-2147483648, 2147483647]]</code>. Use <code>Integer.compare</code> instead of <code>a[1] - b[1]</code>.</li>
+                    <li>• <b>Single Balloon:</b> Always requires exactly 1 arrow.</li>
+                    <li>• <b>Touch Point:</b> <code>[1,2]</code> and <code>[2,3]</code>. They overlap at 2! One arrow bursts both.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="text-center text-slate-400 text-sm pb-12 font-medium">
+            Java LeetCode Visualizer &bull; Greedy Algorithms Module
+        </footer>
+    </div>
+
+    <script>
+        const BALLOONS = [[10, 16], [2, 8], [1, 6], [7, 12]];
+        const SCALE = 25;
+
+        // --- App 1: Sort by Start ---
+        let app1State = {
+            sorted: [...BALLOONS].sort((a,b) => a[0] - b[0]),
+            idx: 0,
+            arrows: 0,
+            currentEnd: null,
+            finished: false
+        };
+
+        function initApp1() {
+            const canvas = document.getElementById('app1-canvas');
+            canvas.innerHTML = '';
+            app1State.sorted.forEach((b, i) => {
+                const div = createBalloonDiv(b, i, 'bg-slate-200 text-slate-600');
+                div.id = `app1-b-${i}`;
+                canvas.appendChild(div);
+            });
+            document.getElementById('app1-count').innerText = '0';
+        }
+
+        function nextStepApp1() {
+            if (app1State.finished) return;
+            const status = document.getElementById('app1-status');
+            const countEl = document.getElementById('app1-count');
+            const b = app1State.sorted[app1State.idx];
+            const div = document.getElementById(`app1-b-${app1State.idx}`);
+
+            if (app1State.idx === 0) {
+                app1State.arrows = 1;
+                app1State.currentEnd = b[1];
+                status.innerText = `Starting with first balloon [${b}]. First arrow needed.`;
+                div.classList.add('active-balloon', 'bg-blue-100');
+                drawArrow(document.getElementById('app1-canvas'), b[1], 'app1-arrow');
+            } else {
+                if (b[0] > app1State.currentEnd) {
+                    app1State.arrows++;
+                    app1State.currentEnd = b[1];
+                    status.innerText = `[${b}] starts after intersection. Shooting NEW arrow at ${b[1]}.`;
+                    div.classList.add('active-balloon', 'bg-blue-100');
+                    updateArrow('app1-arrow', b[1]);
+                } else {
+                    app1State.currentEnd = Math.min(app1State.currentEnd, b[1]);
+                    status.innerText = `[${b}] overlaps. Intersection end is now ${app1State.currentEnd}.`;
+                    div.classList.add('burst');
+                    updateArrow('app1-arrow', app1State.currentEnd);
+                }
+            }
+
+            countEl.innerText = app1State.arrows;
+            app1State.idx++;
+            if (app1State.idx >= app1State.sorted.length) {
+                app1State.finished = true;
+                status.innerText = "All balloons burst!";
+                document.getElementById('app1-next').disabled = true;
+            }
+        }
+
+        function resetApp1() {
+            app1State = { sorted: [...BALLOONS].sort((a,b) => a[0] - b[0]), idx: 0, arrows: 0, currentEnd: null, finished: false };
+            document.getElementById('app1-status').innerText = 'Ready.';
+            document.getElementById('app1-next').disabled = false;
+            initApp1();
+        }
+
+        // --- App 2: Sort by End ---
+        let app2State = {
+            sorted: [...BALLOONS].sort((a,b) => a[1] - b[1]),
+            idx: 0,
+            arrows: 0,
+            arrowPos: -Infinity,
+            finished: false
+        };
+
+        function initApp2() {
+            const canvas = document.getElementById('app2-canvas');
+            canvas.innerHTML = '';
+            app2State.sorted.forEach((b, i) => {
+                const div = createBalloonDiv(b, i, 'bg-blue-50 text-blue-700');
+                div.id = `app2-b-${i}`;
+                canvas.appendChild(div);
+            });
+            document.getElementById('app2-count').innerText = '0';
+        }
+
+        function nextStepApp2() {
+            if (app2State.finished) return;
+            const status = document.getElementById('app2-status');
+            const countEl = document.getElementById('app2-count');
+            const b = app2State.sorted[app2State.idx];
+            const div = document.getElementById(`app2-b-${app2State.idx}`);
+
+            if (b[0] > app2State.arrowPos) {
+                app2State.arrows++;
+                app2State.arrowPos = b[1];
+                status.innerText = `Balloon [${b}] is NOT burst by previous arrow. Shooting at end point ${b[1]}.`;
+                div.classList.add('active-balloon', 'border-blue-500');
+                drawArrow(document.getElementById('app2-canvas'), b[1], `app2-arrow-${app2State.arrows}`);
+            } else {
+                status.innerText = `Balloon [${b}] starts before arrow at ${app2State.arrowPos}. Bursting automatically!`;
+                div.classList.add('burst');
+            }
+
+            countEl.innerText = app2State.arrows;
+            app2State.idx++;
+            if (app2State.idx >= app2State.sorted.length) {
+                app2State.finished = true;
+                status.innerText = "Minimum arrows used. Process complete.";
+                document.getElementById('app2-next').disabled = true;
+            }
+        }
+
+        function resetApp2() {
+            app2State = { sorted: [...BALLOONS].sort((a,b) => a[1] - b[1]), idx: 0, arrows: 0, arrowPos: -Infinity, finished: false };
+            document.getElementById('app2-status').innerText = 'Ready.';
+            document.getElementById('app2-next').disabled = false;
+            initApp2();
+        }
+
+        // --- Utils ---
+        function createBalloonDiv(b, row, colors) {
+            const div = document.createElement('div');
+            div.className = `balloon ${colors}`;
+            div.style.left = (b[0] * SCALE) + 'px';
+            div.style.width = ((b[1] - b[0]) * SCALE) + 'px';
+            div.style.top = (row * 45 + 20) + 'px';
+            div.innerText = `[${b[0]}, ${b[1]}]`;
+            return div;
+        }
+
+        function drawArrow(container, x, id) {
+            const line = document.createElement('div');
+            line.id = id;
+            line.className = 'arrow-line';
+            line.style.left = (x * SCALE) + 'px';
+            container.appendChild(line);
+        }
+
+        function updateArrow(id, x) {
+            const line = document.getElementById(id);
+            if (line) line.style.left = (x * SCALE) + 'px';
+        }
+
+        window.onload = () => { initApp1(); initApp2(); };
+    </script>
+</body>
+</html>

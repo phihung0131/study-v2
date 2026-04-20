@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 49: Group Anagrams Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            line-height: 1.5;
+            font-size: 0.85rem;
+        }
+
+        .keyword { color: #ff79c6; }
+        .comment { color: #6272a4; }
+        .string { color: #f1fa8c; }
+        .type { color: #8be9fd; }
+        .method { color: #50fa7b; }
+
+        .word-pill {
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 9999px;
+            font-weight: 600;
+            background: white;
+            cursor: default;
+        }
+
+        .active-pill {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+        }
+
+        .group-container {
+            border: 2px dashed #cbd5e1;
+            padding: 1rem;
+            border-radius: 1rem;
+            min-height: 80px;
+            background: #f1f5f9;
+        }
+
+        .map-entry {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        .key-badge {
+            background: #334155;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">49. Group Anagrams</h1>
+            <p class="text-lg text-slate-600">Collecting words that share the same letters into buckets.</p>
+            <div class="flex justify-center gap-4">
+                <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold">Medium</span>
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Hash Table</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">Sorting</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 text-slate-800">Problem Description</h2>
+            <p class="mb-4">Given an array of strings <b>strs</b>, group the <b>anagrams</b> together. You can return the answer in any order.</p>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 italic">
+                <b>Example:</b> strs = ["eat","tea","tan","ate","nat","bat"] <br>
+                <b>Output:</b> [["bat"],["nat","tan"],["ate","eat","tea"]]
+            </div>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-slate-400 pl-4">
+                <h2 class="text-3xl font-bold">Approach 1: Brute Force Comparison</h2>
+                <p class="text-slate-600 mt-2">The direct approach: Maintain a list of groups. For each new word, compare it against the first word of every existing group to see if it's an anagram.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-6">
+                <div class="space-y-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase">Input Strings</p>
+                    <div id="brute-input" class="flex flex-wrap gap-2"></div>
+                </div>
+                
+                <div class="space-y-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase">Existing Groups</p>
+                    <div id="brute-groups" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetBrute()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepBrute()" id="btn-brute" class="px-6 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-medium transition">Process Next Word</button>
+                </div>
+                <div id="brute-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to compare words...</div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public</span> List&lt;List&lt;String&gt;&gt; <span class="method">groupAnagrams</span>(String[] strs) {
+    List&lt;List&lt;String&gt;&gt; resultGroups = <span class="keyword">new</span> ArrayList&lt;&gt;();
+    
+    <span class="keyword">for</span> (String currentWord : strs) {
+        <span class="type">boolean</span> addedToGroup = <span class="keyword">false</span>;
+        
+        <span class="comment">// Compare currentWord with existing groups</span>
+        <span class="keyword">for</span> (List&lt;String&gt; group : resultGroups) {
+            <span class="keyword">if</span> (<span class="method">isAnagram</span>(currentWord, group.<span class="method">get</span>(0))) {
+                group.<span class="method">add</span>(currentWord);
+                addedToGroup = <span class="keyword">true</span>;
+                <span class="keyword">break</span>;
+            }
+        }
+        
+        <span class="comment">// If no matching group found, start a new one</span>
+        <span class="keyword">if</span> (!addedToGroup) {
+            List&lt;String&gt; newGroup = <span class="keyword">new</span> ArrayList&lt;&gt;();
+            newGroup.<span class="method">add</span>(currentWord);
+            resultGroups.<span class="method">add</span>(newGroup);
+        }
+    }
+    <span class="keyword">return</span> resultGroups;
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-bold text-slate-800 mb-2">Complexity</h4>
+                    <p><b>Time:</b> <b>O(N² * K)</b> where N is number of words and K is max length. We do N calls, each potentially comparing against N groups, and comparison takes O(K).</p>
+                    <p><b>Space:</b> <b>O(N * K)</b> to store the resulting groups.</p>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <h4 class="font-bold text-orange-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Very simple logic; works with any string type.</p>
+                    <p><b>Cons:</b> Extremely slow. Comparing every word against every group representative is redundant.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 2: Sorting -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-indigo-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 2: Categorize by Sorting</h2>
+                <p class="text-slate-600 mt-2">All anagrams share a unique property: when their characters are sorted alphabetically, they result in the <b>exact same string</b>. We use this sorted string as a <b>HashMap key</b>.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="w-full text-center">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Processing Word</p>
+                        <div id="sort-current" class="text-2xl font-bold text-indigo-600">-</div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 w-full justify-center">
+                        <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 text-sm font-bold">SORTING</div>
+                        <div class="text-2xl text-slate-300">→</div>
+                        <div id="sort-result" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-mono">-</div>
+                    </div>
+
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">HashMap (Sorted Key → List of Words)</p>
+                        <div id="sort-map" class="space-y-2 border p-4 rounded-xl min-h-[100px] bg-slate-50"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetSort()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepSort()" id="btn-sort" class="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition">Next Word</button>
+                </div>
+                <div id="sort-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to sort and map...</div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public</span> List&lt;List&lt;String&gt;&gt; <span class="method">groupAnagrams</span>(String[] strs) {
+    Map&lt;String, List&lt;String&gt;&gt; groups = <span class="keyword">new</span> HashMap&lt;&gt;();
+    
+    <span class="keyword">for</span> (String currentWord : strs) {
+        <span class="type">char</span>[] characters = currentWord.<span class="method">toCharArray</span>();
+        <span class="type">Arrays</span>.<span class="method">sort</span>(characters);
+        String sortedKey = <span class="keyword">new</span> String(characters);
+        
+        <span class="comment">// If key doesn't exist, create an empty list</span>
+        groups.<span class="method">computeIfAbsent</span>(sortedKey, k -> <span class="keyword">new</span> ArrayList&lt;&gt;());
+        groups.<span class="method">get</span>(sortedKey).<span class="method">add</span>(currentWord);
+    }
+    
+    <span class="keyword">return new</span> ArrayList&lt;&gt;(groups.<span class="method">values</span>());
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-2">Complexity</h4>
+                    <p><b>Time:</b> <b>O(N * K log K)</b>. We iterate N words, and for each, we sort a string of length K.</p>
+                    <p><b>Space:</b> <b>O(N * K)</b> to store the contents of the HashMap.</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Pros & Cons</h4>
+                    <p><b>Pros:</b> Fast enough for most cases. Very clean and readable implementation.</p>
+                    <p><b>Cons:</b> String sorting (K log K) can be expensive if words are very long.</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200">
+
+        <!-- Approach 3: Frequency Array -->
+        <section class="space-y-6">
+            <div class="border-l-4 border-emerald-500 pl-4">
+                <h2 class="text-3xl font-bold">Approach 3: Categorize by Frequency (Optimal)</h2>
+                <p class="text-slate-600 mt-2">Instead of sorting, we can represent each word by its <b>character counts</b> (e.g., 'a' appears 2 times, 'b' 0 times). This frequency array is converted into a string key like <code>"#2#0#1..."</code>.</p>
+            </div>
+
+            <!-- Animation Zone -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-8">
+                <div class="flex flex-col items-center gap-6">
+                    <div class="w-full text-center">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Processing Word</p>
+                        <div id="freq-current" class="text-2xl font-bold text-emerald-600">-</div>
+                    </div>
+                    
+                    <div class="w-full overflow-x-auto pb-2">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">Frequency Array (counts[26])</p>
+                        <div id="freq-array-visual" class="flex gap-1 justify-center min-w-max"></div>
+                    </div>
+
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Generated Key</p>
+                        <div id="freq-key" class="bg-emerald-100 text-emerald-800 p-2 rounded font-mono text-center break-all">-</div>
+                    </div>
+
+                    <div class="w-full">
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase text-center">HashMap Buckets</p>
+                        <div id="freq-map" class="space-y-2 border p-4 rounded-xl min-h-[100px] bg-slate-50"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 border-t pt-6">
+                    <button onclick="resetFreq()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg font-medium transition">Reset</button>
+                    <button onclick="stepFreq()" id="btn-freq" class="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-medium transition">Next Word</button>
+                </div>
+                <div id="freq-status" class="text-center font-medium text-slate-700 min-h-[1.5rem]">Ready to count frequencies...</div>
+            </div>
+
+            <!-- Java Code Zone -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold">Java Implementation</h3>
+                <div class="code-block">
+<span class="keyword">public</span> List&lt;List&lt;String&gt;&gt; <span class="method">groupAnagrams</span>(String[] strs) {
+    Map&lt;String, List&lt;String&gt;&gt; groups = <span class="keyword">new</span> HashMap&lt;&gt;();
+    
+    <span class="keyword">for</span> (String s : strs) {
+        <span class="type">int</span>[] counts = <span class="keyword">new</span> <span class="type">int</span>[26];
+        <span class="keyword">for</span> (<span class="type">char</span> c : s.<span class="method">toCharArray</span>()) counts[c - <span class="string">'a'</span>]++;
+        
+        <span class="comment">// Build a string key using counts</span>
+        StringBuilder keyBuilder = <span class="keyword">new</span> StringBuilder();
+        <span class="keyword">for</span> (<span class="type">int</span> count : counts) {
+            keyBuilder.<span class="method">append</span>(<span class="string">'#'</span>);
+            keyBuilder.<span class="method">append</span>(count);
+        }
+        String key = keyBuilder.<span class="method">toString</span>();
+        
+        groups.<span class="method">computeIfAbsent</span>(key, k -> <span class="keyword">new</span> ArrayList&lt;&gt;());
+        groups.<span class="method">get</span>(key).<span class="method">add</span>(s);
+    }
+    <span class="keyword">return new</span> ArrayList&lt;&gt;(groups.<span class="method">values</span>());
+}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2">Complexity</h4>
+                    <p><b>Time:</b> <b>O(N * K)</b>. We avoid sorting entirely. Character counting and key building are both linear in word length.</p>
+                    <p><b>Space:</b> <b>O(N * K)</b> to store the HashMap entries.</p>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2">Efficiency Note</h4>
+                    <p>This is the <b>optimal</b> approach for long strings because O(K) is faster than O(K log K). It relies on the constraint that characters are lowercase English letters.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Comparison Table -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold">Comparison Matrix</h2>
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="p-4 font-bold">Approach</th>
+                            <th class="p-4 font-bold">Time</th>
+                            <th class="p-4 font-bold">Space</th>
+                            <th class="p-4 font-bold">Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="p-4">Brute Force</td>
+                            <td class="p-4">O(N² * K)</td>
+                            <td class="p-4 text-slate-500">O(N * K)</td>
+                            <td class="p-4 text-red-500 font-medium">Too Slow</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4">Sorting Key</td>
+                            <td class="p-4">O(N * K log K)</td>
+                            <td class="p-4 text-slate-500">O(N * K)</td>
+                            <td class="p-4 text-blue-600 font-medium">Standard / Efficient</td>
+                        </tr>
+                        <tr class="bg-emerald-50/50">
+                            <td class="p-4 font-bold text-emerald-700">Frequency Key</td>
+                            <td class="p-4">O(N * K)</td>
+                            <td class="p-4 text-slate-500">O(N * K)</td>
+                            <td class="p-4 font-bold text-emerald-700">Optimal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="bg-slate-900 text-white p-8 rounded-3xl space-y-6">
+            <h2 class="text-3xl font-bold text-blue-400">Interview Cheat Sheet</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Key Concepts</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• Anagrams share the same <b>sorted character sequence</b>.</li>
+                        <li>• Anagrams share the same <b>character frequency distribution</b>.</li>
+                        <li>• Use a <b>HashMap</b> to group items with identical properties.</li>
+                        <li>• In Java, <code>Arrays.sort(char[])</code> is the fastest sorting helper.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3">Edge Cases</h3>
+                    <ul class="space-y-2 text-slate-300">
+                        <li>• <b>Empty array</b>: Return empty list.</li>
+                        <li>• <b>Empty string</b>: <code>""</code> is a valid string, groups together.</li>
+                        <li>• <b>Single word</b>: Results in a single list containing one word.</li>
+                        <li>• <b>No Anagrams</b>: Every word gets its own list.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center pb-12 text-slate-400 text-sm">
+            Interactive Algorithmic Learning Module - Created for Mastery.
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const words = ["eat", "tea", "tan", "ate", "nat", "bat"];
+
+        // --- BRUTE FORCE LOGIC ---
+        let bruteIdx = 0;
+        let bruteGroups = [];
+
+        function isAnagram(s1, s2) {
+            if (s1.length !== s2.length) return false;
+            return s1.split('').sort().join('') === s2.split('').sort().join('');
+        }
+
+        function renderBrute() {
+            const inputEl = document.getElementById('brute-input');
+            const groupsEl = document.getElementById('brute-groups');
+
+            inputEl.innerHTML = words.map((w, i) => 
+                `<div class="word-pill ${i === bruteIdx ? 'active-pill' : (i < bruteIdx ? 'opacity-50' : '')}">${w}</div>`
+            ).join('');
+
+            groupsEl.innerHTML = bruteGroups.map(group => 
+                `<div class="group-container flex gap-2 flex-wrap">
+                    ${group.map(w => `<div class="word-pill">${w}</div>`).join('')}
+                </div>`
+            ).join('');
+        }
+
+        function stepBrute() {
+            if (bruteIdx >= words.length) return;
+            const word = words[bruteIdx];
+            let found = false;
+
+            for (let g of bruteGroups) {
+                if (isAnagram(word, g[0])) {
+                    g.push(word);
+                    found = true;
+                    document.getElementById('brute-status').innerText = `Matched "${word}" with group starting with "${g[0]}"`;
+                    break;
+                }
+            }
+
+            if (!found) {
+                bruteGroups.push([word]);
+                document.getElementById('brute-status').innerText = `No match for "${word}". Starting new group.`;
+            }
+
+            bruteIdx++;
+            renderBrute();
+            if (bruteIdx === words.length) {
+                document.getElementById('btn-brute').disabled = true;
+                document.getElementById('brute-status').innerHTML = "<span class='text-emerald-600 font-bold'>Brute Force Processing Complete!</span>";
+            }
+        }
+
+        function resetBrute() {
+            bruteIdx = 0; bruteGroups = [];
+            document.getElementById('btn-brute').disabled = false;
+            document.getElementById('brute-status').innerText = "Ready to compare words...";
+            renderBrute();
+        }
+
+        // --- SORTING LOGIC ---
+        let sortIdx = 0;
+        let sortMap = {};
+
+        function renderSort() {
+            const mapEl = document.getElementById('sort-map');
+            mapEl.innerHTML = Object.entries(sortMap).map(([key, list]) => 
+                `<div class="map-entry">
+                    <span class="key-badge">${key}</span>
+                    <span class="text-slate-300">→</span>
+                    <div class="flex gap-2">${list.map(w => `<div class="px-2 py-1 bg-white border rounded text-xs">${w}</div>`).join('')}</div>
+                </div>`
+            ).join('');
+        }
+
+        function stepSort() {
+            if (sortIdx >= words.length) return;
+            const word = words[sortIdx];
+            const sorted = word.split('').sort().join('');
+            
+            document.getElementById('sort-current').innerText = word;
+            document.getElementById('sort-result').innerText = sorted;
+
+            if (!sortMap[sorted]) sortMap[sorted] = [];
+            sortMap[sorted].push(word);
+            
+            document.getElementById('sort-status').innerText = `Sorted "${word}" to "${sorted}". Pushed to bucket.`;
+            sortIdx++;
+            renderSort();
+
+            if (sortIdx === words.length) {
+                document.getElementById('btn-sort').disabled = true;
+                document.getElementById('sort-status').innerHTML = "<span class='text-emerald-600 font-bold'>Sorting Categorization Complete!</span>";
+            }
+        }
+
+        function resetSort() {
+            sortIdx = 0; sortMap = {};
+            document.getElementById('sort-current').innerText = "-";
+            document.getElementById('sort-result').innerText = "-";
+            document.getElementById('btn-sort').disabled = false;
+            document.getElementById('sort-status').innerText = "Ready to sort and map...";
+            renderSort();
+        }
+
+        // --- FREQUENCY LOGIC ---
+        let freqIdx = 0;
+        let freqMap = {};
+
+        function renderFreqArray(word) {
+            const container = document.getElementById('freq-array-visual');
+            const counts = new Array(26).fill(0);
+            if(word !== "-") {
+                for(let char of word) counts[char.charCodeAt(0) - 97]++;
+            }
+
+            container.innerHTML = counts.map((count, i) => {
+                const char = String.fromCharCode(97 + i);
+                const hasValue = count > 0;
+                return `<div class="flex flex-col items-center">
+                    <div class="w-6 h-8 flex items-center justify-center border text-[10px] ${hasValue ? 'bg-emerald-500 text-white font-bold border-emerald-600' : 'bg-slate-50 text-slate-300'}">
+                        ${count}
+                    </div>
+                    <span class="text-[8px] mt-1">${char}</span>
+                </div>`;
+            }).join('');
+            return counts;
+        }
+
+        function stepFreq() {
+            if (freqIdx >= words.length) return;
+            const word = words[freqIdx];
+            const counts = renderFreqArray(word);
+            const key = counts.map(c => `#${c}`).join('');
+            
+            document.getElementById('freq-current').innerText = word;
+            document.getElementById('freq-key').innerText = key;
+
+            if (!freqMap[key]) freqMap[key] = [];
+            freqMap[key].push(word);
+
+            const mapEl = document.getElementById('freq-map');
+            mapEl.innerHTML = Object.entries(freqMap).map(([k, list]) => 
+                `<div class="map-entry">
+                    <span class="key-badge text-[10px] max-w-[150px] truncate">${k}</span>
+                    <span class="text-slate-300">→</span>
+                    <div class="flex gap-1">${list.map(w => `<div class="px-2 py-1 bg-white border rounded text-xs">${w}</div>`).join('')}</div>
+                </div>`
+            ).join('');
+
+            document.getElementById('freq-status').innerText = `Counted chars for "${word}". Key generated.`;
+            freqIdx++;
+
+            if (freqIdx === words.length) {
+                document.getElementById('btn-freq').disabled = true;
+                document.getElementById('freq-status').innerHTML = "<span class='text-emerald-600 font-bold'>Frequency Categorization Complete!</span>";
+            }
+        }
+
+        function resetFreq() {
+            freqIdx = 0; freqMap = {};
+            document.getElementById('freq-current').innerText = "-";
+            document.getElementById('freq-key').innerText = "-";
+            document.getElementById('btn-freq').disabled = false;
+            document.getElementById('freq-status').innerText = "Ready to count frequencies...";
+            renderFreqArray("-");
+            document.getElementById('freq-map').innerHTML = "";
+        }
+
+        // Initialize
+        window.onload = () => {
+            renderBrute();
+            renderSort();
+            renderFreqArray("-");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode 11: Container With Most Water - Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        
+        pre, code {
+            font-family: 'Fira+Code', monospace;
+        }
+
+        .bar {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .water-layer {
+            transition: all 0.4s ease;
+            background-color: rgba(59, 130, 246, 0.4);
+            border-top: 2px solid #3b82f6;
+            position: absolute;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .active-pointer {
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        }
+
+        .max-area-found {
+            background-color: rgba(34, 197, 94, 0.2) !important;
+            border-top-color: #22c55e !important;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="max-w-5xl mx-auto space-y-16">
+        
+        <!-- Header Section -->
+        <header class="text-center space-y-4">
+            <h1 class="text-5xl font-extrabold text-slate-900 tracking-tight">11. Container With Most Water</h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto">
+                Find two lines that together with the x-axis form a container, such that the container contains the most water.
+            </p>
+            <div class="flex justify-center gap-3">
+                <span class="px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold border border-blue-200">Medium</span>
+                <span class="px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold border border-green-200">Two Pointers</span>
+                <span class="px-4 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-bold border border-purple-200">Greedy</span>
+            </div>
+        </header>
+
+        <!-- Problem Summary -->
+        <section class="bg-blue-50 rounded-3xl p-8 border border-blue-100">
+            <h2 class="text-2xl font-bold text-blue-900 mb-4">Problem Summary</h2>
+            <p class="text-blue-800 leading-relaxed">
+                Given an array of heights, imagine each element is a vertical line. You need to pick two lines <b>i</b> and <b>j</b> to form a tank. 
+                The amount of water is limited by the <b>shorter line</b>. 
+                <br><br>
+                <b>Area = min(height[i], height[j]) * (j - i)</b>
+            </p>
+        </section>
+
+        <!-- Approach 1: Brute Force -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 1: Brute Force (All Pairs)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    Check every single combination of two lines and calculate the area for each.
+                </p>
+            </div>
+
+            <!-- Animation Zone 1 -->
+            <div class="p-8 bg-slate-50 border-b border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div class="text-center md:text-left">
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Input: [1, 8, 6, 2, 5, 4]</div>
+                        <div class="text-2xl font-bold text-slate-700">Max Area Found: <span id="app1-max" class="text-blue-600">0</span></div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app1.next()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app1.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div class="relative bg-white rounded-2xl border border-slate-200 p-10 h-64 flex items-end justify-center gap-4 overflow-hidden">
+                    <div id="app1-water" class="water-layer"></div>
+                    <div id="app1-bars" class="flex items-end justify-center gap-4 w-full h-full relative z-20">
+                        <!-- Bars via JS -->
+                    </div>
+                </div>
+                <div id="app1-msg" class="mt-6 text-center text-lg font-medium text-slate-600 h-8"></div>
+            </div>
+
+            <!-- Code Zone 1 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public int</span> maxArea(<span class="text-blue-400">int[]</span> height) {
+    <span class="text-blue-400">int</span> maxAreaFound = 0;
+    <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> left = 0; left < height.length; left++) {
+        <span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> right = left + 1; right < height.length; right++) {
+            <span class="text-blue-400">int</span> currentHeight = Math.min(height[left], height[right]);
+            <span class="text-blue-400">int</span> currentWidth = right - left;
+            <span class="text-blue-400">int</span> currentArea = currentHeight * currentWidth;
+            
+            maxAreaFound = Math.max(maxAreaFound, currentArea);
+        }
+    }
+    <span class="text-pink-400">return</span> maxAreaFound;
+}</code></pre>
+                </div>
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Complexity Analysis</h4>
+                        <p><b>Time:</b> <b>O(n²)</b>. We compare every pair of lines.</p>
+                        <p><b>Space:</b> <b>O(1)</b>. Only one variable to store the max.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-red-500 w-fit mb-4">The Downside</h4>
+                        <p class="text-slate-600 italic">This approach is too slow for large inputs (n = 10⁵). We need a way to skip useless pairs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approach 2: Two Pointers -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-3xl font-bold text-slate-800">Approach 2: Two Pointers (Optimal)</h2>
+                <p class="mt-3 text-slate-600 text-lg">
+                    Start wide and move inward. Since moving a pointer always reduces <b>width</b>, we only move the pointer with the <b>shorter</b> height to potentially gain a taller container.
+                </p>
+            </div>
+
+            <!-- Animation Zone 2 -->
+            <div class="p-8 bg-slate-50 border-b border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div class="text-center md:text-left">
+                        <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">Input: [1, 8, 6, 2, 5, 4, 8, 3, 7]</div>
+                        <div class="text-2xl font-bold text-slate-700">Optimal Max Area: <span id="app2-max" class="text-green-600">0</span></div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="app2.next()" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-lg">Next Step</button>
+                        <button onclick="app2.reset()" class="px-6 py-3 bg-white border border-slate-300 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div class="relative bg-white rounded-2xl border border-slate-200 p-10 h-72 flex items-end justify-center gap-2 overflow-hidden">
+                    <div id="app2-water" class="water-layer"></div>
+                    <div id="app2-bars" class="flex items-end justify-center gap-2 w-full h-full relative z-20">
+                        <!-- Bars via JS -->
+                    </div>
+                </div>
+                <div id="app2-msg" class="mt-6 text-center text-lg font-medium text-slate-600 h-8"></div>
+            </div>
+
+            <!-- Code Zone 2 -->
+            <div class="p-8">
+                <h3 class="text-xl font-bold mb-4">Java Implementation</h3>
+                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto text-sm leading-relaxed text-slate-300">
+                    <pre><code><span class="text-blue-400">public int</span> maxArea(<span class="text-blue-400">int[]</span> height) {
+    <span class="text-blue-400">int</span> leftWall = 0;
+    <span class="text-blue-400">int</span> rightWall = height.length - 1;
+    <span class="text-blue-400">int</span> maxAreaFound = 0;
+
+    <span class="text-pink-400">while</span> (leftWall < rightWall) {
+        <span class="text-blue-400">int</span> currentHeight = Math.min(height[leftWall], height[rightWall]);
+        <span class="text-blue-400">int</span> currentWidth = rightWall - leftWall;
+        <span class="text-blue-400">int</span> currentArea = currentHeight * currentWidth;
+
+        maxAreaFound = Math.max(maxAreaFound, currentArea);
+
+        <span class="text-slate-500">// Move the pointer pointing to the shorter line</span>
+        <span class="text-pink-400">if</span> (height[leftWall] < height[rightWall]) {
+            leftWall++;
+        } <span class="text-pink-400">else</span> {
+            rightWall--;
+        }
+    }
+    <span class="text-pink-400">return</span> maxAreaFound;
+}</code></pre>
+                </div>
+                <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-green-500 w-fit mb-4">Complexity Analysis</h4>
+                        <p><b>Time:</b> <b>O(n)</b>. We traverse the array only once.</p>
+                        <p><b>Space:</b> <b>O(1)</b>. Constant extra space used.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 border-b-2 border-blue-500 w-fit mb-4">Why it works?</h4>
+                        <p class="text-slate-600">
+                            By moving the shorter line, we give ourselves a chance to find a taller line that compensates for the lost width. 
+                            If we moved the taller line, the height of the container could only stay the same or decrease, while the width <b>always</b> decreases.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Comparison Table</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="p-4 font-bold text-slate-700">Approach</th>
+                            <th class="p-4 font-bold text-slate-700">Time Complexity</th>
+                            <th class="p-4 font-bold text-slate-700">Space Complexity</th>
+                            <th class="p-4 font-bold text-slate-700">Logic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-slate-100">
+                            <td class="p-4">Brute Force</td>
+                            <td class="p-4 font-mono">O(n²)</td>
+                            <td class="p-4 font-mono">O(1)</td>
+                            <td class="p-4 text-slate-500 italic">Exhaustive search</td>
+                        </tr>
+                        <tr class="bg-green-50/50">
+                            <td class="p-4 font-bold">Two Pointers</td>
+                            <td class="p-4 font-mono font-bold">O(n)</td>
+                            <td class="p-4 font-mono font-bold">O(1)</td>
+                            <td class="p-4 text-green-700 font-semibold">Greedy inward squeeze</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Cheat Sheet -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-slate-900 text-white rounded-3xl p-8 shadow-xl">
+                <h3 class="text-2xl font-bold mb-4">⚡ Quick Takeaways</h3>
+                <ul class="space-y-4 text-slate-300">
+                    <li>• <b>Area Formula:</b> min(h1, h2) * (index2 - index1)</li>
+                    <li>• <b>Optimization Hint:</b> Since width decreases as pointers move together, we must prioritize finding greater heights.</li>
+                    <li>• <b>The Rule:</b> Always move the pointer that points to the <b>shorter</b> bar.</li>
+                    <li>• <b>Greedy Property:</b> This logic ensures we don't miss the optimal solution by eliminating states that are strictly worse.</li>
+                </ul>
+            </div>
+            <div class="bg-amber-50 rounded-3xl p-8 border border-amber-100">
+                <h3 class="text-2xl font-bold text-amber-900 mb-4">🧩 Edge Cases</h3>
+                <ul class="space-y-4 text-amber-800">
+                    <li>• <b>Minimal Input:</b> Array of length 2 (only one possible container).</li>
+                    <li>• <b>Uniform Heights:</b> All lines have same height (move either pointer).</li>
+                    <li>• <b>Ascending/Descending:</b> All lines are in sorted order.</li>
+                    <li>• <b>Steep Differences:</b> One very tall bar in middle, but tiny bars on ends.</li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const h1 = [1, 8, 6, 2, 5, 4];
+        const h2 = [1, 8, 6, 2, 5, 4, 8, 3, 7];
+
+        const app1 = {
+            left: 0,
+            right: 1,
+            max: 0,
+            done: false,
+            init() {
+                const container = document.getElementById('app1-bars');
+                container.innerHTML = h1.map((h, i) => `
+                    <div id="app1-bar-${i}" class="bar bg-slate-300 w-12 rounded-t-lg flex items-center justify-center font-bold text-slate-500" style="height: ${h * 20}px">
+                        ${h}
+                    </div>
+                `).join('');
+                this.updateUI();
+            },
+            next() {
+                if (this.done) return;
+                const area = Math.min(h1[this.left], h1[this.right]) * (this.right - this.left);
+                const isNewMax = area > this.max;
+                if (isNewMax) this.max = area;
+
+                this.updateUI(area, isNewMax);
+
+                this.right++;
+                if (this.right >= h1.length) {
+                    this.left++;
+                    this.right = this.left + 1;
+                }
+                if (this.left >= h1.length - 1) {
+                    this.done = true;
+                }
+            },
+            updateUI(area = 0, isNewMax = false) {
+                h1.forEach((_, i) => {
+                    const bar = document.getElementById(`app1-bar-${i}`);
+                    bar.classList.remove('bg-blue-500', 'active-pointer');
+                    bar.classList.add('bg-slate-300');
+                    if (i === this.left || i === this.right) {
+                        bar.classList.replace('bg-slate-300', 'bg-blue-500');
+                        bar.classList.add('active-pointer');
+                    }
+                });
+
+                const water = document.getElementById('app1-water');
+                const leftBar = document.getElementById(`app1-bar-${this.left}`);
+                const rightBar = document.getElementById(`app1-bar-${this.right}`);
+                
+                if (leftBar && rightBar) {
+                    const rect1 = leftBar.getBoundingClientRect();
+                    const rect2 = rightBar.getBoundingClientRect();
+                    const parentRect = leftBar.parentElement.getBoundingClientRect();
+                    
+                    water.style.left = (rect1.left - parentRect.left + rect1.width/2) + "px";
+                    water.style.width = (rect2.left - rect1.left) + "px";
+                    water.style.height = (Math.min(h1[this.left], h1[this.right]) * 20) + "px";
+                    
+                    if (isNewMax) {
+                        water.classList.add('max-area-found');
+                        setTimeout(() => water.classList.remove('max-area-found'), 500);
+                    }
+                }
+
+                document.getElementById('app1-max').textContent = this.max;
+                document.getElementById('app1-msg').textContent = `Checking Pair [${this.left}, ${this.right}] -> Area: ${area}`;
+            },
+            reset() {
+                this.left = 0; this.right = 1; this.max = 0; this.done = false;
+                this.init();
+                document.getElementById('app1-msg').textContent = "";
+            }
+        };
+
+        const app2 = {
+            left: 0,
+            right: h2.length - 1,
+            max: 0,
+            done: false,
+            init() {
+                const container = document.getElementById('app2-bars');
+                container.innerHTML = h2.map((h, i) => `
+                    <div id="app2-bar-${i}" class="bar bg-slate-200 w-8 rounded-t-md flex items-center justify-center text-xs font-bold text-slate-400" style="height: ${h * 25}px">
+                        ${h}
+                    </div>
+                `).join('');
+                this.updateUI();
+            },
+            next() {
+                if (this.done || this.left >= this.right) {
+                    this.done = true;
+                    document.getElementById('app2-msg').textContent = "Search complete. Max Area Found!";
+                    return;
+                }
+
+                const area = Math.min(h2[this.left], h2[this.right]) * (this.right - this.left);
+                const isNewMax = area > this.max;
+                if (isNewMax) this.max = area;
+
+                this.updateUI(area, isNewMax);
+
+                if (h2[this.left] < h2[this.right]) {
+                    this.left++;
+                } else {
+                    this.right--;
+                }
+            },
+            updateUI(area = 0, isNewMax = false) {
+                h2.forEach((_, i) => {
+                    const bar = document.getElementById(`app2-bar-${i}`);
+                    bar.classList.remove('bg-green-500', 'active-pointer', 'bg-slate-200');
+                    if (i === this.left || i === this.right) {
+                        bar.classList.add('bg-green-500', 'active-pointer');
+                    } else if (i < this.left || i > this.right) {
+                        bar.classList.add('bg-slate-100', 'opacity-30');
+                    } else {
+                        bar.classList.add('bg-slate-200');
+                    }
+                });
+
+                const water = document.getElementById('app2-water');
+                const leftBar = document.getElementById(`app2-bar-${this.left}`);
+                const rightBar = document.getElementById(`app2-bar-${this.right}`);
+                
+                if (leftBar && rightBar) {
+                    const rect1 = leftBar.getBoundingClientRect();
+                    const rect2 = rightBar.getBoundingClientRect();
+                    const parentRect = leftBar.parentElement.getBoundingClientRect();
+                    
+                    water.style.left = (rect1.left - parentRect.left + rect1.width/2) + "px";
+                    water.style.width = (rect2.left - rect1.left) + "px";
+                    water.style.height = (Math.min(h2[this.left], h2[this.right]) * 25) + "px";
+                    water.style.backgroundColor = "rgba(34, 197, 94, 0.3)";
+                    water.style.borderTopColor = "#22c55e";
+                    
+                    if (isNewMax) {
+                        water.classList.add('max-area-found');
+                        setTimeout(() => water.classList.remove('max-area-found'), 600);
+                    }
+                }
+
+                document.getElementById('app2-max').textContent = this.max;
+                if (area > 0) {
+                    const moveMsg = h2[this.left] < h2[this.right] ? "Moving Left inward (it was shorter)" : "Moving Right inward (it was shorter)";
+                    document.getElementById('app2-msg').textContent = `Current Area: ${area}. ${moveMsg}`;
+                }
+            },
+            reset() {
+                this.left = 0; this.right = h2.length - 1; this.max = 0; this.done = false;
+                this.init();
+                document.getElementById('app2-msg').textContent = "";
+            }
+        };
+
+        window.onload = () => {
+            app1.init();
+            app2.init();
+        };
+    </script>
+</body>
+</html>
