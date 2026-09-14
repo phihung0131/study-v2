@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """Generate a workspace index.html that links to all HTML files recursively.
 
 Usage:
